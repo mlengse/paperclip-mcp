@@ -21,3 +21,8 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Paperclip runtime / worktrees
+.paperclip/worktrees/
+.remember/
+worktrees/
