@@ -1,10 +1,7 @@
 #!/usr/bin/env node
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { registerAllTools } from "./tools/index.js";
 
 const server = new Server(
   {
@@ -18,15 +15,7 @@ const server = new Server(
   }
 );
 
-server.setRequestHandler(ListToolsRequestSchema, async () => {
-  return {
-    tools: [],
-  };
-});
-
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  throw new Error(`Unknown tool: ${request.params.name}`);
-});
+registerAllTools(server);
 
 async function main() {
   const transport = new StdioServerTransport();
