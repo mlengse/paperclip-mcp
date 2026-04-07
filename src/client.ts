@@ -12,6 +12,10 @@ export class PaperclipClient {
     this.fetchFn = fetchFn ?? ((url, init) => fetch(url, init));
   }
 
+  get companyId(): string {
+    return this.auth.companyId;
+  }
+
   buildHeaders(runId?: string): Record<string, string> {
     const headers: Record<string, string> = {
       Authorization: `Bearer ${this.auth.apiKey}`,
