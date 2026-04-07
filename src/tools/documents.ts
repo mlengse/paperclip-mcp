@@ -1,18 +1,8 @@
-import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
+import { validate, IssueIdSchema } from "./validation.js";
 
-function validate<T>(schema: z.ZodType<T>, args: unknown): T {
-  const result = schema.safeParse(args);
-  if (!result.success) {
-    throw new McpError(ErrorCode.InvalidParams, result.error.message);
-  }
-  return result.data;
-}
-
-const ListDocumentsInput = z.object({
-  issueId: z.string().min(1),
-});
+const ListDocumentsInput = IssueIdSchema;
 
 const GetDocumentInput = z.object({
   issueId: z.string().min(1),
@@ -88,14 +78,11 @@ export const documentTools: ToolDefinition[] = [
     async handler(args, client) {
       const { issueId, key, title, body, format, baseRevisionId } = validate(
         UpsertDocumentInput,
-        args,
+        args
       );
       const payload: Record<string, unknown> = { title, body, format: format ?? "markdown" };
       if (baseRevisionId !== undefined) payload.baseRevisionId = baseRevisionId;
-      const data = await client.put<unknown>(
-        `/api/issues/${issueId}/documents/${key}`,
-        payload,
-      );
+      const data = await client.put<unknown>(`/api/issues/${issueId}/documents/${key}`, payload);
       return { content: [{ type: "text", text: JSON.stringify(data) }] };
     },
   },

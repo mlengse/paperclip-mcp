@@ -5,7 +5,6 @@ import {
   McpError,
   ErrorCode,
 } from "@modelcontextprotocol/sdk/types.js";
-import { z } from "zod";
 import { PaperclipClient } from "../client.js";
 import { identityTools } from "./identity.js";
 import { issueTools } from "./issues.js";
@@ -13,6 +12,7 @@ import { commentTools } from "./comments.js";
 import { documentTools } from "./documents.js";
 import { agentTools } from "./agents.js";
 import { dashboardTools } from "./dashboard.js";
+export { validate as validateInput } from "./validation.js";
 
 export type ToolResult = {
   content: Array<{ type: "text"; text: string }>;
@@ -26,15 +26,14 @@ export interface ToolDefinition {
   handler: (args: unknown, client: PaperclipClient) => Promise<ToolResult>;
 }
 
-export function validateInput<T>(schema: z.ZodType<T>, args: unknown): T {
-  const result = schema.safeParse(args);
-  if (!result.success) {
-    throw new McpError(ErrorCode.InvalidParams, result.error.message);
-  }
-  return result.data;
-}
-
-const ALL_TOOLS: ToolDefinition[] = [...identityTools, ...issueTools, ...commentTools, ...documentTools, ...agentTools, ...dashboardTools];
+const ALL_TOOLS: ToolDefinition[] = [
+  ...identityTools,
+  ...issueTools,
+  ...commentTools,
+  ...documentTools,
+  ...agentTools,
+  ...dashboardTools,
+];
 
 export function registerAllTools(server: Server): void {
   const client = new PaperclipClient();
@@ -51,10 +50,7 @@ export function registerAllTools(server: Server): void {
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const tool = toolMap.get(request.params.name);
     if (!tool) {
-      throw new McpError(
-        ErrorCode.MethodNotFound,
-        `Unknown tool: ${request.params.name}`,
-      );
+      throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${request.params.name}`);
     }
     return tool.handler(request.params.arguments ?? {}, client);
   });

@@ -1,14 +1,6 @@
-import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-
-function validate<T>(schema: z.ZodType<T>, args: unknown): T {
-  const result = schema.safeParse(args);
-  if (!result.success) {
-    throw new McpError(ErrorCode.InvalidParams, result.error.message);
-  }
-  return result.data;
-}
+import { validate, IssueIdSchema } from "./validation.js";
 
 const ListIssuesInput = z.object({
   status: z.string().optional(),
@@ -17,9 +9,7 @@ const ListIssuesInput = z.object({
   q: z.string().optional(),
 });
 
-const IssueIdInput = z.object({
-  issueId: z.string().min(1),
-});
+const IssueIdInput = IssueIdSchema;
 
 const CheckoutIssueInput = z.object({
   issueId: z.string().min(1),

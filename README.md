@@ -48,6 +48,21 @@ Add to your MCP config:
 }
 ```
 
+## Documentation
+
+Full documentation is in [`docs/`](docs/README.md):
+
+- [Getting started](docs/guides/getting-started.md)
+- [Configuration](docs/guides/configuration.md)
+- [MCP tools reference](docs/reference/tools.md)
+- [Architecture overview](docs/architecture/overview.md)
+
+To check for broken links locally:
+
+```bash
+npm run docs:check
+```
+
 ## Project Structure
 
 ```
@@ -61,14 +76,14 @@ dist/             — Compiled JavaScript (generated, not committed)
 
 ## Scripts
 
-| Command | Description |
-|---|---|
-| `npm run build` | Compile TypeScript to `dist/` |
-| `npm run dev` | Run with `tsx` (no compile step) |
-| `npm run typecheck` | Type-check without emitting |
-| `npm run lint` | ESLint |
-| `npm run format` | Prettier (write) |
-| `npm run format:check` | Prettier (check only) |
+| Command                | Description                      |
+| ---------------------- | -------------------------------- |
+| `npm run build`        | Compile TypeScript to `dist/`    |
+| `npm run dev`          | Run with `tsx` (no compile step) |
+| `npm run typecheck`    | Type-check without emitting      |
+| `npm run lint`         | ESLint                           |
+| `npm run format`       | Prettier (write)                 |
+| `npm run format:check` | Prettier (check only)            |
 
 ## Contributing
 

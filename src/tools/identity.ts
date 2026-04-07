@@ -1,16 +1,5 @@
-import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
-import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-
-const NoInput = z.object({});
-
-function validate<T>(schema: z.ZodType<T>, args: unknown): T {
-  const result = schema.safeParse(args);
-  if (!result.success) {
-    throw new McpError(ErrorCode.InvalidParams, result.error.message);
-  }
-  return result.data;
-}
+import { validate, NoInput } from "./validation.js";
 
 export const identityTools: ToolDefinition[] = [
   {
