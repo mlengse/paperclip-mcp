@@ -11,6 +11,8 @@ import { identityTools } from "./identity.js";
 import { issueTools } from "./issues.js";
 import { commentTools } from "./comments.js";
 import { documentTools } from "./documents.js";
+import { agentTools } from "./agents.js";
+import { dashboardTools } from "./dashboard.js";
 
 export type ToolResult = {
   content: Array<{ type: "text"; text: string }>;
@@ -32,7 +34,7 @@ export function validateInput<T>(schema: z.ZodType<T>, args: unknown): T {
   return result.data;
 }
 
-const ALL_TOOLS: ToolDefinition[] = [...identityTools, ...issueTools, ...commentTools, ...documentTools];
+const ALL_TOOLS: ToolDefinition[] = [...identityTools, ...issueTools, ...commentTools, ...documentTools, ...agentTools, ...dashboardTools];
 
 export function registerAllTools(server: Server): void {
   const client = new PaperclipClient();
