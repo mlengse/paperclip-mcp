@@ -7,6 +7,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { PaperclipClient } from "../client.js";
+import { identityTools } from "./identity.js";
 
 export type ToolResult = {
   content: Array<{ type: "text"; text: string }>;
@@ -28,9 +29,7 @@ export function validateInput<T>(schema: z.ZodType<T>, args: unknown): T {
   return result.data;
 }
 
-// Tool modules register their definitions here.
-// PAP-19 and PAP-20 will push into this array.
-const ALL_TOOLS: ToolDefinition[] = [];
+const ALL_TOOLS: ToolDefinition[] = [...identityTools];
 
 export function registerAllTools(server: Server): void {
   const client = new PaperclipClient();
