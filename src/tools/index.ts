@@ -9,6 +9,7 @@ import { z } from "zod";
 import { PaperclipClient } from "../client.js";
 import { identityTools } from "./identity.js";
 import { issueTools } from "./issues.js";
+import { commentTools } from "./comments.js";
 
 export type ToolResult = {
   content: Array<{ type: "text"; text: string }>;
@@ -30,7 +31,7 @@ export function validateInput<T>(schema: z.ZodType<T>, args: unknown): T {
   return result.data;
 }
 
-const ALL_TOOLS: ToolDefinition[] = [...identityTools, ...issueTools];
+const ALL_TOOLS: ToolDefinition[] = [...identityTools, ...issueTools, ...commentTools];
 
 export function registerAllTools(server: Server): void {
   const client = new PaperclipClient();
