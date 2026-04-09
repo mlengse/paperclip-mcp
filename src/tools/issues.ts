@@ -6,6 +6,8 @@ const ListIssuesInput = z.object({
   status: z.string().optional(),
   assigneeAgentId: z.string().optional(),
   projectId: z.string().optional(),
+  goalId: z.string().optional(),
+  labelId: z.string().optional(),
   q: z.string().optional(),
 });
 
@@ -24,6 +26,11 @@ const UpdateIssueInput = z.object({
   title: z.string().optional(),
   description: z.string().optional(),
   assigneeAgentId: z.string().nullable().optional(),
+  assigneeUserId: z.string().nullable().optional(),
+  goalId: z.string().nullable().optional(),
+  projectId: z.string().nullable().optional(),
+  parentId: z.string().nullable().optional(),
+  billingCode: z.string().nullable().optional(),
 });
 
 const CreateIssueInput = z.object({
@@ -35,13 +42,18 @@ const CreateIssueInput = z.object({
   goalId: z.string().optional(),
   projectId: z.string().optional(),
   assigneeAgentId: z.string().optional(),
+  billingCode: z.string().optional(),
+  inheritExecutionWorkspaceFromIssueId: z
+    .string()
+    .optional()
+    .describe("Link to an existing execution workspace (for follow-up tasks on same checkout)"),
 });
 
 export const issueTools: ToolDefinition[] = [
   {
     name: "paperclip_list_issues",
     description:
-      "List issues for the current company. Optionally filter by status (comma-separated), assigneeAgentId, projectId, or full-text search query.",
+      "List issues for the current company. Optionally filter by status (comma-separated), assigneeAgentId, projectId, goalId, labelId, or full-text search query.",
     inputSchema: {
       type: "object",
       properties: {
@@ -51,6 +63,8 @@ export const issueTools: ToolDefinition[] = [
         },
         assigneeAgentId: { type: "string", description: "Filter by assignee agent ID" },
         projectId: { type: "string", description: "Filter by project ID" },
+        goalId: { type: "string", description: "Filter by goal ID" },
+        labelId: { type: "string", description: "Filter by label ID" },
         q: { type: "string", description: "Full-text search query" },
       },
       required: [],
@@ -63,6 +77,8 @@ export const issueTools: ToolDefinition[] = [
         if (input.status) params.set("status", input.status);
         if (input.assigneeAgentId) params.set("assigneeAgentId", input.assigneeAgentId);
         if (input.projectId) params.set("projectId", input.projectId);
+        if (input.goalId) params.set("goalId", input.goalId);
+        if (input.labelId) params.set("labelId", input.labelId);
         if (input.q) params.set("q", input.q);
         const qs = params.toString();
         const path = `/api/companies/${client.companyId}/issues${qs ? `?${qs}` : ""}`;
@@ -169,7 +185,7 @@ export const issueTools: ToolDefinition[] = [
   {
     name: "paperclip_update_issue",
     description:
-      "Update an issue's status, priority, title, description, assignee, or add a comment. Run ID header is injected automatically.",
+      "Update an issue's status, priority, title, description, assignee, goal, project, parent, billing code, or add a comment. Run ID header is injected automatically.",
     inputSchema: {
       type: "object",
       properties: {
@@ -182,6 +198,26 @@ export const issueTools: ToolDefinition[] = [
         assigneeAgentId: {
           type: ["string", "null"],
           description: "Reassign to agent ID, or null to unassign",
+        },
+        assigneeUserId: {
+          type: ["string", "null"],
+          description: "Reassign to board/human user ID, or null to unassign",
+        },
+        goalId: {
+          type: ["string", "null"],
+          description: "Move issue to a different goal, or null to unlink",
+        },
+        projectId: {
+          type: ["string", "null"],
+          description: "Move issue to a different project, or null to unlink",
+        },
+        parentId: {
+          type: ["string", "null"],
+          description: "Reparent issue (make sub-task of another), or null to unparent",
+        },
+        billingCode: {
+          type: ["string", "null"],
+          description: "Cross-team billing attribution, or null to clear",
         },
       },
       required: ["issueId"],
@@ -216,6 +252,12 @@ export const issueTools: ToolDefinition[] = [
         goalId: { type: "string", description: "Goal ID to link the issue to" },
         projectId: { type: "string", description: "Project ID to assign to" },
         assigneeAgentId: { type: "string", description: "Agent ID to assign to" },
+        billingCode: { type: "string", description: "Cross-team billing attribution code" },
+        inheritExecutionWorkspaceFromIssueId: {
+          type: "string",
+          description:
+            "Link to an existing execution workspace (for follow-up tasks on same checkout/worktree)",
+        },
       },
       required: ["title"],
     },
@@ -231,6 +273,9 @@ export const issueTools: ToolDefinition[] = [
         if (input.goalId !== undefined) body["goalId"] = input.goalId;
         if (input.projectId !== undefined) body["projectId"] = input.projectId;
         if (input.assigneeAgentId !== undefined) body["assigneeAgentId"] = input.assigneeAgentId;
+        if (input.billingCode !== undefined) body["billingCode"] = input.billingCode;
+        if (input.inheritExecutionWorkspaceFromIssueId !== undefined)
+          body["inheritExecutionWorkspaceFromIssueId"] = input.inheritExecutionWorkspaceFromIssueId;
         const data = await client.post<unknown>(`/api/companies/${client.companyId}/issues`, body);
         return { content: [{ type: "text", text: JSON.stringify(data) }] };
       } catch (err) {

@@ -63,6 +63,22 @@ export class PaperclipClient {
     return this.handleResponse<T>(response);
   }
 
+  async postForm<T>(path: string, form: FormData, runId?: string): Promise<T> {
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${this.auth.apiKey}`,
+    };
+    const effectiveRunId = runId ?? this.auth.runId;
+    if (effectiveRunId) {
+      headers["X-Paperclip-Run-Id"] = effectiveRunId;
+    }
+    const response = await this.fetchFn(`${this.auth.apiUrl}${path}`, {
+      method: "POST",
+      headers,
+      body: form,
+    });
+    return this.handleResponse<T>(response);
+  }
+
   async delete<T>(path: string, runId?: string): Promise<T> {
     const response = await this.fetchFn(`${this.auth.apiUrl}${path}`, {
       method: "DELETE",
