@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import { validate, handleApiError } from "./validation.js";
+import { validate, handleApiError, NoInput } from "./validation.js";
 
 const GoalIdInput = z.object({
   goalId: z.string().min(1).describe("Goal UUID"),
@@ -33,6 +33,7 @@ export const goalTools: ToolDefinition[] = [
     annotations: { readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
+        validate(NoInput, args);
         const data = await client.get<unknown>(`/api/companies/${client.companyId}/goals`);
         return { content: [{ type: "text", text: JSON.stringify(data) }] };
       } catch (err) {
