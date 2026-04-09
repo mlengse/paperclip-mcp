@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import { validate, IssueIdSchema } from "./validation.js";
+import { validate, IssueIdSchema, handleApiError } from "./validation.js";
 
 const ListIssuesInput = z.object({
   status: z.string().optional(),
@@ -55,17 +55,22 @@ export const issueTools: ToolDefinition[] = [
       },
       required: [],
     },
+    annotations: { readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
-      const input = validate(ListIssuesInput, args);
-      const params = new URLSearchParams();
-      if (input.status) params.set("status", input.status);
-      if (input.assigneeAgentId) params.set("assigneeAgentId", input.assigneeAgentId);
-      if (input.projectId) params.set("projectId", input.projectId);
-      if (input.q) params.set("q", input.q);
-      const qs = params.toString();
-      const path = `/api/companies/${client.companyId}/issues${qs ? `?${qs}` : ""}`;
-      const data = await client.get<unknown>(path);
-      return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      try {
+        const input = validate(ListIssuesInput, args);
+        const params = new URLSearchParams();
+        if (input.status) params.set("status", input.status);
+        if (input.assigneeAgentId) params.set("assigneeAgentId", input.assigneeAgentId);
+        if (input.projectId) params.set("projectId", input.projectId);
+        if (input.q) params.set("q", input.q);
+        const qs = params.toString();
+        const path = `/api/companies/${client.companyId}/issues${qs ? `?${qs}` : ""}`;
+        const data = await client.get<unknown>(path);
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      } catch (err) {
+        return handleApiError(err);
+      }
     },
   },
   {
@@ -78,10 +83,15 @@ export const issueTools: ToolDefinition[] = [
       },
       required: ["issueId"],
     },
+    annotations: { readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
-      const { issueId } = validate(IssueIdInput, args);
-      const data = await client.get<unknown>(`/api/issues/${issueId}`);
-      return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      try {
+        const { issueId } = validate(IssueIdInput, args);
+        const data = await client.get<unknown>(`/api/issues/${issueId}`);
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      } catch (err) {
+        return handleApiError(err);
+      }
     },
   },
   {
@@ -95,10 +105,15 @@ export const issueTools: ToolDefinition[] = [
       },
       required: ["issueId"],
     },
+    annotations: { readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
-      const { issueId } = validate(IssueIdInput, args);
-      const data = await client.get<unknown>(`/api/issues/${issueId}/heartbeat-context`);
-      return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      try {
+        const { issueId } = validate(IssueIdInput, args);
+        const data = await client.get<unknown>(`/api/issues/${issueId}/heartbeat-context`);
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      } catch (err) {
+        return handleApiError(err);
+      }
     },
   },
   {
@@ -117,12 +132,17 @@ export const issueTools: ToolDefinition[] = [
       },
       required: ["issueId"],
     },
+    annotations: { destructiveHint: false, idempotentHint: false, openWorldHint: false },
     async handler(args, client) {
-      const { issueId, expectedStatuses } = validate(CheckoutIssueInput, args);
-      const body: Record<string, unknown> = {};
-      if (expectedStatuses) body["expectedStatuses"] = expectedStatuses;
-      const data = await client.post<unknown>(`/api/issues/${issueId}/checkout`, body);
-      return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      try {
+        const { issueId, expectedStatuses } = validate(CheckoutIssueInput, args);
+        const body: Record<string, unknown> = {};
+        if (expectedStatuses) body["expectedStatuses"] = expectedStatuses;
+        const data = await client.post<unknown>(`/api/issues/${issueId}/checkout`, body);
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      } catch (err) {
+        return handleApiError(err);
+      }
     },
   },
   {
@@ -135,10 +155,15 @@ export const issueTools: ToolDefinition[] = [
       },
       required: ["issueId"],
     },
+    annotations: { idempotentHint: true, openWorldHint: false },
     async handler(args, client) {
-      const { issueId } = validate(IssueIdInput, args);
-      const data = await client.post<unknown>(`/api/issues/${issueId}/release`);
-      return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      try {
+        const { issueId } = validate(IssueIdInput, args);
+        const data = await client.post<unknown>(`/api/issues/${issueId}/release`);
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      } catch (err) {
+        return handleApiError(err);
+      }
     },
   },
   {
@@ -161,14 +186,19 @@ export const issueTools: ToolDefinition[] = [
       },
       required: ["issueId"],
     },
+    annotations: { destructiveHint: true, openWorldHint: false },
     async handler(args, client) {
-      const { issueId, ...rest } = validate(UpdateIssueInput, args);
-      const body: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(rest)) {
-        if (v !== undefined) body[k] = v;
+      try {
+        const { issueId, ...rest } = validate(UpdateIssueInput, args);
+        const body: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(rest)) {
+          if (v !== undefined) body[k] = v;
+        }
+        const data = await client.patch<unknown>(`/api/issues/${issueId}`, body);
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      } catch (err) {
+        return handleApiError(err);
       }
-      const data = await client.patch<unknown>(`/api/issues/${issueId}`, body);
-      return { content: [{ type: "text", text: JSON.stringify(data) }] };
     },
   },
   {
@@ -189,18 +219,23 @@ export const issueTools: ToolDefinition[] = [
       },
       required: ["title"],
     },
+    annotations: { destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
-      const input = validate(CreateIssueInput, args);
-      const body: Record<string, unknown> = { title: input.title };
-      if (input.description !== undefined) body["description"] = input.description;
-      if (input.status !== undefined) body["status"] = input.status;
-      if (input.priority !== undefined) body["priority"] = input.priority;
-      if (input.parentId !== undefined) body["parentId"] = input.parentId;
-      if (input.goalId !== undefined) body["goalId"] = input.goalId;
-      if (input.projectId !== undefined) body["projectId"] = input.projectId;
-      if (input.assigneeAgentId !== undefined) body["assigneeAgentId"] = input.assigneeAgentId;
-      const data = await client.post<unknown>(`/api/companies/${client.companyId}/issues`, body);
-      return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      try {
+        const input = validate(CreateIssueInput, args);
+        const body: Record<string, unknown> = { title: input.title };
+        if (input.description !== undefined) body["description"] = input.description;
+        if (input.status !== undefined) body["status"] = input.status;
+        if (input.priority !== undefined) body["priority"] = input.priority;
+        if (input.parentId !== undefined) body["parentId"] = input.parentId;
+        if (input.goalId !== undefined) body["goalId"] = input.goalId;
+        if (input.projectId !== undefined) body["projectId"] = input.projectId;
+        if (input.assigneeAgentId !== undefined) body["assigneeAgentId"] = input.assigneeAgentId;
+        const data = await client.post<unknown>(`/api/companies/${client.companyId}/issues`, body);
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      } catch (err) {
+        return handleApiError(err);
+      }
     },
   },
 ];

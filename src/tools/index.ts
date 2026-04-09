@@ -12,6 +12,9 @@ import { commentTools } from "./comments.js";
 import { documentTools } from "./documents.js";
 import { agentTools } from "./agents.js";
 import { dashboardTools } from "./dashboard.js";
+import { approvalTools } from "./approvals.js";
+import { goalTools } from "./goals.js";
+import { projectTools } from "./projects.js";
 export { validate as validateInput } from "./validation.js";
 
 export type ToolResult = {
@@ -19,10 +22,18 @@ export type ToolResult = {
   isError?: boolean;
 };
 
+export interface ToolAnnotations {
+  readOnlyHint?: boolean;
+  destructiveHint?: boolean;
+  idempotentHint?: boolean;
+  openWorldHint?: boolean;
+}
+
 export interface ToolDefinition {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  annotations?: ToolAnnotations;
   handler: (args: unknown, client: PaperclipClient) => Promise<ToolResult>;
 }
 
@@ -33,6 +44,9 @@ const ALL_TOOLS: ToolDefinition[] = [
   ...documentTools,
   ...agentTools,
   ...dashboardTools,
+  ...approvalTools,
+  ...goalTools,
+  ...projectTools,
 ];
 
 export function registerAllTools(server: Server): void {
@@ -40,10 +54,11 @@ export function registerAllTools(server: Server): void {
   const toolMap = new Map(ALL_TOOLS.map((t) => [t.name, t]));
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: ALL_TOOLS.map(({ name, description, inputSchema }) => ({
+    tools: ALL_TOOLS.map(({ name, description, inputSchema, annotations }) => ({
       name,
       description,
       inputSchema,
+      ...(annotations ? { annotations } : {}),
     })),
   }));
 

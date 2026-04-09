@@ -7,30 +7,45 @@
   "bin": {
     "paperclip-mcp": "dist/index.js"
   },
+  "files": ["dist"],
+  "keywords": ["mcp", "paperclip", "claude", "model-context-protocol"],
+  "mcpName": "paperclip",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/paperclip-ai/paperclip-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/paperclip-ai/paperclip-mcp/issues"
+  },
+  "homepage": "https://github.com/paperclip-ai/paperclip-mcp#readme",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && shx chmod +x dist/*.js",
+    "prepare": "npm run build",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "lint": "eslint src",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx/esm --test 'src/**/*.test.ts'"
+    "test": "node --import tsx/esm --test 'src/**/*.test.ts'",
+    "docs:check": "find docs -name '*.md' | xargs markdown-link-check -c .markdown-link-check.json"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
     "@types/node": "^22.0.0",
     "eslint": "^9.0.0",
+    "markdown-link-check": "^3.12.0",
     "prettier": "^3.0.0",
+    "shx": "^0.3.4",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0",
     "typescript-eslint": "^8.0.0"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   }
 }

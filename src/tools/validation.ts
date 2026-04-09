@@ -1,5 +1,7 @@
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
+import { PaperclipApiError } from "../errors.js";
+import type { ToolResult } from "./index.js";
 
 export function validate<T>(schema: z.ZodType<T>, args: unknown): T {
   const result = schema.safeParse(args);
@@ -7,6 +9,14 @@ export function validate<T>(schema: z.ZodType<T>, args: unknown): T {
     throw new McpError(ErrorCode.InvalidParams, result.error.message);
   }
   return result.data;
+}
+
+export function handleApiError(err: unknown): ToolResult {
+  if (err instanceof PaperclipApiError) {
+    const text = `Paperclip API error ${err.status} ${err.statusText}: ${JSON.stringify(err.body)}`;
+    return { isError: true, content: [{ type: "text", text }] };
+  }
+  throw err;
 }
 
 // Common input schemas reused across tool modules

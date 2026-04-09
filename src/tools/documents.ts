@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import { validate, IssueIdSchema } from "./validation.js";
+import { validate, IssueIdSchema, handleApiError } from "./validation.js";
 
 const ListDocumentsInput = IssueIdSchema;
 
@@ -29,10 +29,15 @@ export const documentTools: ToolDefinition[] = [
       },
       required: ["issueId"],
     },
+    annotations: { readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
-      const { issueId } = validate(ListDocumentsInput, args);
-      const data = await client.get<unknown>(`/api/issues/${issueId}/documents`);
-      return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      try {
+        const { issueId } = validate(ListDocumentsInput, args);
+        const data = await client.get<unknown>(`/api/issues/${issueId}/documents`);
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      } catch (err) {
+        return handleApiError(err);
+      }
     },
   },
   {
@@ -46,10 +51,15 @@ export const documentTools: ToolDefinition[] = [
       },
       required: ["issueId", "key"],
     },
+    annotations: { readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
-      const { issueId, key } = validate(GetDocumentInput, args);
-      const data = await client.get<unknown>(`/api/issues/${issueId}/documents/${key}`);
-      return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      try {
+        const { issueId, key } = validate(GetDocumentInput, args);
+        const data = await client.get<unknown>(`/api/issues/${issueId}/documents/${key}`);
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      } catch (err) {
+        return handleApiError(err);
+      }
     },
   },
   {
@@ -75,15 +85,20 @@ export const documentTools: ToolDefinition[] = [
       },
       required: ["issueId", "key", "title", "body"],
     },
+    annotations: { idempotentHint: true, openWorldHint: false },
     async handler(args, client) {
-      const { issueId, key, title, body, format, baseRevisionId } = validate(
-        UpsertDocumentInput,
-        args
-      );
-      const payload: Record<string, unknown> = { title, body, format: format ?? "markdown" };
-      if (baseRevisionId !== undefined) payload.baseRevisionId = baseRevisionId;
-      const data = await client.put<unknown>(`/api/issues/${issueId}/documents/${key}`, payload);
-      return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      try {
+        const { issueId, key, title, body, format, baseRevisionId } = validate(
+          UpsertDocumentInput,
+          args
+        );
+        const payload: Record<string, unknown> = { title, body, format: format ?? "markdown" };
+        if (baseRevisionId !== undefined) payload.baseRevisionId = baseRevisionId;
+        const data = await client.put<unknown>(`/api/issues/${issueId}/documents/${key}`, payload);
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      } catch (err) {
+        return handleApiError(err);
+      }
     },
   },
 ];

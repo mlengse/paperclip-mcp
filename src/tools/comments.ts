@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import { validate } from "./validation.js";
+import { validate, handleApiError } from "./validation.js";
 
 const ListCommentsInput = z.object({
   issueId: z.string().min(1),
@@ -34,15 +34,20 @@ export const commentTools: ToolDefinition[] = [
       },
       required: ["issueId"],
     },
+    annotations: { readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
-      const input = validate(ListCommentsInput, args);
-      const params = new URLSearchParams();
-      if (input.after) params.set("after", input.after);
-      if (input.order) params.set("order", input.order);
-      const qs = params.toString();
-      const path = `/api/issues/${input.issueId}/comments${qs ? `?${qs}` : ""}`;
-      const data = await client.get<unknown>(path);
-      return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      try {
+        const input = validate(ListCommentsInput, args);
+        const params = new URLSearchParams();
+        if (input.after) params.set("after", input.after);
+        if (input.order) params.set("order", input.order);
+        const qs = params.toString();
+        const path = `/api/issues/${input.issueId}/comments${qs ? `?${qs}` : ""}`;
+        const data = await client.get<unknown>(path);
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      } catch (err) {
+        return handleApiError(err);
+      }
     },
   },
   {
@@ -57,10 +62,15 @@ export const commentTools: ToolDefinition[] = [
       },
       required: ["issueId", "body"],
     },
+    annotations: { destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
-      const { issueId, body } = validate(AddCommentInput, args);
-      const data = await client.post<unknown>(`/api/issues/${issueId}/comments`, { body });
-      return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      try {
+        const { issueId, body } = validate(AddCommentInput, args);
+        const data = await client.post<unknown>(`/api/issues/${issueId}/comments`, { body });
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      } catch (err) {
+        return handleApiError(err);
+      }
     },
   },
 ];
