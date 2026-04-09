@@ -323,6 +323,14 @@ describe("paperclip_create_agent_key", () => {
     );
     assert.equal(calls.length, 0);
   });
+
+  it("returns isError response on 404 API error", async () => {
+    const { fn } = mockFetch(404, { message: "Agent not found" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await createAgentKey.handler({ agentId: "missing-agent" }, client);
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("404"));
+  });
 });
 
 describe("paperclip_list_agent_config_revisions", () => {
@@ -342,6 +350,19 @@ describe("paperclip_list_agent_config_revisions", () => {
     const result = await listConfigRevisions.handler({ agentId: "missing-agent" }, client);
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("404"));
+  });
+
+  it("throws McpError when agentId is empty string (validation failure, fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => listConfigRevisions.handler({ agentId: "" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
   });
 });
 
@@ -373,6 +394,17 @@ describe("paperclip_rollback_agent_config", () => {
       }
     );
     assert.equal(calls.length, 0);
+  });
+
+  it("returns isError response on 409 API error (revision conflict)", async () => {
+    const { fn } = mockFetch(409, { message: "Revision conflict" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await rollbackAgentConfig.handler(
+      { agentId: "agent-1", revisionId: "rev-stale" },
+      client
+    );
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("409"));
   });
 });
 
@@ -423,6 +455,17 @@ describe("paperclip_set_agent_instructions_path", () => {
     );
     assert.equal(calls.length, 0);
   });
+
+  it("returns isError response on 404 API error", async () => {
+    const { fn } = mockFetch(404, { message: "Agent not found" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await setInstructionsPath.handler(
+      { agentId: "missing-agent", path: "AGENTS.md" },
+      client
+    );
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("404"));
+  });
 });
 
 describe("paperclip_get_org_chart", () => {
@@ -442,6 +485,19 @@ describe("paperclip_get_org_chart", () => {
     const result = await getOrgChart.handler({}, client);
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("403"));
+  });
+
+  it("throws McpError when args is not an object (validation failure, fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => getOrgChart.handler("not-an-object" as unknown as Record<string, unknown>, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
   });
 });
 
@@ -503,5 +559,18 @@ describe("paperclip_list_company_skills", () => {
     const result = await listCompanySkills.handler({}, client);
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("403"));
+  });
+
+  it("throws McpError when args is not an object (validation failure, fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => listCompanySkills.handler("not-an-object" as unknown as Record<string, unknown>, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
   });
 });
