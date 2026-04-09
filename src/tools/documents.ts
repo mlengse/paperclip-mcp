@@ -18,6 +18,11 @@ const UpsertDocumentInput = z.object({
   baseRevisionId: z.string().optional(),
 });
 
+const DocumentKeyInput = z.object({
+  issueId: z.string().min(1),
+  key: z.string().min(1),
+});
+
 export const documentTools: ToolDefinition[] = [
   {
     name: "paperclip_list_documents",
@@ -95,6 +100,53 @@ export const documentTools: ToolDefinition[] = [
         const payload: Record<string, unknown> = { title, body, format: format ?? "markdown" };
         if (baseRevisionId !== undefined) payload.baseRevisionId = baseRevisionId;
         const data = await client.put<unknown>(`/api/issues/${issueId}/documents/${key}`, payload);
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      } catch (err) {
+        return handleApiError(err);
+      }
+    },
+  },
+  {
+    name: "paperclip_delete_document",
+    description:
+      "Delete a document from an issue by key. Run ID header is injected automatically.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        issueId: { type: "string", description: "Issue ID or identifier (e.g. PAP-22)" },
+        key: { type: "string", description: "Document key to delete (e.g. `plan`)" },
+      },
+      required: ["issueId", "key"],
+    },
+    annotations: { destructiveHint: true, openWorldHint: false },
+    async handler(args, client) {
+      try {
+        const { issueId, key } = validate(DocumentKeyInput, args);
+        const data = await client.delete<unknown>(`/api/issues/${issueId}/documents/${key}`);
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      } catch (err) {
+        return handleApiError(err);
+      }
+    },
+  },
+  {
+    name: "paperclip_get_document_revisions",
+    description: "Get the revision history for an issue document.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        issueId: { type: "string", description: "Issue ID or identifier (e.g. PAP-22)" },
+        key: { type: "string", description: "Document key (e.g. `plan`)" },
+      },
+      required: ["issueId", "key"],
+    },
+    annotations: { readOnlyHint: true, openWorldHint: false },
+    async handler(args, client) {
+      try {
+        const { issueId, key } = validate(DocumentKeyInput, args);
+        const data = await client.get<unknown>(
+          `/api/issues/${issueId}/documents/${key}/revisions`
+        );
         return { content: [{ type: "text", text: JSON.stringify(data) }] };
       } catch (err) {
         return handleApiError(err);

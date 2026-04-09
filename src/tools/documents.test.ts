@@ -27,6 +27,10 @@ function mockFetch(status: number, body: unknown) {
 const listDocuments = documentTools.find((t) => t.name === "paperclip_list_documents")!;
 const getDocument = documentTools.find((t) => t.name === "paperclip_get_document")!;
 const upsertDocument = documentTools.find((t) => t.name === "paperclip_upsert_document")!;
+const deleteDocument = documentTools.find((t) => t.name === "paperclip_delete_document")!;
+const getDocumentRevisions = documentTools.find(
+  (t) => t.name === "paperclip_get_document_revisions"
+)!;
 
 describe("paperclip_list_documents", () => {
   it("calls GET /api/issues/{id}/documents and returns document list", async () => {
@@ -146,5 +150,83 @@ describe("paperclip_upsert_document", () => {
     );
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("409"));
+  });
+});
+
+describe("paperclip_delete_document", () => {
+  it("calls DELETE /api/issues/{id}/documents/{key} and returns result", async () => {
+    const { fn, calls } = mockFetch(200, { deleted: true });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await deleteDocument.handler({ issueId: "issue-1", key: "plan" }, client);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1/documents/plan");
+    assert.equal(calls[0]!.init.method, "DELETE");
+    assert.deepEqual(result, {
+      content: [{ type: "text", text: JSON.stringify({ deleted: true }) }],
+    });
+  });
+
+  it("throws McpError when key is empty string (validation failure, fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => deleteDocument.handler({ issueId: "issue-1", key: "" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("returns isError response on 404 API error", async () => {
+    const { fn } = mockFetch(404, { message: "Document not found" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await deleteDocument.handler({ issueId: "issue-1", key: "missing" }, client);
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("404"));
+  });
+});
+
+describe("paperclip_get_document_revisions", () => {
+  it("calls GET /api/issues/{id}/documents/{key}/revisions and returns revisions", async () => {
+    const revisions = [
+      { id: "rev-1", createdAt: "2026-01-01T00:00:00Z", agentId: "agent-1" },
+      { id: "rev-2", createdAt: "2026-01-02T00:00:00Z", agentId: "agent-2" },
+    ];
+    const { fn, calls } = mockFetch(200, revisions);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getDocumentRevisions.handler({ issueId: "issue-1", key: "plan" }, client);
+    assert.equal(calls.length, 1);
+    assert.equal(
+      calls[0]!.url,
+      "http://localhost:3100/api/issues/issue-1/documents/plan/revisions"
+    );
+    assert.equal(calls[0]!.init.method, "GET");
+    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(revisions) }] });
+  });
+
+  it("throws McpError when issueId is empty string (validation failure, fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => getDocumentRevisions.handler({ issueId: "", key: "plan" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("returns isError response on 404 API error", async () => {
+    const { fn } = mockFetch(404, { message: "Document not found" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getDocumentRevisions.handler(
+      { issueId: "issue-1", key: "missing" },
+      client
+    );
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("404"));
   });
 });
