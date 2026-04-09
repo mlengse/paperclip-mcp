@@ -52,6 +52,15 @@ describe("paperclip_list_issues", () => {
     assert.ok(url.includes("assigneeAgentId=agent-1"), `URL missing assigneeAgentId: ${url}`);
   });
 
+  it("forwards goalId and labelId as query params (PAP-60)", async () => {
+    const { fn, calls } = mockFetch(200, []);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await listIssues.handler({ goalId: "goal-1", labelId: "label-1" }, client);
+    const url = calls[0]!.url;
+    assert.ok(url.includes("goalId=goal-1"), `URL missing goalId param: ${url}`);
+    assert.ok(url.includes("labelId=label-1"), `URL missing labelId param: ${url}`);
+  });
+
   it("returns isError response on 500 API error", async () => {
     const { fn } = mockFetch(500, { message: "Internal Server Error" });
     const client = new PaperclipClient(TEST_AUTH, fn);
@@ -287,6 +296,23 @@ describe("paperclip_create_issue", () => {
     assert.equal(sentBody.priority, "high");
     assert.equal(sentBody.projectId, "proj-1");
     assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(created) }] });
+  });
+
+  it("forwards billingCode and inheritExecutionWorkspaceFromIssueId in POST body (PAP-60)", async () => {
+    const created = { id: "issue-new", title: "Follow-up task" };
+    const { fn, calls } = mockFetch(200, created);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await createIssue.handler(
+      {
+        title: "Follow-up task",
+        billingCode: "TEAM-X",
+        inheritExecutionWorkspaceFromIssueId: "issue-source-1",
+      },
+      client
+    );
+    const sentBody = JSON.parse(calls[0]!.init.body as string);
+    assert.equal(sentBody.billingCode, "TEAM-X");
+    assert.equal(sentBody.inheritExecutionWorkspaceFromIssueId, "issue-source-1");
   });
 
   it("throws McpError when title is empty string (validation failure, fetch not called)", async () => {
