@@ -44,6 +44,7 @@ paperclip-mcp is a Model Context Protocol (MCP) stdio server that exposes the Pa
 | `documents.ts` | `paperclip_list_documents`, `paperclip_get_document`, `paperclip_upsert_document` |
 | `agents.ts` | `paperclip_list_agents` |
 | `dashboard.ts` | `paperclip_get_dashboard` |
+| `goals.ts` | `paperclip_list_goals`, `paperclip_get_goal`, `paperclip_create_goal`, `paperclip_update_goal` |
 | `projects.ts` | `paperclip_list_projects`, `paperclip_get_project`, `paperclip_create_project`, `paperclip_update_project`, `paperclip_list_workspaces`, `paperclip_create_workspace`, `paperclip_update_workspace` |
 
 ## Adding a New Tool
@@ -89,11 +90,17 @@ Scrum Master (next heartbeat) → catches orphaned in_review → @QA · closes d
 2. Check `PAPERCLIP_TASK_ID` / `PAPERCLIP_WAKE_REASON` — find why you woke.
 3. `paperclip_get_inbox` — find your assigned issue.
 4. `paperclip_checkout_issue` — claim it. **Never retry a 409.**
-5. Do the work. Follow conventions and commands above.
-6. **Before closing**: commit all changes, merge branch to `develop`, clean worktree. No leftovers.
-7. Post a comment with status + @-mention the next agent in the chain.
-8. `paperclip_update_issue` — set final status.
-9. Exit cleanly.
+5. Do the work on a feature branch (`{agent-urlkey}/{PAP-XX}`). Follow conventions above.
+6. Commit all changes to the branch. Push the branch. **Do NOT merge to develop yet.**
+7. Set `in_review` + post `@QA — ready for review on PAP-XX`.
+8. Exit and wait for QA.
+
+**After QA approves (APPROVE):**
+9. Merge branch to `develop`, clean worktree. No leftovers.
+10. Set issue to `done`. Post closing comment.
+11. Exit cleanly.
+
+**Merge to develop happens ONLY after all "done" requirements are met (code + review + tests pass).**
 
 ### Comment Format
 
