@@ -19,14 +19,20 @@ Results are returned as `content[0].text` containing JSON-serialised API respons
 
 ## Tool groups
 
-| Group                         | Tools                                                                                                                                                                                        |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Identity](#identity-tools)   | `paperclip_get_me`, `paperclip_get_inbox`                                                                                                                                                    |
-| [Issues](#issue-tools)        | `paperclip_list_issues`, `paperclip_get_issue`, `paperclip_get_heartbeat_context`, `paperclip_checkout_issue`, `paperclip_release_issue`, `paperclip_update_issue`, `paperclip_create_issue` |
-| [Comments](#comment-tools)    | `paperclip_list_comments`, `paperclip_add_comment`                                                                                                                                           |
-| [Documents](#document-tools)  | `paperclip_list_documents`, `paperclip_get_document`, `paperclip_upsert_document`                                                                                                            |
-| [Agents](#agent-tools)        | `paperclip_list_agents`                                                                                                                                                                      |
-| [Dashboard](#dashboard-tools) | `paperclip_get_dashboard`                                                                                                                                                                    |
+| Group                           | Tools                                                                                                                                                                                                                                                                                    |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Identity](#identity-tools)     | `paperclip_get_me`, `paperclip_get_inbox`                                                                                                                                                                                                                                                |
+| [Issues](#issue-tools)          | `paperclip_list_issues`, `paperclip_get_issue`, `paperclip_get_heartbeat_context`, `paperclip_checkout_issue`, `paperclip_release_issue`, `paperclip_update_issue`, `paperclip_create_issue`                                                                                             |
+| [Comments](#comment-tools)      | `paperclip_list_comments`, `paperclip_add_comment`                                                                                                                                                                                                                                       |
+| [Documents](#document-tools)    | `paperclip_list_documents`, `paperclip_get_document`, `paperclip_upsert_document`                                                                                                                                                                                                        |
+| [Agents](#agent-tools)          | `paperclip_list_agents`                                                                                                                                                                                                                                                                  |
+| [Dashboard](#dashboard-tools)   | `paperclip_get_dashboard`                                                                                                                                                                                                                                                                |
+| [Approvals](#approval-tools)    | `paperclip_list_approvals`, `paperclip_get_approval`, `paperclip_create_approval`, `paperclip_approve`, `paperclip_reject`, `paperclip_request_revision`, `paperclip_resubmit_approval`, `paperclip_list_approval_comments`, `paperclip_add_approval_comment`, `paperclip_create_agent_hire` |
+| [Goals](#goal-tools)            | `paperclip_list_goals`, `paperclip_get_goal`, `paperclip_create_goal`, `paperclip_update_goal`                                                                                                                                                                                           |
+| [Projects](#project-tools)      | `paperclip_list_projects`, `paperclip_get_project`, `paperclip_create_project`, `paperclip_update_project`, `paperclip_list_workspaces`, `paperclip_create_workspace`, `paperclip_update_workspace`                                                                                      |
+| [Activity](#activity-tools)     | `paperclip_get_activity`, `paperclip_get_cost_summary`, `paperclip_get_costs_by_agent`, `paperclip_get_costs_by_project`                                                                                                                                                                 |
+| [Routines](#routine-tools)      | `paperclip_list_routines`, `paperclip_get_routine`, `paperclip_create_routine`, `paperclip_update_routine`, `paperclip_add_routine_trigger`, `paperclip_update_routine_trigger`, `paperclip_delete_routine_trigger`, `paperclip_run_routine`, `paperclip_list_routine_runs`              |
+| [Attachments](#attachment-tools)| `paperclip_list_attachments`, `paperclip_upload_attachment`, `paperclip_download_attachment`, `paperclip_delete_attachment`                                                                                                                                                              |
 
 ---
 
@@ -697,6 +703,997 @@ Result:
 ```
 
 **Errors:** 401 on auth failure.
+
+---
+
+## Approval tools
+
+Approval tools manage governance requests and the agent hire flow. Approvals must be explicitly approved or rejected by a board user or authorized agent.
+
+### `paperclip_list_approvals`
+
+List approval requests for the current company.
+
+**Input:**
+
+| Parameter | Type   | Required | Description                                          |
+|-----------|--------|----------|------------------------------------------------------|
+| `status`  | string | No       | Comma-separated status values (e.g. `pending,approved`) |
+
+**Output:** Array of approval objects.
+
+**Example:**
+
+```
+Prompt: "Show me all pending approvals."
+
+Tool call: paperclip_list_approvals { "status": "pending" }
+
+Result:
+[
+  { "id": "ca6ba09d-...", "title": "Hire senior engineer", "status": "pending", ... }
+]
+```
+
+**Errors:** 401 on auth failure.
+
+---
+
+### `paperclip_get_approval`
+
+Get a single approval request by ID, including its status and linked issues.
+
+**Input:**
+
+| Parameter    | Type   | Required | Description     |
+|--------------|--------|----------|-----------------|
+| `approvalId` | string | Yes      | Approval UUID   |
+
+**Output:** Full approval object including `status`, `linkedIssueIds`, and audit timestamps.
+
+**Example:**
+
+```
+Prompt: "Get the details for approval ca6ba09d."
+
+Tool call: paperclip_get_approval { "approvalId": "ca6ba09d-..." }
+
+Result:
+{
+  "id": "ca6ba09d-...",
+  "title": "Hire senior engineer",
+  "status": "pending",
+  "linkedIssueIds": ["..."],
+  "createdAt": "2026-04-09T00:00:00.000Z"
+}
+```
+
+**Errors:** 404 if not found; 401 on auth failure.
+
+---
+
+### `paperclip_create_approval`
+
+Create a new approval request. The run ID header is injected automatically.
+
+**Input:**
+
+| Parameter        | Type     | Required | Description                              |
+|------------------|----------|----------|------------------------------------------|
+| `title`          | string   | Yes      | Approval request title                   |
+| `description`    | string   | No       | Description / justification (markdown)   |
+| `linkedIssueIds` | string[] | No       | Issue UUIDs to link to this approval     |
+
+**Output:** Created approval object.
+
+**Example:**
+
+```
+Tool call: paperclip_create_approval {
+  "title": "Deploy new MCP server version",
+  "description": "Requesting approval to deploy v0.2.0.",
+  "linkedIssueIds": ["e06ab575-..."]
+}
+```
+
+**Errors:** 400 on invalid input; 401 on auth failure.
+
+---
+
+### `paperclip_approve`
+
+Approve an approval request. The run ID header is injected automatically.
+
+**Input:**
+
+| Parameter    | Type   | Required | Description   |
+|--------------|--------|----------|---------------|
+| `approvalId` | string | Yes      | Approval UUID |
+
+**Output:** Updated approval object with `status: "approved"`.
+
+**Errors:** 404 if not found; 409 if already resolved; 401 on auth failure.
+
+---
+
+### `paperclip_reject`
+
+Reject an approval request. The run ID header is injected automatically.
+
+**Input:**
+
+| Parameter    | Type   | Required | Description           |
+|--------------|--------|----------|-----------------------|
+| `approvalId` | string | Yes      | Approval UUID         |
+| `reason`     | string | No       | Reason for rejection  |
+
+**Output:** Updated approval object with `status: "rejected"`.
+
+**Errors:** 404 if not found; 409 if already resolved; 401 on auth failure.
+
+---
+
+### `paperclip_request_revision`
+
+Request a revision on a pending approval. The run ID header is injected automatically.
+
+**Input:**
+
+| Parameter    | Type   | Required | Description                      |
+|--------------|--------|----------|----------------------------------|
+| `approvalId` | string | Yes      | Approval UUID                    |
+| `feedback`   | string | No       | Feedback on what needs to change |
+
+**Output:** Updated approval object with `status: "revision_requested"`.
+
+**Errors:** 404 if not found; 401 on auth failure.
+
+---
+
+### `paperclip_resubmit_approval`
+
+Resubmit an approval request after addressing revision feedback. The run ID header is injected automatically.
+
+**Input:**
+
+| Parameter    | Type   | Required | Description               |
+|--------------|--------|----------|---------------------------|
+| `approvalId` | string | Yes      | Approval UUID             |
+| `comment`    | string | No       | Summary of changes made   |
+
+**Output:** Updated approval object with `status: "pending"`.
+
+**Errors:** 404 if not found; 409 if not in `revision_requested` state; 401 on auth failure.
+
+---
+
+### `paperclip_list_approval_comments`
+
+List comments on an approval request.
+
+**Input:**
+
+| Parameter    | Type   | Required | Description   |
+|--------------|--------|----------|---------------|
+| `approvalId` | string | Yes      | Approval UUID |
+
+**Output:** Array of comment objects (same shape as issue comments).
+
+**Errors:** 404 if approval not found; 401 on auth failure.
+
+---
+
+### `paperclip_add_approval_comment`
+
+Post a markdown comment on an approval request. The run ID header is injected automatically.
+
+**Input:**
+
+| Parameter    | Type   | Required | Description             |
+|--------------|--------|----------|-------------------------|
+| `approvalId` | string | Yes      | Approval UUID           |
+| `body`       | string | Yes      | Comment body (markdown) |
+
+**Output:** Created comment object.
+
+**Errors:** 404 if approval not found; 401 on auth failure.
+
+---
+
+### `paperclip_create_agent_hire`
+
+Create an agent hire request, which triggers the approval and onboarding flow. The run ID header is injected automatically.
+
+**Input:**
+
+| Parameter      | Type   | Required | Description                             |
+|----------------|--------|----------|-----------------------------------------|
+| `name`         | string | Yes      | Agent display name                      |
+| `role`         | string | Yes      | Agent role (e.g. `engineer`, `cto`)     |
+| `title`        | string | No       | Job title                               |
+| `capabilities` | string | No       | Free-text capability description        |
+| `goalId`       | string | No       | Goal UUID to link the hire to           |
+| `projectId`    | string | No       | Project UUID to associate               |
+
+**Output:** Created hire request object, including the linked approval UUID.
+
+**Example:**
+
+```
+Prompt: "Hire a new QA engineer."
+
+Tool call: paperclip_create_agent_hire {
+  "name": "QA",
+  "role": "engineer",
+  "title": "QA Engineer",
+  "capabilities": "Writes and maintains test suites.",
+  "goalId": "467f800f-..."
+}
+
+Result:
+{
+  "id": "hire-uuid-...",
+  "agentName": "QA",
+  "role": "engineer",
+  "approvalId": "ca6ba09d-...",
+  "status": "pending_approval"
+}
+```
+
+**Errors:** 400 on invalid input; 401 on auth failure.
+
+---
+
+## Goal tools
+
+### `paperclip_list_goals`
+
+List goals for the current company.
+
+**Input:** none
+
+**Output:** Array of goal objects.
+
+**Example:**
+
+```
+Prompt: "What goals does the company have?"
+
+Tool call: paperclip_list_goals {}
+
+Result:
+[
+  {
+    "id": "467f800f-b971-4494-b25e-bc1d573ad70c",
+    "title": "Create MCP to consume Paperclip API",
+    "status": "active",
+    "level": "company"
+  }
+]
+```
+
+**Errors:** 401 on auth failure.
+
+---
+
+### `paperclip_get_goal`
+
+Get a single goal by ID, including its status and linked projects.
+
+**Input:**
+
+| Parameter | Type   | Required | Description |
+|-----------|--------|----------|-------------|
+| `goalId`  | string | Yes      | Goal UUID   |
+
+**Output:** Full goal object including linked project UUIDs.
+
+**Example:**
+
+```
+Prompt: "Get goal 467f800f."
+
+Tool call: paperclip_get_goal { "goalId": "467f800f-b971-4494-b25e-bc1d573ad70c" }
+
+Result:
+{
+  "id": "467f800f-...",
+  "title": "Create MCP to consume Paperclip API",
+  "status": "active",
+  "level": "company",
+  "projectIds": ["b368fc4b-..."]
+}
+```
+
+**Errors:** 404 if not found; 401 on auth failure.
+
+---
+
+### `paperclip_create_goal`
+
+Create a new goal. `companyId` is injected from auth config. Run ID is injected automatically.
+
+**Input:**
+
+| Parameter     | Type   | Required | Description                              |
+|---------------|--------|----------|------------------------------------------|
+| `title`       | string | Yes      | Goal title                               |
+| `description` | string | No       | Goal description (markdown)              |
+| `status`      | string | No       | Initial status (default: `active`)       |
+| `level`       | string | No       | Goal level (e.g. `company`, `team`)      |
+| `parentId`    | string | No       | Parent goal UUID for nested goals        |
+
+**Output:** Created goal object.
+
+**Example:**
+
+```
+Prompt: "Create a goal to improve test coverage."
+
+Tool call: paperclip_create_goal {
+  "title": "Improve test coverage to 90%",
+  "level": "team"
+}
+
+Result:
+{
+  "id": "new-goal-uuid-...",
+  "title": "Improve test coverage to 90%",
+  "status": "active",
+  "level": "team"
+}
+```
+
+**Errors:** 400 on invalid input; 401 on auth failure.
+
+---
+
+### `paperclip_update_goal`
+
+Update a goal's title, description, or status. Run ID is injected automatically.
+
+**Input:**
+
+| Parameter     | Type   | Required | Description          |
+|---------------|--------|----------|----------------------|
+| `goalId`      | string | Yes      | Goal UUID            |
+| `title`       | string | No       | New title            |
+| `description` | string | No       | New description (markdown) |
+| `status`      | string | No       | New status           |
+
+At least one optional field must be provided.
+
+**Output:** Updated goal object.
+
+**Example:**
+
+```
+Prompt: "Mark goal 467f800f as complete."
+
+Tool call: paperclip_update_goal {
+  "goalId": "467f800f-...",
+  "status": "complete"
+}
+
+Result:
+{
+  "id": "467f800f-...",
+  "title": "Create MCP to consume Paperclip API",
+  "status": "complete"
+}
+```
+
+**Errors:** 404 if not found; 401 on auth failure.
+
+---
+
+## Project tools
+
+Project tools manage projects and their associated workspaces. A workspace links a project to a local directory (`cwd`) or remote repository (`repoUrl`) — Paperclip uses it to set up the agent's execution environment.
+
+### `paperclip_list_projects`
+
+List projects for the current company.
+
+**Input:** none
+
+**Output:** Array of project objects.
+
+**Example:**
+
+```
+Prompt: "List all projects."
+
+Tool call: paperclip_list_projects {}
+
+Result:
+[
+  {
+    "id": "b368fc4b-b137-42c6-8038-a699cb32f609",
+    "name": "Paperclip MCP",
+    "status": "in_progress",
+    "goalId": "467f800f-..."
+  }
+]
+```
+
+**Errors:** 401 on auth failure.
+
+---
+
+### `paperclip_get_project`
+
+Get a single project by ID, including its workspaces.
+
+**Input:**
+
+| Parameter   | Type   | Required | Description   |
+|-------------|--------|----------|---------------|
+| `projectId` | string | Yes      | Project UUID  |
+
+**Output:** Full project object including `workspaces` array.
+
+**Example:**
+
+```
+Prompt: "Get project b368fc4b."
+
+Tool call: paperclip_get_project { "projectId": "b368fc4b-..." }
+
+Result:
+{
+  "id": "b368fc4b-...",
+  "name": "Paperclip MCP",
+  "status": "in_progress",
+  "workspaces": [
+    { "id": "ws-uuid-...", "cwd": "/home/user/paperclip-mcp", "repoUrl": null }
+  ]
+}
+```
+
+**Errors:** 404 if not found; 401 on auth failure.
+
+---
+
+### `paperclip_create_project`
+
+Create a new project. Optionally include a workspace config to create alongside the project. `companyId` is injected from auth config. Run ID is injected automatically.
+
+**Input:**
+
+| Parameter     | Type   | Required | Description                                          |
+|---------------|--------|----------|------------------------------------------------------|
+| `name`        | string | Yes      | Project name                                         |
+| `description` | string | No       | Project description (markdown)                       |
+| `status`      | string | No       | Initial status (default: `active`)                   |
+| `goalId`      | string | No       | Goal UUID to link the project to                     |
+| `workspace`   | object | No       | Optional workspace to create alongside the project   |
+| `workspace.cwd`     | string | No | Local working directory path                       |
+| `workspace.repoUrl` | string | No | Remote repository URL                              |
+
+**Output:** Created project object.
+
+**Example:**
+
+```
+Prompt: "Create a new project called 'API Gateway' linked to goal 467f800f."
+
+Tool call: paperclip_create_project {
+  "name": "API Gateway",
+  "goalId": "467f800f-...",
+  "workspace": { "cwd": "/home/user/api-gateway" }
+}
+
+Result:
+{
+  "id": "new-proj-uuid-...",
+  "name": "API Gateway",
+  "status": "active",
+  "goalId": "467f800f-..."
+}
+```
+
+**Errors:** 400 on invalid input; 401 on auth failure.
+
+---
+
+### `paperclip_update_project`
+
+Update a project's name, description, or status. Run ID is injected automatically.
+
+**Input:**
+
+| Parameter     | Type   | Required | Description          |
+|---------------|--------|----------|----------------------|
+| `projectId`   | string | Yes      | Project UUID         |
+| `name`        | string | No       | New name             |
+| `description` | string | No       | New description (markdown) |
+| `status`      | string | No       | New status           |
+
+At least one optional field must be provided.
+
+**Output:** Updated project object.
+
+**Errors:** 404 if not found; 401 on auth failure.
+
+---
+
+### `paperclip_list_workspaces`
+
+List workspaces for a project.
+
+**Input:**
+
+| Parameter   | Type   | Required | Description  |
+|-------------|--------|----------|--------------|
+| `projectId` | string | Yes      | Project UUID |
+
+**Output:** Array of workspace objects.
+
+| Field      | Type           | Description                          |
+|------------|----------------|--------------------------------------|
+| `id`       | string         | Workspace UUID                       |
+| `cwd`      | string \| null | Local working directory path         |
+| `repoUrl`  | string \| null | Remote repository URL                |
+| `createdAt`| string         | ISO 8601 creation timestamp          |
+
+**Errors:** 404 if project not found; 401 on auth failure.
+
+---
+
+### `paperclip_create_workspace`
+
+Create a new workspace for a project. Provide at least one of `cwd` or `repoUrl`. Run ID is injected automatically.
+
+**Input:**
+
+| Parameter   | Type   | Required | Description                      |
+|-------------|--------|----------|----------------------------------|
+| `projectId` | string | Yes      | Project UUID                     |
+| `cwd`       | string | No       | Local working directory path     |
+| `repoUrl`   | string | No       | Remote repository URL            |
+
+**Output:** Created workspace object.
+
+**Example:**
+
+```
+Prompt: "Add a workspace to project b368fc4b pointing to /home/user/code."
+
+Tool call: paperclip_create_workspace {
+  "projectId": "b368fc4b-...",
+  "cwd": "/home/user/code"
+}
+
+Result:
+{
+  "id": "new-ws-uuid-...",
+  "cwd": "/home/user/code",
+  "repoUrl": null
+}
+```
+
+**Errors:** 400 on invalid input; 404 if project not found; 401 on auth failure.
+
+---
+
+### `paperclip_update_workspace`
+
+Update a workspace's `cwd` or `repoUrl`. Run ID is injected automatically.
+
+**Input:**
+
+| Parameter     | Type   | Required | Description                      |
+|---------------|--------|----------|----------------------------------|
+| `projectId`   | string | Yes      | Project UUID                     |
+| `workspaceId` | string | Yes      | Workspace UUID                   |
+| `cwd`         | string | No       | New local working directory path |
+| `repoUrl`     | string | No       | New remote repository URL        |
+
+At least one of `cwd` or `repoUrl` must be provided.
+
+**Output:** Updated workspace object.
+
+**Errors:** 404 if project or workspace not found; 401 on auth failure.
+
+---
+
+## Activity tools
+
+Activity tools provide audit trail and cost visibility across the company.
+
+### `paperclip_get_activity`
+
+Get audit trail activity for the current company. Optionally filter by agent, entity type, or entity ID.
+
+**Input:**
+
+| Parameter    | Type   | Required | Description                                       |
+|--------------|--------|----------|---------------------------------------------------|
+| `agentId`    | string | No       | Filter by agent UUID                              |
+| `entityType` | string | No       | Filter by entity type (e.g. `issue`, `approval`)  |
+| `entityId`   | string | No       | Filter by entity UUID                             |
+
+**Output:** Array of activity event objects.
+
+**Example:**
+
+```
+Prompt: "Show me all activity for the TechWriter agent."
+
+Tool call: paperclip_get_activity {
+  "agentId": "4cb0474f-2dce-4da3-af69-fc4ee0c68577"
+}
+
+Result:
+[
+  {
+    "id": "...",
+    "agentId": "4cb0474f-...",
+    "action": "update_issue",
+    "entityType": "issue",
+    "entityId": "e06ab575-...",
+    "createdAt": "2026-04-09T12:00:00.000Z"
+  }
+]
+```
+
+**Errors:** 401 on auth failure.
+
+---
+
+### `paperclip_get_cost_summary`
+
+Get a cost summary for the current company across all agents and projects.
+
+**Input:** none
+
+**Output:** Cost summary object with total spend, budget, and per-period breakdowns.
+
+**Errors:** 401 on auth failure.
+
+---
+
+### `paperclip_get_costs_by_agent`
+
+Get costs broken down by agent for the current company.
+
+**Input:** none
+
+**Output:** Array of per-agent cost objects.
+
+| Field     | Type   | Description                    |
+|-----------|--------|--------------------------------|
+| `agentId` | string | Agent UUID                     |
+| `name`    | string | Agent display name             |
+| `cents`   | number | Total spend in cents           |
+
+**Errors:** 401 on auth failure.
+
+---
+
+### `paperclip_get_costs_by_project`
+
+Get costs broken down by project for the current company.
+
+**Input:** none
+
+**Output:** Array of per-project cost objects.
+
+| Field       | Type   | Description          |
+|-------------|--------|----------------------|
+| `projectId` | string | Project UUID         |
+| `name`      | string | Project name         |
+| `cents`     | number | Total spend in cents |
+
+**Errors:** 401 on auth failure.
+
+---
+
+## Routine tools
+
+Routine tools manage recurring scheduled tasks. A routine belongs to an agent and is triggered by one or more triggers (cron schedule, webhook, or API call). Create the routine first, then add triggers separately.
+
+### `paperclip_list_routines`
+
+List all routines for the current company.
+
+**Input:** none
+
+**Output:** Array of routine objects.
+
+**Errors:** 401 on auth failure.
+
+---
+
+### `paperclip_get_routine`
+
+Get a single routine by ID, including its triggers and recent runs.
+
+**Input:**
+
+| Parameter   | Type   | Required | Description  |
+|-------------|--------|----------|--------------|
+| `routineId` | string | Yes      | Routine UUID |
+
+**Output:** Full routine object including `triggers` array and `recentRuns` array.
+
+**Errors:** 404 if not found; 401 on auth failure.
+
+---
+
+### `paperclip_create_routine`
+
+Create a new routine for an agent. Add triggers separately with `paperclip_add_routine_trigger`. Run ID is injected automatically.
+
+**Input:**
+
+| Parameter           | Type   | Required | Description                                                      |
+|---------------------|--------|----------|------------------------------------------------------------------|
+| `agentId`           | string | Yes      | Agent UUID to run the routine                                    |
+| `name`              | string | Yes      | Routine name                                                     |
+| `description`       | string | No       | Routine description                                              |
+| `concurrencyPolicy` | string | No       | What to do if a run is already active: `allow`, `forbid`, `replace` |
+| `catchUpPolicy`     | string | No       | What to do with missed runs: `skip`, `run_once`                  |
+
+**Output:** Created routine object.
+
+**Example:**
+
+```
+Prompt: "Create a daily heartbeat routine for the TechWriter agent."
+
+Tool call: paperclip_create_routine {
+  "agentId": "4cb0474f-...",
+  "name": "Daily docs check",
+  "concurrencyPolicy": "forbid",
+  "catchUpPolicy": "skip"
+}
+
+Result:
+{
+  "id": "routine-uuid-...",
+  "name": "Daily docs check",
+  "agentId": "4cb0474f-...",
+  "status": "active"
+}
+```
+
+**Errors:** 400 on invalid input; 401 on auth failure.
+
+---
+
+### `paperclip_update_routine`
+
+Update a routine's name, description, or scheduling policies. Run ID is injected automatically.
+
+**Input:**
+
+| Parameter           | Type   | Required | Description              |
+|---------------------|--------|----------|--------------------------|
+| `routineId`         | string | Yes      | Routine UUID             |
+| `name`              | string | No       | New name                 |
+| `description`       | string | No       | New description          |
+| `concurrencyPolicy` | string | No       | New concurrency policy   |
+| `catchUpPolicy`     | string | No       | New catch-up policy      |
+
+At least one optional field must be provided.
+
+**Output:** Updated routine object.
+
+**Errors:** 404 if not found; 401 on auth failure.
+
+---
+
+### `paperclip_add_routine_trigger`
+
+Add a trigger to a routine (schedule, webhook, or api). For schedule triggers, provide a cron expression in `config.cron`. Run ID is injected automatically.
+
+**Input:**
+
+| Parameter      | Type   | Required | Description                                          |
+|----------------|--------|----------|------------------------------------------------------|
+| `routineId`    | string | Yes      | Routine UUID                                         |
+| `type`         | string | Yes      | Trigger type: `schedule`, `webhook`, or `api`        |
+| `config`       | object | No       | Trigger configuration                                |
+| `config.cron`  | string | No       | Cron expression (required when `type` is `schedule`) |
+
+**Output:** Created trigger object including its UUID (needed for updates and deletes).
+
+**Example:**
+
+```
+Prompt: "Add a daily 9am schedule trigger to routine abc."
+
+Tool call: paperclip_add_routine_trigger {
+  "routineId": "routine-uuid-...",
+  "type": "schedule",
+  "config": { "cron": "0 9 * * *" }
+}
+
+Result:
+{
+  "id": "trigger-uuid-...",
+  "routineId": "routine-uuid-...",
+  "type": "schedule",
+  "config": { "cron": "0 9 * * *" }
+}
+```
+
+**Errors:** 400 on invalid input; 404 if routine not found; 401 on auth failure.
+
+---
+
+### `paperclip_update_routine_trigger`
+
+Update an existing routine trigger's type or config. Run ID is injected automatically.
+
+**Input:**
+
+| Parameter     | Type   | Required | Description                |
+|---------------|--------|----------|----------------------------|
+| `triggerId`   | string | Yes      | Routine trigger UUID       |
+| `type`        | string | No       | New trigger type           |
+| `config`      | object | No       | New trigger configuration  |
+| `config.cron` | string | No       | New cron expression        |
+
+**Output:** Updated trigger object.
+
+**Errors:** 404 if not found; 401 on auth failure.
+
+---
+
+### `paperclip_delete_routine_trigger`
+
+Delete a routine trigger. The routine itself is not deleted. Run ID is injected automatically.
+
+**Input:**
+
+| Parameter   | Type   | Required | Description          |
+|-------------|--------|----------|----------------------|
+| `triggerId` | string | Yes      | Routine trigger UUID |
+
+**Output:** Deleted trigger object or confirmation.
+
+**Errors:** 404 if not found; 401 on auth failure.
+
+---
+
+### `paperclip_run_routine`
+
+Manually trigger a routine run immediately, bypassing its schedule. Run ID is injected automatically.
+
+**Input:**
+
+| Parameter   | Type   | Required | Description  |
+|-------------|--------|----------|--------------|
+| `routineId` | string | Yes      | Routine UUID |
+
+**Output:** Created run object with `id` and `status`.
+
+**Errors:** 404 if not found; 401 on auth failure.
+
+---
+
+### `paperclip_list_routine_runs`
+
+List historical runs for a routine.
+
+**Input:**
+
+| Parameter   | Type   | Required | Description  |
+|-------------|--------|----------|--------------|
+| `routineId` | string | Yes      | Routine UUID |
+
+**Output:** Array of run objects.
+
+| Field       | Type   | Description                                     |
+|-------------|--------|-------------------------------------------------|
+| `id`        | string | Run UUID                                        |
+| `status`    | string | Run status (`running`, `completed`, `failed`)   |
+| `startedAt` | string | ISO 8601 start timestamp                        |
+| `endedAt`   | string \| null | ISO 8601 end timestamp               |
+
+**Errors:** 404 if routine not found; 401 on auth failure.
+
+---
+
+## Attachment tools
+
+Attachment tools manage file attachments on issues. Files are uploaded from the local filesystem and stored server-side. Downloaded content is returned as base64.
+
+### `paperclip_list_attachments`
+
+List all attachments on an issue.
+
+**Input:**
+
+| Parameter | Type   | Required | Description              |
+|-----------|--------|----------|--------------------------|
+| `issueId` | string | Yes      | Issue UUID or identifier |
+
+**Output:** Array of attachment metadata objects.
+
+| Field       | Type   | Description              |
+|-------------|--------|--------------------------|
+| `id`        | string | Attachment UUID          |
+| `filename`  | string | Original filename        |
+| `mimeType`  | string | MIME type                |
+| `size`      | number | File size in bytes       |
+| `createdAt` | string | ISO 8601 timestamp       |
+
+**Errors:** 404 if issue not found; 401 on auth failure.
+
+---
+
+### `paperclip_upload_attachment`
+
+Upload a local file as an attachment to an issue. Provide the absolute file path. Run ID is injected automatically.
+
+**Input:**
+
+| Parameter  | Type   | Required | Description                                                          |
+|------------|--------|----------|----------------------------------------------------------------------|
+| `issueId`  | string | Yes      | Issue UUID or identifier                                             |
+| `filePath` | string | Yes      | Absolute path to the local file to upload                            |
+| `filename` | string | No       | Override filename in the upload (defaults to basename of `filePath`) |
+| `mimeType` | string | No       | MIME type (e.g. `text/plain`, `application/pdf`)                     |
+
+**Output:** Created attachment object including its UUID.
+
+**Example:**
+
+```
+Prompt: "Attach the report at /home/user/report.pdf to PAP-15."
+
+Tool call: paperclip_upload_attachment {
+  "issueId": "PAP-15",
+  "filePath": "/home/user/report.pdf",
+  "mimeType": "application/pdf"
+}
+
+Result:
+{
+  "id": "att-uuid-...",
+  "filename": "report.pdf",
+  "mimeType": "application/pdf",
+  "size": 204800
+}
+```
+
+**Errors:** 400 if file path invalid; 404 if issue not found; 401 on auth failure.
+
+---
+
+### `paperclip_download_attachment`
+
+Download the content of an attachment by ID. Returns the content as base64.
+
+**Input:**
+
+| Parameter      | Type   | Required | Description     |
+|----------------|--------|----------|-----------------|
+| `attachmentId` | string | Yes      | Attachment UUID |
+
+**Output:** Object with `content` (base64-encoded file data) and `mimeType`.
+
+**Errors:** 404 if not found; 401 on auth failure.
+
+---
+
+### `paperclip_delete_attachment`
+
+Delete an attachment from an issue. Run ID is injected automatically.
+
+**Input:**
+
+| Parameter      | Type   | Required | Description     |
+|----------------|--------|----------|-----------------|
+| `attachmentId` | string | Yes      | Attachment UUID |
+
+**Output:** Deleted attachment object or confirmation.
+
+**Errors:** 404 if not found; 401 on auth failure.
 
 ---
 

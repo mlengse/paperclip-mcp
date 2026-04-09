@@ -1,0 +1,173 @@
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+import { McpError } from "@modelcontextprotocol/sdk/types.js";
+import { PaperclipClient } from "../client.js";
+import { activityTools } from "./activity.js";
+
+const TEST_AUTH = {
+  apiKey: "test-jwt",
+  apiUrl: "http://localhost:3100",
+  agentId: "agent-1",
+  companyId: "company-1",
+};
+
+function mockFetch(status: number, body: unknown) {
+  const calls: { url: string; init: RequestInit }[] = [];
+  const fn = async (url: string, init: RequestInit): Promise<Response> => {
+    calls.push({ url, init });
+    return new Response(body !== undefined ? JSON.stringify(body) : null, {
+      status,
+      statusText: status >= 200 && status < 300 ? "OK" : "Error",
+      headers: new Headers({ "Content-Type": "application/json" }),
+    });
+  };
+  return { fn, calls };
+}
+
+const getActivity = activityTools.find((t) => t.name === "paperclip_get_activity")!;
+const getCostSummary = activityTools.find((t) => t.name === "paperclip_get_cost_summary")!;
+const getCostsByAgent = activityTools.find((t) => t.name === "paperclip_get_costs_by_agent")!;
+const getCostsByProject = activityTools.find((t) => t.name === "paperclip_get_costs_by_project")!;
+
+describe("paperclip_get_activity", () => {
+  it("calls GET /api/companies/{id}/activity with no filters", async () => {
+    const activity = [{ id: "act-1", type: "issue.created" }];
+    const { fn, calls } = mockFetch(200, activity);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getActivity.handler({}, client);
+    assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/activity");
+    assert.equal(calls[0]!.init.method, "GET");
+    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(activity) }] });
+  });
+
+  it("appends query params when filters are provided", async () => {
+    const { fn, calls } = mockFetch(200, []);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await getActivity.handler(
+      { agentId: "agent-1", entityType: "issue", entityId: "issue-1" },
+      client
+    );
+    const url = calls[0]!.url;
+    assert.ok(url.includes("agentId=agent-1"), `URL missing agentId: ${url}`);
+    assert.ok(url.includes("entityType=issue"), `URL missing entityType: ${url}`);
+    assert.ok(url.includes("entityId=issue-1"), `URL missing entityId: ${url}`);
+  });
+
+  it("returns isError response on 500 API error", async () => {
+    const { fn } = mockFetch(500, { message: "Internal Server Error" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getActivity.handler({}, client);
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("500"));
+  });
+});
+
+describe("paperclip_get_cost_summary", () => {
+  it("calls GET /api/companies/{id}/costs/summary and returns summary", async () => {
+    const summary = { total: 1234, currency: "usd" };
+    const { fn, calls } = mockFetch(200, summary);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getCostSummary.handler({}, client);
+    assert.equal(
+      calls[0]!.url,
+      "http://localhost:3100/api/companies/company-1/costs/summary"
+    );
+    assert.equal(calls[0]!.init.method, "GET");
+    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(summary) }] });
+  });
+
+  it("throws McpError when args is not an object (validation failure, fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => getCostSummary.handler(null, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("returns isError response on 403 API error", async () => {
+    const { fn } = mockFetch(403, { message: "Forbidden" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getCostSummary.handler({}, client);
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("403"));
+  });
+});
+
+describe("paperclip_get_costs_by_agent", () => {
+  it("calls GET /api/companies/{id}/costs/by-agent and returns breakdown", async () => {
+    const breakdown = [{ agentId: "agent-1", total: 500 }];
+    const { fn, calls } = mockFetch(200, breakdown);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getCostsByAgent.handler({}, client);
+    assert.equal(
+      calls[0]!.url,
+      "http://localhost:3100/api/companies/company-1/costs/by-agent"
+    );
+    assert.equal(calls[0]!.init.method, "GET");
+    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(breakdown) }] });
+  });
+
+  it("throws McpError when args is not an object (validation failure, fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => getCostsByAgent.handler(null, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("returns isError response on 500 API error", async () => {
+    const { fn } = mockFetch(500, { message: "Internal Server Error" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getCostsByAgent.handler({}, client);
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("500"));
+  });
+});
+
+describe("paperclip_get_costs_by_project", () => {
+  it("calls GET /api/companies/{id}/costs/by-project and returns breakdown", async () => {
+    const breakdown = [{ projectId: "proj-1", total: 800 }];
+    const { fn, calls } = mockFetch(200, breakdown);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getCostsByProject.handler({}, client);
+    assert.equal(
+      calls[0]!.url,
+      "http://localhost:3100/api/companies/company-1/costs/by-project"
+    );
+    assert.equal(calls[0]!.init.method, "GET");
+    assert.deepEqual(result, {
+      content: [{ type: "text", text: JSON.stringify(breakdown) }],
+    });
+  });
+
+  it("throws McpError when args is not an object (validation failure, fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => getCostsByProject.handler(null, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("returns isError response on 500 API error", async () => {
+    const { fn } = mockFetch(500, { message: "Internal Server Error" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getCostsByProject.handler({}, client);
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("500"));
+  });
+});
