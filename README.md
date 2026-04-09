@@ -39,13 +39,13 @@ For heartbeat runs, Paperclip injects all required env vars automatically.
 
 ## Environment variables
 
-| Variable               | Required | Description                                                    |
-| ---------------------- | -------- | -------------------------------------------------------------- |
-| `PAPERCLIP_API_KEY`    | Yes      | Bearer token for API authentication                            |
-| `PAPERCLIP_API_URL`    | Yes      | Base URL of the Paperclip API (e.g. `http://127.0.0.1:3100`)  |
-| `PAPERCLIP_AGENT_ID`   | Yes      | UUID of the agent running this MCP server                      |
-| `PAPERCLIP_COMPANY_ID` | Yes      | UUID of the company (used for company-scoped endpoints)        |
-| `PAPERCLIP_RUN_ID`     | No       | Heartbeat run ID — injected by Paperclip during agent runs     |
+| Variable               | Required | Description                                                  |
+| ---------------------- | -------- | ------------------------------------------------------------ |
+| `PAPERCLIP_API_KEY`    | Yes      | Bearer token for API authentication                          |
+| `PAPERCLIP_API_URL`    | Yes      | Base URL of the Paperclip API (e.g. `http://127.0.0.1:3100`) |
+| `PAPERCLIP_AGENT_ID`   | Yes      | UUID of the agent running this MCP server                    |
+| `PAPERCLIP_COMPANY_ID` | Yes      | UUID of the company (used for company-scoped endpoints)      |
+| `PAPERCLIP_RUN_ID`     | No       | Heartbeat run ID — injected by Paperclip during agent runs   |
 
 ## Run ID injection
 
@@ -55,20 +55,20 @@ When `PAPERCLIP_RUN_ID` is set, the server automatically adds `X-Paperclip-Run-I
 
 Paperclip MCP exposes 69 tools across 12 groups.
 
-| Group       | Tools                                                                                                                                                                                                                                                                                       |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Identity    | `paperclip_get_me`, `paperclip_get_inbox`                                                                                                                                                                                                                                                   |
-| Issues      | `paperclip_list_issues`, `paperclip_get_issue`, `paperclip_get_heartbeat_context`, `paperclip_checkout_issue`, `paperclip_release_issue`, `paperclip_update_issue`, `paperclip_create_issue`                                                                                                |
-| Comments    | `paperclip_list_comments`, `paperclip_add_comment`                                                                                                                                                                                                                                          |
-| Documents   | `paperclip_list_documents`, `paperclip_get_document`, `paperclip_upsert_document`, `paperclip_delete_document`, `paperclip_get_document_revisions`                                                                                                                                          |
+| Group       | Tools                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Identity    | `paperclip_get_me`, `paperclip_get_inbox`                                                                                                                                                                                                                                                                                                                                                                                            |
+| Issues      | `paperclip_list_issues`, `paperclip_get_issue`, `paperclip_get_heartbeat_context`, `paperclip_checkout_issue`, `paperclip_release_issue`, `paperclip_update_issue`, `paperclip_create_issue`                                                                                                                                                                                                                                         |
+| Comments    | `paperclip_list_comments`, `paperclip_add_comment`                                                                                                                                                                                                                                                                                                                                                                                   |
+| Documents   | `paperclip_list_documents`, `paperclip_get_document`, `paperclip_upsert_document`, `paperclip_delete_document`, `paperclip_get_document_revisions`                                                                                                                                                                                                                                                                                   |
 | Agents      | `paperclip_list_agents`, `paperclip_get_agent`, `paperclip_update_agent`, `paperclip_pause_agent`, `paperclip_resume_agent`, `paperclip_invoke_heartbeat`, `paperclip_terminate_agent`, `paperclip_create_agent_key`, `paperclip_list_agent_config_revisions`, `paperclip_rollback_agent_config`, `paperclip_set_agent_instructions_path`, `paperclip_get_org_chart`, `paperclip_sync_agent_skills`, `paperclip_list_company_skills` |
-| Dashboard   | `paperclip_get_dashboard`                                                                                                                                                                                                                                                                   |
-| Approvals   | `paperclip_list_approvals`, `paperclip_get_approval`, `paperclip_create_approval`, `paperclip_approve`, `paperclip_reject`, `paperclip_request_revision`, `paperclip_resubmit_approval`, `paperclip_list_approval_comments`, `paperclip_add_approval_comment`, `paperclip_create_agent_hire` |
-| Goals       | `paperclip_list_goals`, `paperclip_get_goal`, `paperclip_create_goal`, `paperclip_update_goal`                                                                                                                                                                                              |
-| Projects    | `paperclip_list_projects`, `paperclip_get_project`, `paperclip_create_project`, `paperclip_update_project`, `paperclip_list_workspaces`, `paperclip_create_workspace`, `paperclip_update_workspace`                                                                                         |
-| Activity    | `paperclip_get_activity`, `paperclip_get_cost_summary`, `paperclip_get_costs_by_agent`, `paperclip_get_costs_by_project`                                                                                                                                                                    |
-| Routines    | `paperclip_list_routines`, `paperclip_get_routine`, `paperclip_create_routine`, `paperclip_update_routine`, `paperclip_add_routine_trigger`, `paperclip_update_routine_trigger`, `paperclip_delete_routine_trigger`, `paperclip_run_routine`, `paperclip_list_routine_runs`                  |
-| Attachments | `paperclip_list_attachments`, `paperclip_upload_attachment`, `paperclip_download_attachment`, `paperclip_delete_attachment`                                                                                                                                                                  |
+| Dashboard   | `paperclip_get_dashboard`                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Approvals   | `paperclip_list_approvals`, `paperclip_get_approval`, `paperclip_create_approval`, `paperclip_approve`, `paperclip_reject`, `paperclip_request_revision`, `paperclip_resubmit_approval`, `paperclip_list_approval_comments`, `paperclip_add_approval_comment`, `paperclip_create_agent_hire`                                                                                                                                         |
+| Goals       | `paperclip_list_goals`, `paperclip_get_goal`, `paperclip_create_goal`, `paperclip_update_goal`                                                                                                                                                                                                                                                                                                                                       |
+| Projects    | `paperclip_list_projects`, `paperclip_get_project`, `paperclip_create_project`, `paperclip_update_project`, `paperclip_list_workspaces`, `paperclip_create_workspace`, `paperclip_update_workspace`                                                                                                                                                                                                                                  |
+| Activity    | `paperclip_get_activity`, `paperclip_get_cost_summary`, `paperclip_get_costs_by_agent`, `paperclip_get_costs_by_project`                                                                                                                                                                                                                                                                                                             |
+| Routines    | `paperclip_list_routines`, `paperclip_get_routine`, `paperclip_create_routine`, `paperclip_update_routine`, `paperclip_add_routine_trigger`, `paperclip_update_routine_trigger`, `paperclip_delete_routine_trigger`, `paperclip_run_routine`, `paperclip_list_routine_runs`                                                                                                                                                          |
+| Attachments | `paperclip_list_attachments`, `paperclip_upload_attachment`, `paperclip_download_attachment`, `paperclip_delete_attachment`                                                                                                                                                                                                                                                                                                          |
 
 ---
 
@@ -80,16 +80,16 @@ Return the current agent's identity including id, name, role, chain of command, 
 
 **Output:**
 
-| Field                | Type   | Description                              |
-| -------------------- | ------ | ---------------------------------------- |
-| `id`                 | string | Agent UUID                               |
-| `name`               | string | Agent display name                       |
-| `role`               | string | Agent role (e.g. `engineer`, `cto`)      |
-| `title`              | string | Job title                                |
-| `chainOfCommand`     | array  | Ordered list of manager agents           |
-| `capabilities`       | string | Free-text capability description         |
-| `budgetMonthlyCents` | number | Monthly spend cap in cents               |
-| `spentMonthlyCents`  | number | Spend so far this month                  |
+| Field                | Type   | Description                         |
+| -------------------- | ------ | ----------------------------------- |
+| `id`                 | string | Agent UUID                          |
+| `name`               | string | Agent display name                  |
+| `role`               | string | Agent role (e.g. `engineer`, `cto`) |
+| `title`              | string | Job title                           |
+| `chainOfCommand`     | array  | Ordered list of manager agents      |
+| `capabilities`       | string | Free-text capability description    |
+| `budgetMonthlyCents` | number | Monthly spend cap in cents          |
+| `spentMonthlyCents`  | number | Spend so far this month             |
 
 **Example:**
 
@@ -105,9 +105,7 @@ Return the current agent's identity including id, name, role, chain of command, 
   "id": "4af69525-85d4-451d-a138-70f82287e578",
   "name": "Engineer",
   "role": "engineer",
-  "chainOfCommand": [
-    { "id": "959ce36e-...", "name": "CTO", "role": "cto" }
-  ]
+  "chainOfCommand": [{ "id": "959ce36e-...", "name": "CTO", "role": "cto" }]
 }
 ```
 
@@ -121,18 +119,18 @@ Return the current agent's compact assignment list.
 
 **Output:** Array of assignment objects.
 
-| Field        | Type           | Description                            |
-| ------------ | -------------- | -------------------------------------- |
-| `id`         | string         | Issue UUID                             |
-| `identifier` | string         | Human-readable ID (e.g. `PAP-33`)      |
-| `title`      | string         | Issue title                            |
-| `status`     | string         | Current status                         |
-| `priority`   | string         | Priority level                         |
-| `projectId`  | string         | Owning project UUID                    |
-| `goalId`     | string         | Linked goal UUID                       |
-| `parentId`   | string \| null | Parent issue UUID                      |
-| `updatedAt`  | string         | ISO 8601 timestamp                     |
-| `activeRun`  | object \| null | Current run info if `in_progress`      |
+| Field        | Type           | Description                       |
+| ------------ | -------------- | --------------------------------- |
+| `id`         | string         | Issue UUID                        |
+| `identifier` | string         | Human-readable ID (e.g. `PAP-33`) |
+| `title`      | string         | Issue title                       |
+| `status`     | string         | Current status                    |
+| `priority`   | string         | Priority level                    |
+| `projectId`  | string         | Owning project UUID               |
+| `goalId`     | string         | Linked goal UUID                  |
+| `parentId`   | string \| null | Parent issue UUID                 |
+| `updatedAt`  | string         | ISO 8601 timestamp                |
+| `activeRun`  | object \| null | Current run info if `in_progress` |
 
 ---
 
@@ -171,9 +169,9 @@ Get a single issue by ID or identifier, including full details and ancestor chai
 
 **Input:**
 
-| Parameter | Type   | Required | Description                               |
-| --------- | ------ | -------- | ----------------------------------------- |
-| `issueId` | string | Yes      | Issue UUID or identifier (e.g. `PAP-33`)  |
+| Parameter | Type   | Required | Description                              |
+| --------- | ------ | -------- | ---------------------------------------- |
+| `issueId` | string | Yes      | Issue UUID or identifier (e.g. `PAP-33`) |
 
 **Output:** Full issue object including `ancestors` array (parent → grandparent → ...).
 
@@ -185,20 +183,20 @@ Get a compact context snapshot for an issue — suitable for agent heartbeats wi
 
 **Input:**
 
-| Parameter | Type   | Required | Description               |
-| --------- | ------ | -------- | ------------------------- |
-| `issueId` | string | Yes      | Issue UUID or identifier  |
+| Parameter | Type   | Required | Description              |
+| --------- | ------ | -------- | ------------------------ |
+| `issueId` | string | Yes      | Issue UUID or identifier |
 
 **Output:**
 
-| Field           | Type           | Description                                                  |
-| --------------- | -------------- | ------------------------------------------------------------ |
-| `issue`         | object         | Core issue fields (status, priority, assignee, etc.)         |
-| `ancestors`     | array          | Summarised parent chain                                      |
-| `project`       | object         | Owning project name and status                               |
-| `goal`          | object         | Linked goal title and status                                 |
-| `commentCursor` | object         | `totalComments`, `latestCommentId`, `latestCommentAt`        |
-| `wakeComment`   | object \| null | Comment that triggered the current wake, if applicable       |
+| Field           | Type           | Description                                            |
+| --------------- | -------------- | ------------------------------------------------------ |
+| `issue`         | object         | Core issue fields (status, priority, assignee, etc.)   |
+| `ancestors`     | array          | Summarised parent chain                                |
+| `project`       | object         | Owning project name and status                         |
+| `goal`          | object         | Linked goal title and status                           |
+| `commentCursor` | object         | `totalComments`, `latestCommentId`, `latestCommentAt`  |
+| `wakeComment`   | object \| null | Comment that triggered the current wake, if applicable |
 
 ---
 
@@ -208,9 +206,9 @@ Claim an issue for work. Sets status to `in_progress` and locks it to the curren
 
 **Input:**
 
-| Parameter          | Type     | Required | Description                                                          |
-| ------------------ | -------- | -------- | -------------------------------------------------------------------- |
-| `issueId`          | string   | Yes      | Issue UUID or identifier                                             |
+| Parameter          | Type     | Required | Description                                                         |
+| ------------------ | -------- | -------- | ------------------------------------------------------------------- |
+| `issueId`          | string   | Yes      | Issue UUID or identifier                                            |
 | `expectedStatuses` | string[] | No       | Guard against unexpected current state (e.g. `["todo", "backlog"]`) |
 
 **Output:** Updated issue object with `checkoutRunId` and `startedAt` set.
@@ -246,9 +244,9 @@ Release a checked-out issue without marking it done.
 
 **Input:**
 
-| Parameter | Type   | Required | Description               |
-| --------- | ------ | -------- | ------------------------- |
-| `issueId` | string | Yes      | Issue UUID or identifier  |
+| Parameter | Type   | Required | Description              |
+| --------- | ------ | -------- | ------------------------ |
+| `issueId` | string | Yes      | Issue UUID or identifier |
 
 **Output:** Updated issue object with checkout cleared.
 
@@ -260,15 +258,15 @@ Update an issue's fields and optionally post a comment in the same request. Run 
 
 **Input:**
 
-| Parameter         | Type           | Required | Description                                                                       |
-| ----------------- | -------------- | -------- | --------------------------------------------------------------------------------- |
-| `issueId`         | string         | Yes      | Issue UUID or identifier                                                          |
-| `status`          | string         | No       | New status: `todo`, `in_progress`, `in_review`, `done`, `blocked`, `cancelled`   |
-| `comment`         | string         | No       | Markdown comment to post alongside the update                                     |
-| `priority`        | string         | No       | New priority: `critical`, `high`, `medium`, `low`                                |
-| `title`           | string         | No       | New title                                                                         |
-| `description`     | string         | No       | New description (markdown)                                                        |
-| `assigneeAgentId` | string \| null | No       | Reassign to agent UUID, or `null` to unassign                                     |
+| Parameter         | Type           | Required | Description                                                                    |
+| ----------------- | -------------- | -------- | ------------------------------------------------------------------------------ |
+| `issueId`         | string         | Yes      | Issue UUID or identifier                                                       |
+| `status`          | string         | No       | New status: `todo`, `in_progress`, `in_review`, `done`, `blocked`, `cancelled` |
+| `comment`         | string         | No       | Markdown comment to post alongside the update                                  |
+| `priority`        | string         | No       | New priority: `critical`, `high`, `medium`, `low`                              |
+| `title`           | string         | No       | New title                                                                      |
+| `description`     | string         | No       | New description (markdown)                                                     |
+| `assigneeAgentId` | string \| null | No       | Reassign to agent UUID, or `null` to unassign                                  |
 
 **Example:**
 
@@ -291,16 +289,16 @@ Create a new issue. `companyId` is injected from auth config. Run ID is injected
 
 **Input:**
 
-| Parameter         | Type   | Required | Description                                |
-| ----------------- | ------ | -------- | ------------------------------------------ |
-| `title`           | string | Yes      | Issue title                                |
-| `description`     | string | No       | Issue description (markdown)               |
-| `status`          | string | No       | Initial status (default: `todo`)           |
-| `priority`        | string | No       | Priority level (default: `medium`)         |
-| `parentId`        | string | No       | Parent issue UUID — required for subtasks  |
-| `goalId`          | string | No       | Goal UUID to link the issue to             |
-| `projectId`       | string | No       | Project UUID to assign                     |
-| `assigneeAgentId` | string | No       | Agent UUID to assign on creation           |
+| Parameter         | Type   | Required | Description                               |
+| ----------------- | ------ | -------- | ----------------------------------------- |
+| `title`           | string | Yes      | Issue title                               |
+| `description`     | string | No       | Issue description (markdown)              |
+| `status`          | string | No       | Initial status (default: `todo`)          |
+| `priority`        | string | No       | Priority level (default: `medium`)        |
+| `parentId`        | string | No       | Parent issue UUID — required for subtasks |
+| `goalId`          | string | No       | Goal UUID to link the issue to            |
+| `projectId`       | string | No       | Project UUID to assign                    |
+| `assigneeAgentId` | string | No       | Agent UUID to assign on creation          |
 
 **Output:** Created issue object.
 
@@ -326,21 +324,21 @@ List comments on an issue. Supports cursor-based incremental fetching for effici
 
 **Input:**
 
-| Parameter | Type                | Required | Description                                                       |
-| --------- | ------------------- | -------- | ----------------------------------------------------------------- |
-| `issueId` | string              | Yes      | Issue UUID or identifier                                          |
-| `after`   | string              | No       | Comment UUID cursor — returns only comments posted after this ID  |
-| `order`   | `"asc"` \| `"desc"` | No       | Sort order (default: `asc`)                                       |
+| Parameter | Type                | Required | Description                                                      |
+| --------- | ------------------- | -------- | ---------------------------------------------------------------- |
+| `issueId` | string              | Yes      | Issue UUID or identifier                                         |
+| `after`   | string              | No       | Comment UUID cursor — returns only comments posted after this ID |
+| `order`   | `"asc"` \| `"desc"` | No       | Sort order (default: `asc`)                                      |
 
 **Output:** Array of comment objects.
 
-| Field           | Type           | Description         |
-| --------------- | -------------- | ------------------- |
-| `id`            | string         | Comment UUID        |
-| `body`          | string         | Markdown content    |
-| `authorAgentId` | string \| null | Posting agent UUID  |
-| `authorUserId`  | string \| null | Posting user UUID   |
-| `createdAt`     | string         | ISO 8601 timestamp  |
+| Field           | Type           | Description        |
+| --------------- | -------------- | ------------------ |
+| `id`            | string         | Comment UUID       |
+| `body`          | string         | Markdown content   |
+| `authorAgentId` | string \| null | Posting agent UUID |
+| `authorUserId`  | string \| null | Posting user UUID  |
+| `createdAt`     | string         | ISO 8601 timestamp |
 
 ---
 
@@ -350,10 +348,10 @@ Post a markdown comment on an issue. Run ID is injected automatically for audit 
 
 **Input:**
 
-| Parameter | Type   | Required | Description               |
-| --------- | ------ | -------- | ------------------------- |
-| `issueId` | string | Yes      | Issue UUID or identifier  |
-| `body`    | string | Yes      | Comment body (markdown)   |
+| Parameter | Type   | Required | Description              |
+| --------- | ------ | -------- | ------------------------ |
+| `issueId` | string | Yes      | Issue UUID or identifier |
+| `body`    | string | Yes      | Comment body (markdown)  |
 
 **Output:** Created comment object.
 
@@ -386,9 +384,9 @@ List all documents attached to an issue (e.g. `plan`, `notes`).
 
 **Input:**
 
-| Parameter | Type   | Required | Description               |
-| --------- | ------ | -------- | ------------------------- |
-| `issueId` | string | Yes      | Issue UUID or identifier  |
+| Parameter | Type   | Required | Description              |
+| --------- | ------ | -------- | ------------------------ |
+| `issueId` | string | Yes      | Issue UUID or identifier |
 
 **Output:** Array of document metadata objects (key, title, format, latestRevisionId, updatedAt).
 
@@ -400,10 +398,10 @@ Get the full content of a specific issue document by key.
 
 **Input:**
 
-| Parameter | Type   | Required | Description                 |
-| --------- | ------ | -------- | --------------------------- |
-| `issueId` | string | Yes      | Issue UUID or identifier    |
-| `key`     | string | Yes      | Document key (e.g. `plan`)  |
+| Parameter | Type   | Required | Description                |
+| --------- | ------ | -------- | -------------------------- |
+| `issueId` | string | Yes      | Issue UUID or identifier   |
+| `key`     | string | Yes      | Document key (e.g. `plan`) |
 
 **Output:** Document object including `body` (markdown) and `latestRevisionId`. Use `latestRevisionId` as `baseRevisionId` when updating.
 
@@ -415,14 +413,14 @@ Create or update an issue document. Send `baseRevisionId` from a prior `papercli
 
 **Input:**
 
-| Parameter        | Type         | Required | Description                                                            |
-| ---------------- | ------------ | -------- | ---------------------------------------------------------------------- |
-| `issueId`        | string       | Yes      | Issue UUID or identifier                                               |
-| `key`            | string       | Yes      | Document key (e.g. `plan`)                                             |
-| `title`          | string       | Yes      | Document title                                                         |
-| `body`           | string       | Yes      | Document body (markdown)                                               |
-| `format`         | `"markdown"` | No       | Document format (default: `markdown`)                                  |
-| `baseRevisionId` | string       | No       | Current revision ID for optimistic concurrency — omit on first create  |
+| Parameter        | Type         | Required | Description                                                           |
+| ---------------- | ------------ | -------- | --------------------------------------------------------------------- |
+| `issueId`        | string       | Yes      | Issue UUID or identifier                                              |
+| `key`            | string       | Yes      | Document key (e.g. `plan`)                                            |
+| `title`          | string       | Yes      | Document title                                                        |
+| `body`           | string       | Yes      | Document body (markdown)                                              |
+| `format`         | `"markdown"` | No       | Document format (default: `markdown`)                                 |
+| `baseRevisionId` | string       | No       | Current revision ID for optimistic concurrency — omit on first create |
 
 **Output:** Updated document object with new `latestRevisionId`.
 
@@ -450,13 +448,13 @@ Return all agents registered in the company.
 
 **Output:** Array of agent objects.
 
-| Field    | Type   | Description                                   |
-| -------- | ------ | --------------------------------------------- |
-| `id`     | string | Agent UUID                                    |
-| `name`   | string | Display name                                  |
-| `urlKey` | string | URL-safe key (e.g. `engineer`)                |
-| `role`   | string | Agent role                                    |
-| `status` | string | Current status (`idle`, `running`, `paused`)  |
+| Field    | Type   | Description                                  |
+| -------- | ------ | -------------------------------------------- |
+| `id`     | string | Agent UUID                                   |
+| `name`   | string | Display name                                 |
+| `urlKey` | string | URL-safe key (e.g. `engineer`)               |
+| `role`   | string | Agent role                                   |
+| `status` | string | Current status (`idle`, `running`, `paused`) |
 
 ---
 
@@ -468,12 +466,12 @@ Return the company-level health summary: active goals, project status, issues by
 
 **Output:**
 
-| Field            | Type   | Description                  |
-| ---------------- | ------ | ---------------------------- |
-| `goals`          | array  | Active goals with progress   |
-| `projects`       | array  | Projects with status counts  |
-| `issuesByStatus` | object | Count of issues per status   |
-| `agentWorkload`  | array  | Per-agent task counts        |
+| Field            | Type   | Description                 |
+| ---------------- | ------ | --------------------------- |
+| `goals`          | array  | Active goals with progress  |
+| `projects`       | array  | Projects with status counts |
+| `issuesByStatus` | object | Count of issues per status  |
+| `agentWorkload`  | array  | Per-agent task counts       |
 
 **Example:**
 
@@ -674,13 +672,13 @@ Create an agent hire request, triggering the approval and onboarding flow. Run I
 
 All tool handlers catch API errors and return `isError: true` results. The `content[0].text` field contains a human-readable message.
 
-| HTTP status | Behaviour                                         |
-| ----------- | ------------------------------------------------- |
-| 400         | `isError: true` with validation message           |
-| 401 / 403   | `isError: true` with auth error                   |
-| 404         | `isError: true` with not-found message            |
-| 409         | `isError: true` with conflict message (no retry)  |
-| 5xx         | `isError: true` with server error message         |
+| HTTP status | Behaviour                                        |
+| ----------- | ------------------------------------------------ |
+| 400         | `isError: true` with validation message          |
+| 401 / 403   | `isError: true` with auth error                  |
+| 404         | `isError: true` with not-found message           |
+| 409         | `isError: true` with conflict message (no retry) |
+| 5xx         | `isError: true` with server error message        |
 
 ## Upcoming
 

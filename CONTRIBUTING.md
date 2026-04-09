@@ -21,14 +21,14 @@ export PAPERCLIP_COMPANY_ID=<your-company-id>
 
 ## Common commands
 
-| Task | Command |
-|------|---------|
-| Build | `npm run build` |
-| Dev (live TS) | `npm run dev` |
-| Type-check | `npm run typecheck` |
-| Lint | `npm run lint` |
-| Format | `npm run format` |
-| Run tests | `npm run test` |
+| Task            | Command              |
+| --------------- | -------------------- |
+| Build           | `npm run build`      |
+| Dev (live TS)   | `npm run dev`        |
+| Type-check      | `npm run typecheck`  |
+| Lint            | `npm run lint`       |
+| Format          | `npm run format`     |
+| Run tests       | `npm run test`       |
 | Check doc links | `npm run docs:check` |
 
 ## Branch strategy
@@ -50,6 +50,7 @@ type(scope): short description (PAP-XX if applicable)
 Types: `feat`, `fix`, `docs`, `test`, `chore`, `refactor`
 
 Examples:
+
 ```
 feat(tools): add paperclip_list_goals tool (PAP-41)
 fix(client): clear stale run ID on checkout failure (PAP-64)

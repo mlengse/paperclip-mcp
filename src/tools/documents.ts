@@ -108,8 +108,7 @@ export const documentTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_delete_document",
-    description:
-      "Delete a document from an issue by key. Run ID header is injected automatically.",
+    description: "Delete a document from an issue by key. Run ID header is injected automatically.",
     inputSchema: {
       type: "object",
       properties: {
@@ -144,9 +143,7 @@ export const documentTools: ToolDefinition[] = [
     async handler(args, client) {
       try {
         const { issueId, key } = validate(DocumentKeyInput, args);
-        const data = await client.get<unknown>(
-          `/api/issues/${issueId}/documents/${key}/revisions`
-        );
+        const data = await client.get<unknown>(`/api/issues/${issueId}/documents/${key}/revisions`);
         return { content: [{ type: "text", text: JSON.stringify(data) }] };
       } catch (err) {
         return handleApiError(err);

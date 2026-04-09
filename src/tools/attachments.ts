@@ -9,8 +9,14 @@ const ListAttachmentsInput = IssueIdSchema;
 const UploadAttachmentInput = z.object({
   issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-22)"),
   filePath: z.string().min(1).describe("Absolute path to the local file to upload"),
-  filename: z.string().optional().describe("Override filename in the upload (defaults to basename of filePath)"),
-  mimeType: z.string().optional().describe("MIME type of the file (e.g. text/plain, application/pdf)"),
+  filename: z
+    .string()
+    .optional()
+    .describe("Override filename in the upload (defaults to basename of filePath)"),
+  mimeType: z
+    .string()
+    .optional()
+    .describe("MIME type of the file (e.g. text/plain, application/pdf)"),
 });
 
 const AttachmentIdInput = z.object({
@@ -101,8 +107,7 @@ export const attachmentTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_delete_attachment",
-    description:
-      "Delete an attachment from an issue. Run ID header is injected automatically.",
+    description: "Delete an attachment from an issue. Run ID header is injected automatically.",
     inputSchema: {
       type: "object",
       properties: {

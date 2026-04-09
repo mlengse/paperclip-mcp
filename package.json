@@ -7,8 +7,15 @@
   "bin": {
     "paperclip-mcp": "dist/index.js"
   },
-  "files": ["dist"],
-  "keywords": ["mcp", "paperclip", "claude", "model-context-protocol"],
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "mcp",
+    "paperclip",
+    "claude",
+    "model-context-protocol"
+  ],
   "mcpName": "paperclip",
   "repository": {
     "type": "git",

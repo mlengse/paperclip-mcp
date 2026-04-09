@@ -215,10 +215,7 @@ describe("paperclip_request_revision", () => {
       { approvalId: "appr-1", feedback: "Need more tests" },
       client
     );
-    assert.equal(
-      calls[0]!.url,
-      "http://localhost:3100/api/approvals/appr-1/request-revision"
-    );
+    assert.equal(calls[0]!.url, "http://localhost:3100/api/approvals/appr-1/request-revision");
     assert.equal(calls[0]!.init.method, "POST");
     const body = JSON.parse(calls[0]!.init.body as string);
     assert.equal(body.feedback, "Need more tests");
@@ -323,10 +320,7 @@ describe("paperclip_add_approval_comment", () => {
     const created = { id: "cmt-new", body: "Approved!" };
     const { fn, calls } = mockFetch(200, created);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await addComment.handler(
-      { approvalId: "appr-1", body: "Approved!" },
-      client
-    );
+    const result = await addComment.handler({ approvalId: "appr-1", body: "Approved!" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/approvals/appr-1/comments");
     assert.equal(calls[0]!.init.method, "POST");
     const reqBody = JSON.parse(calls[0]!.init.body as string);
@@ -365,10 +359,7 @@ describe("paperclip_create_agent_hire", () => {
       { name: "Alice", role: "engineer", title: "Senior Engineer", goalId: "goal-1" },
       client
     );
-    assert.equal(
-      calls[0]!.url,
-      "http://localhost:3100/api/companies/company-1/agent-hires"
-    );
+    assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/agent-hires");
     assert.equal(calls[0]!.init.method, "POST");
     const body = JSON.parse(calls[0]!.init.body as string);
     assert.equal(body.name, "Alice");

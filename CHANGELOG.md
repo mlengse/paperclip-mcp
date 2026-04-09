@@ -18,6 +18,7 @@ _No unreleased changes._
 ### Added
 
 **Agent management tools (13 tools)**
+
 - `paperclip_get_agent` — fetch a single agent by ID
 - `paperclip_update_agent` — update agent name, description, or config
 - `paperclip_pause_agent` — pause a running agent
@@ -33,10 +34,12 @@ _No unreleased changes._
 - `paperclip_list_company_skills` — list all skills registered in the company
 
 **Document tools (2 tools)**
+
 - `paperclip_delete_document` — delete an issue document by key
 - `paperclip_get_document_revisions` — fetch the full revision history for an issue document
 
 **Documentation**
+
 - `docs/reference/tools.md` updated with full entries for all 15 new tools
 - `docs/architecture/overview.md` updated with new agent management module
 
@@ -49,6 +52,7 @@ Initial public release of the Paperclip MCP server.
 ### Added
 
 **Core infrastructure**
+
 - MCP stdio server using `@modelcontextprotocol/sdk` with `ListTools` / `CallTool` handlers
 - `PaperclipClient` typed HTTP wrapper with automatic `Authorization` and `X-Paperclip-Run-Id` header injection
 - Fail-fast env var validation at startup (`PAPERCLIP_API_KEY`, `PAPERCLIP_API_URL`, `PAPERCLIP_AGENT_ID`, `PAPERCLIP_COMPANY_ID`)
@@ -57,6 +61,7 @@ Initial public release of the Paperclip MCP server.
 - MCP tool annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`) on all tools
 
 **Tool groups (54 tools across 12 groups)**
+
 - **Identity** (2): `paperclip_get_me`, `paperclip_get_inbox`
 - **Issues** (7): `paperclip_list_issues`, `paperclip_get_issue`, `paperclip_get_heartbeat_context`, `paperclip_checkout_issue`, `paperclip_release_issue`, `paperclip_update_issue`, `paperclip_create_issue`
 - **Comments** (2): `paperclip_list_comments`, `paperclip_add_comment`
@@ -71,6 +76,7 @@ Initial public release of the Paperclip MCP server.
 - **Attachments** (4): `paperclip_list_attachments`, `paperclip_upload_attachment`, `paperclip_download_attachment`, `paperclip_delete_attachment`
 
 **Documentation**
+
 - `docs/guides/getting-started.md` — installation and first tool call walkthrough
 - `docs/guides/configuration.md` — environment variable reference
 - `docs/reference/tools.md` — full per-tool reference (all 54 tools)
@@ -78,6 +84,7 @@ Initial public release of the Paperclip MCP server.
 - `npm run docs:check` link-validation script
 
 **Testing**
+
 - Unit tests for all tool handlers using Node.js built-in `node:test`
 - CI workflow on push/PR to `main` and `develop`
 

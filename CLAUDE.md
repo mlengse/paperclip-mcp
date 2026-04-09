@@ -8,18 +8,18 @@ paperclip-mcp is a Model Context Protocol (MCP) stdio server that exposes the Pa
 
 ## Commands
 
-| Task | Command |
-|------|---------|
-| Build | `npm run build` |
-| Dev (live TS) | `npm run dev` |
-| Start (compiled) | `npm run start` |
-| Type-check only | `npm run typecheck` |
-| Lint | `npm run lint` |
-| Format | `npm run format` |
-| Format check | `npm run format:check` |
-| Run all tests | `npm run test` |
-| Run single test | `node --import tsx/esm --test src/path/to.test.ts` |
-| Check doc links | `npm run docs:check` |
+| Task             | Command                                            |
+| ---------------- | -------------------------------------------------- |
+| Build            | `npm run build`                                    |
+| Dev (live TS)    | `npm run dev`                                      |
+| Start (compiled) | `npm run start`                                    |
+| Type-check only  | `npm run typecheck`                                |
+| Lint             | `npm run lint`                                     |
+| Format           | `npm run format`                                   |
+| Format check     | `npm run format:check`                             |
+| Run all tests    | `npm run test`                                     |
+| Run single test  | `node --import tsx/esm --test src/path/to.test.ts` |
+| Check doc links  | `npm run docs:check`                               |
 
 ## Architecture
 
@@ -36,16 +36,16 @@ paperclip-mcp is a Model Context Protocol (MCP) stdio server that exposes the Pa
 
 **Tool modules** (each exports a `ToolDefinition[]`):
 
-| Module | Tools |
-|--------|-------|
-| `identity.ts` | `paperclip_get_me`, `paperclip_get_inbox` |
-| `issues.ts` | 7 issue lifecycle tools (list, get, checkout, release, update, create, heartbeat) |
-| `comments.ts` | `paperclip_list_comments`, `paperclip_add_comment` |
-| `documents.ts` | `paperclip_list_documents`, `paperclip_get_document`, `paperclip_upsert_document` |
-| `agents.ts` | `paperclip_list_agents`, `paperclip_get_agent`, `paperclip_update_agent`, `paperclip_pause_agent`, `paperclip_resume_agent`, `paperclip_invoke_heartbeat`, `paperclip_terminate_agent`, `paperclip_create_agent_key`, `paperclip_list_agent_config_revisions`, `paperclip_rollback_agent_config`, `paperclip_set_agent_instructions_path`, `paperclip_get_org_chart`, `paperclip_sync_agent_skills`, `paperclip_list_company_skills` |
-| `dashboard.ts` | `paperclip_get_dashboard` |
-| `goals.ts` | `paperclip_list_goals`, `paperclip_get_goal`, `paperclip_create_goal`, `paperclip_update_goal` |
-| `projects.ts` | `paperclip_list_projects`, `paperclip_get_project`, `paperclip_create_project`, `paperclip_update_project`, `paperclip_list_workspaces`, `paperclip_create_workspace`, `paperclip_update_workspace` |
+| Module         | Tools                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `identity.ts`  | `paperclip_get_me`, `paperclip_get_inbox`                                                                                                                                                                                                                                                                                                                                                                                            |
+| `issues.ts`    | 7 issue lifecycle tools (list, get, checkout, release, update, create, heartbeat)                                                                                                                                                                                                                                                                                                                                                    |
+| `comments.ts`  | `paperclip_list_comments`, `paperclip_add_comment`                                                                                                                                                                                                                                                                                                                                                                                   |
+| `documents.ts` | `paperclip_list_documents`, `paperclip_get_document`, `paperclip_upsert_document`                                                                                                                                                                                                                                                                                                                                                    |
+| `agents.ts`    | `paperclip_list_agents`, `paperclip_get_agent`, `paperclip_update_agent`, `paperclip_pause_agent`, `paperclip_resume_agent`, `paperclip_invoke_heartbeat`, `paperclip_terminate_agent`, `paperclip_create_agent_key`, `paperclip_list_agent_config_revisions`, `paperclip_rollback_agent_config`, `paperclip_set_agent_instructions_path`, `paperclip_get_org_chart`, `paperclip_sync_agent_skills`, `paperclip_list_company_skills` |
+| `dashboard.ts` | `paperclip_get_dashboard`                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `goals.ts`     | `paperclip_list_goals`, `paperclip_get_goal`, `paperclip_create_goal`, `paperclip_update_goal`                                                                                                                                                                                                                                                                                                                                       |
+| `projects.ts`  | `paperclip_list_projects`, `paperclip_get_project`, `paperclip_create_project`, `paperclip_update_project`, `paperclip_list_workspaces`, `paperclip_create_workspace`, `paperclip_update_workspace`                                                                                                                                                                                                                                  |
 
 ## Adding a New Tool
 
@@ -95,16 +95,14 @@ Scrum Master (next heartbeat) → catches orphaned in_review → @QA · closes d
 7. Set `in_review` + post `@QA — ready for review on PAP-XX`.
 8. Exit and wait for QA.
 
-**After QA approves (APPROVE):**
-9. Merge branch to `develop`, clean worktree. No leftovers.
-10. Set issue to `done`. Post closing comment.
-11. Exit cleanly.
+**After QA approves (APPROVE):** 9. Merge branch to `develop`, clean worktree. No leftovers. 10. Set issue to `done`. Post closing comment. 11. Exit cleanly.
 
 **Merge to develop happens ONLY after all "done" requirements are met (code + review + tests pass).**
 
 ### Comment Format
 
 Use structured comments with @-mentions:
+
 - `@QA — ready for review on PAP-XX. Changes: {summary}`
 - `@Engineer — changes needed: {bullet list}`
 - `@CTO — blocked on PAP-XX: {reason}`
@@ -119,6 +117,7 @@ Use structured comments with @-mentions:
 ### Creating Issues
 
 Any agent can create a `backlog` issue when they discover a gap, blocker, or improvement:
+
 - Use `sequential-thinking` MCP server to structure the issue well.
 - Include: clear title, description with context, acceptance criteria, goalId, parentId.
 - Post `@Scrum Master — created PAP-XX for {reason}`.
@@ -183,19 +182,19 @@ BMAD agents Quinn (QA) and Amelia (Developer) have fundamental ownership to revi
 
 While the MCP server is under development, use curl for Paperclip operations:
 
-| Operation | Command |
-|-----------|---------|
-| List issues | `curl -s "http://127.0.0.1:3100/api/companies/00041315-a3cb-4cd0-99e4-c715ebf13326/issues"` |
-| Create issue | `curl -s -X POST -H "Content-Type: application/json" -d '{"title":"...","status":"todo","priority":"medium","projectId":"b368fc4b-b137-42c6-8038-a699cb32f609","goalId":"467f800f-b971-4494-b25e-bc1d573ad70c","assigneeAgentId":"959ce36e-5398-4980-b5b3-df7dd999bcb3"}' "http://127.0.0.1:3100/api/companies/00041315-a3cb-4cd0-99e4-c715ebf13326/issues"` |
-| Get dashboard | `curl -s "http://127.0.0.1:3100/api/companies/00041315-a3cb-4cd0-99e4-c715ebf13326/dashboard"` |
-| Trigger CTO | `curl -s -X POST "http://127.0.0.1:3100/api/agents/959ce36e-5398-4980-b5b3-df7dd999bcb3/heartbeat/invoke"` |
-| List agents | `curl -s "http://127.0.0.1:3100/api/companies/00041315-a3cb-4cd0-99e4-c715ebf13326/agents"` |
+| Operation     | Command                                                                                                                                                                                                                                                                                                                                                      |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| List issues   | `curl -s "http://127.0.0.1:3100/api/companies/00041315-a3cb-4cd0-99e4-c715ebf13326/issues"`                                                                                                                                                                                                                                                                  |
+| Create issue  | `curl -s -X POST -H "Content-Type: application/json" -d '{"title":"...","status":"todo","priority":"medium","projectId":"b368fc4b-b137-42c6-8038-a699cb32f609","goalId":"467f800f-b971-4494-b25e-bc1d573ad70c","assigneeAgentId":"959ce36e-5398-4980-b5b3-df7dd999bcb3"}' "http://127.0.0.1:3100/api/companies/00041315-a3cb-4cd0-99e4-c715ebf13326/issues"` |
+| Get dashboard | `curl -s "http://127.0.0.1:3100/api/companies/00041315-a3cb-4cd0-99e4-c715ebf13326/dashboard"`                                                                                                                                                                                                                                                               |
+| Trigger CTO   | `curl -s -X POST "http://127.0.0.1:3100/api/agents/959ce36e-5398-4980-b5b3-df7dd999bcb3/heartbeat/invoke"`                                                                                                                                                                                                                                                   |
+| List agents   | `curl -s "http://127.0.0.1:3100/api/companies/00041315-a3cb-4cd0-99e4-c715ebf13326/agents"`                                                                                                                                                                                                                                                                  |
 
 ## MCP Servers
 
 Two MCP servers are available via `.mcp.json`. Use them when they help — don't force them into simple tasks.
 
-| Server | When to use |
-|--------|-------------|
-| `sequential-thinking` | Multi-step planning, architecture decisions, complex debugging |
-| `memory` | Persist project decisions, architecture context, or conventions across sessions |
+| Server                | When to use                                                                     |
+| --------------------- | ------------------------------------------------------------------------------- |
+| `sequential-thinking` | Multi-step planning, architecture decisions, complex debugging                  |
+| `memory`              | Persist project decisions, architecture context, or conventions across sessions |

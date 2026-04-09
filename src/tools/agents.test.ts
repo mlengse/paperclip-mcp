@@ -544,7 +544,10 @@ describe("paperclip_sync_agent_skills", () => {
 
 describe("paperclip_list_company_skills", () => {
   it("calls GET /api/companies/{id}/skills and returns skill list", async () => {
-    const skills = [{ id: "skill-1", name: "paperclip" }, { id: "skill-2", name: "commit-commands" }];
+    const skills = [
+      { id: "skill-1", name: "paperclip" },
+      { id: "skill-2", name: "commit-commands" },
+    ];
     const { fn, calls } = mockFetch(200, skills);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await listCompanySkills.handler({}, client);
@@ -565,7 +568,8 @@ describe("paperclip_list_company_skills", () => {
     const { fn, calls } = mockFetch(200, {});
     const client = new PaperclipClient(TEST_AUTH, fn);
     await assert.rejects(
-      () => listCompanySkills.handler("not-an-object" as unknown as Record<string, unknown>, client),
+      () =>
+        listCompanySkills.handler("not-an-object" as unknown as Record<string, unknown>, client),
       (err: unknown) => {
         assert.ok(err instanceof McpError);
         return true;

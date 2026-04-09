@@ -54,9 +54,7 @@ export const activityTools: ToolDefinition[] = [
     async handler(args, client) {
       try {
         validate(NoInput, args);
-        const data = await client.get<unknown>(
-          `/api/companies/${client.companyId}/costs/summary`
-        );
+        const data = await client.get<unknown>(`/api/companies/${client.companyId}/costs/summary`);
         return { content: [{ type: "text", text: JSON.stringify(data) }] };
       } catch (err) {
         return handleApiError(err);
@@ -75,9 +73,7 @@ export const activityTools: ToolDefinition[] = [
     async handler(args, client) {
       try {
         validate(NoInput, args);
-        const data = await client.get<unknown>(
-          `/api/companies/${client.companyId}/costs/by-agent`
-        );
+        const data = await client.get<unknown>(`/api/companies/${client.companyId}/costs/by-agent`);
         return { content: [{ type: "text", text: JSON.stringify(data) }] };
       } catch (err) {
         return handleApiError(err);

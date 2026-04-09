@@ -98,8 +98,7 @@ export const approvalTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_create_approval",
-    description:
-      "Create a new approval request. Run ID header is injected automatically.",
+    description: "Create a new approval request. Run ID header is injected automatically.",
     inputSchema: {
       type: "object",
       properties: {

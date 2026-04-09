@@ -207,8 +207,7 @@ describe("paperclip_add_routine_trigger", () => {
     const { fn, calls } = mockFetch(200, {});
     const client = new PaperclipClient(TEST_AUTH, fn);
     await assert.rejects(
-      () =>
-        addTrigger.handler({ routineId: "routine-1", type: "invalid-type" as never }, client),
+      () => addTrigger.handler({ routineId: "routine-1", type: "invalid-type" as never }, client),
       (err: unknown) => {
         assert.ok(err instanceof McpError);
         return true;
@@ -220,10 +219,7 @@ describe("paperclip_add_routine_trigger", () => {
   it("returns isError response on 400 API error", async () => {
     const { fn } = mockFetch(400, { message: "Invalid trigger config" });
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await addTrigger.handler(
-      { routineId: "routine-1", type: "schedule" },
-      client
-    );
+    const result = await addTrigger.handler({ routineId: "routine-1", type: "schedule" }, client);
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("400"));
   });
@@ -234,10 +230,7 @@ describe("paperclip_update_routine_trigger", () => {
     const updated = { id: "trig-1", type: "webhook", config: {} };
     const { fn, calls } = mockFetch(200, updated);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await updateTrigger.handler(
-      { triggerId: "trig-1", type: "webhook" },
-      client
-    );
+    const result = await updateTrigger.handler({ triggerId: "trig-1", type: "webhook" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/routine-triggers/trig-1");
     assert.equal(calls[0]!.init.method, "PATCH");
     const body = JSON.parse(calls[0]!.init.body as string);
@@ -335,7 +328,10 @@ describe("paperclip_run_routine", () => {
 
 describe("paperclip_list_routine_runs", () => {
   it("calls GET /api/routines/{id}/runs and returns run history", async () => {
-    const runs = [{ id: "run-1", status: "completed" }, { id: "run-2", status: "failed" }];
+    const runs = [
+      { id: "run-1", status: "completed" },
+      { id: "run-2", status: "failed" },
+    ];
     const { fn, calls } = mockFetch(200, runs);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await listRuns.handler({ routineId: "routine-1" }, client);

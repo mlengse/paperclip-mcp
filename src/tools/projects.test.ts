@@ -260,10 +260,7 @@ describe("paperclip_update_workspace", () => {
       { projectId: "proj-1", workspaceId: "ws-1", cwd: "/new-app" },
       client
     );
-    assert.equal(
-      calls[0]!.url,
-      "http://localhost:3100/api/projects/proj-1/workspaces/ws-1"
-    );
+    assert.equal(calls[0]!.url, "http://localhost:3100/api/projects/proj-1/workspaces/ws-1");
     assert.equal(calls[0]!.init.method, "PATCH");
     const body = JSON.parse(calls[0]!.init.body as string);
     assert.equal(body.cwd, "/new-app");

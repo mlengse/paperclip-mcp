@@ -19,20 +19,20 @@ Results are returned as `content[0].text` containing JSON-serialised API respons
 
 ## Tool groups
 
-| Group                           | Tools                                                                                                                                                                                                                                                                                    |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Identity](#identity-tools)     | `paperclip_get_me`, `paperclip_get_inbox`                                                                                                                                                                                                                                                |
-| [Issues](#issue-tools)          | `paperclip_list_issues`, `paperclip_get_issue`, `paperclip_get_heartbeat_context`, `paperclip_checkout_issue`, `paperclip_release_issue`, `paperclip_update_issue`, `paperclip_create_issue`                                                                                             |
-| [Comments](#comment-tools)      | `paperclip_list_comments`, `paperclip_add_comment`                                                                                                                                                                                                                                       |
-| [Documents](#document-tools)    | `paperclip_list_documents`, `paperclip_get_document`, `paperclip_upsert_document`, `paperclip_delete_document`, `paperclip_get_document_revisions`                                                                                                                                       |
-| [Agents](#agent-tools)          | `paperclip_list_agents`, `paperclip_get_agent`, `paperclip_update_agent`, `paperclip_pause_agent`, `paperclip_resume_agent`, `paperclip_invoke_heartbeat`, `paperclip_terminate_agent`, `paperclip_create_agent_key`, `paperclip_list_agent_config_revisions`, `paperclip_rollback_agent_config`, `paperclip_set_agent_instructions_path`, `paperclip_get_org_chart`, `paperclip_sync_agent_skills`, `paperclip_list_company_skills` |
-| [Dashboard](#dashboard-tools)   | `paperclip_get_dashboard`                                                                                                                                                                                                                                                                |
-| [Approvals](#approval-tools)    | `paperclip_list_approvals`, `paperclip_get_approval`, `paperclip_create_approval`, `paperclip_approve`, `paperclip_reject`, `paperclip_request_revision`, `paperclip_resubmit_approval`, `paperclip_list_approval_comments`, `paperclip_add_approval_comment`, `paperclip_create_agent_hire` |
-| [Goals](#goal-tools)            | `paperclip_list_goals`, `paperclip_get_goal`, `paperclip_create_goal`, `paperclip_update_goal`                                                                                                                                                                                           |
-| [Projects](#project-tools)      | `paperclip_list_projects`, `paperclip_get_project`, `paperclip_create_project`, `paperclip_update_project`, `paperclip_list_workspaces`, `paperclip_create_workspace`, `paperclip_update_workspace`                                                                                      |
-| [Activity](#activity-tools)     | `paperclip_get_activity`, `paperclip_get_cost_summary`, `paperclip_get_costs_by_agent`, `paperclip_get_costs_by_project`                                                                                                                                                                 |
-| [Routines](#routine-tools)      | `paperclip_list_routines`, `paperclip_get_routine`, `paperclip_create_routine`, `paperclip_update_routine`, `paperclip_add_routine_trigger`, `paperclip_update_routine_trigger`, `paperclip_delete_routine_trigger`, `paperclip_run_routine`, `paperclip_list_routine_runs`              |
-| [Attachments](#attachment-tools)| `paperclip_list_attachments`, `paperclip_upload_attachment`, `paperclip_download_attachment`, `paperclip_delete_attachment`                                                                                                                                                              |
+| Group                            | Tools                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [Identity](#identity-tools)      | `paperclip_get_me`, `paperclip_get_inbox`                                                                                                                                                                                                                                                                                                                                                                                            |
+| [Issues](#issue-tools)           | `paperclip_list_issues`, `paperclip_get_issue`, `paperclip_get_heartbeat_context`, `paperclip_checkout_issue`, `paperclip_release_issue`, `paperclip_update_issue`, `paperclip_create_issue`                                                                                                                                                                                                                                         |
+| [Comments](#comment-tools)       | `paperclip_list_comments`, `paperclip_add_comment`                                                                                                                                                                                                                                                                                                                                                                                   |
+| [Documents](#document-tools)     | `paperclip_list_documents`, `paperclip_get_document`, `paperclip_upsert_document`, `paperclip_delete_document`, `paperclip_get_document_revisions`                                                                                                                                                                                                                                                                                   |
+| [Agents](#agent-tools)           | `paperclip_list_agents`, `paperclip_get_agent`, `paperclip_update_agent`, `paperclip_pause_agent`, `paperclip_resume_agent`, `paperclip_invoke_heartbeat`, `paperclip_terminate_agent`, `paperclip_create_agent_key`, `paperclip_list_agent_config_revisions`, `paperclip_rollback_agent_config`, `paperclip_set_agent_instructions_path`, `paperclip_get_org_chart`, `paperclip_sync_agent_skills`, `paperclip_list_company_skills` |
+| [Dashboard](#dashboard-tools)    | `paperclip_get_dashboard`                                                                                                                                                                                                                                                                                                                                                                                                            |
+| [Approvals](#approval-tools)     | `paperclip_list_approvals`, `paperclip_get_approval`, `paperclip_create_approval`, `paperclip_approve`, `paperclip_reject`, `paperclip_request_revision`, `paperclip_resubmit_approval`, `paperclip_list_approval_comments`, `paperclip_add_approval_comment`, `paperclip_create_agent_hire`                                                                                                                                         |
+| [Goals](#goal-tools)             | `paperclip_list_goals`, `paperclip_get_goal`, `paperclip_create_goal`, `paperclip_update_goal`                                                                                                                                                                                                                                                                                                                                       |
+| [Projects](#project-tools)       | `paperclip_list_projects`, `paperclip_get_project`, `paperclip_create_project`, `paperclip_update_project`, `paperclip_list_workspaces`, `paperclip_create_workspace`, `paperclip_update_workspace`                                                                                                                                                                                                                                  |
+| [Activity](#activity-tools)      | `paperclip_get_activity`, `paperclip_get_cost_summary`, `paperclip_get_costs_by_agent`, `paperclip_get_costs_by_project`                                                                                                                                                                                                                                                                                                             |
+| [Routines](#routine-tools)       | `paperclip_list_routines`, `paperclip_get_routine`, `paperclip_create_routine`, `paperclip_update_routine`, `paperclip_add_routine_trigger`, `paperclip_update_routine_trigger`, `paperclip_delete_routine_trigger`, `paperclip_run_routine`, `paperclip_list_routine_runs`                                                                                                                                                          |
+| [Attachments](#attachment-tools) | `paperclip_list_attachments`, `paperclip_upload_attachment`, `paperclip_download_attachment`, `paperclip_delete_attachment`                                                                                                                                                                                                                                                                                                          |
 
 ---
 
@@ -638,9 +638,9 @@ Delete a document from an issue by key. Use when a document is no longer relevan
 
 **Input:**
 
-| Parameter | Type   | Required | Description                        |
-| --------- | ------ | -------- | ---------------------------------- |
-| `issueId` | string | Yes      | Issue UUID or identifier           |
+| Parameter | Type   | Required | Description                          |
+| --------- | ------ | -------- | ------------------------------------ |
+| `issueId` | string | Yes      | Issue UUID or identifier             |
 | `key`     | string | Yes      | Document key to delete (e.g. `plan`) |
 
 **Output:** Confirmation object (empty body or `{ "ok": true }` on success).
@@ -676,10 +676,10 @@ Get the full revision history for an issue document. Use to audit changes or rec
 
 **Output:** Array of revision objects, newest first.
 
-| Field        | Type   | Description                             |
-| ------------ | ------ | --------------------------------------- |
-| `revisionId` | string | UUID of this revision                   |
-| `body`       | string | Document body at this revision          |
+| Field        | Type   | Description                                |
+| ------------ | ------ | ------------------------------------------ |
+| `revisionId` | string | UUID of this revision                      |
+| `body`       | string | Document body at this revision             |
 | `createdAt`  | string | ISO 8601 timestamp when revision was saved |
 
 **Example:**
@@ -755,7 +755,7 @@ Get full details for a single agent by ID.
 **Input:**
 
 | Parameter | Type   | Required | Description |
-|-----------|--------|----------|-------------|
+| --------- | ------ | -------- | ----------- |
 | `agentId` | string | Yes      | Agent UUID  |
 
 **Output:** Full agent object including adapter config, skills, and chain of command.
@@ -791,7 +791,7 @@ Update an agent's name, title, capabilities, or status. Run ID header is injecte
 **Input:**
 
 | Parameter      | Type   | Required | Description                          |
-|----------------|--------|----------|--------------------------------------|
+| -------------- | ------ | -------- | ------------------------------------ |
 | `agentId`      | string | Yes      | Agent UUID                           |
 | `name`         | string | No       | New display name                     |
 | `title`        | string | No       | New job title                        |
@@ -827,7 +827,7 @@ Pause an agent, preventing it from starting new heartbeat runs.
 **Input:**
 
 | Parameter | Type   | Required | Description |
-|-----------|--------|----------|-------------|
+| --------- | ------ | -------- | ----------- |
 | `agentId` | string | Yes      | Agent UUID  |
 
 **Output:** Updated agent object with `status: "paused"`.
@@ -854,7 +854,7 @@ Resume a paused agent, allowing it to start new heartbeat runs.
 **Input:**
 
 | Parameter | Type   | Required | Description |
-|-----------|--------|----------|-------------|
+| --------- | ------ | -------- | ----------- |
 | `agentId` | string | Yes      | Agent UUID  |
 
 **Output:** Updated agent object with `status: "idle"`.
@@ -881,7 +881,7 @@ Manually trigger a heartbeat run for an agent immediately, bypassing the schedul
 **Input:**
 
 | Parameter | Type   | Required | Description |
-|-----------|--------|----------|-------------|
+| --------- | ------ | -------- | ----------- |
 | `agentId` | string | Yes      | Agent UUID  |
 
 **Output:** Created run object with `id` and `status`.
@@ -908,7 +908,7 @@ Permanently deactivate an agent. **This action is irreversible** — the agent c
 **Input:**
 
 | Parameter | Type   | Required | Description |
-|-----------|--------|----------|-------------|
+| --------- | ------ | -------- | ----------- |
 | `agentId` | string | Yes      | Agent UUID  |
 
 **Output:** Terminated agent object.
@@ -923,11 +923,11 @@ Create a long-lived API key for an agent. Returns the key value — store it sec
 
 **Input:**
 
-| Parameter   | Type   | Required | Description                   |
-|-------------|--------|----------|-------------------------------|
-| `agentId`   | string | Yes      | Agent UUID                    |
-| `name`      | string | No       | Key label                     |
-| `expiresAt` | string | No       | ISO 8601 expiry date          |
+| Parameter   | Type   | Required | Description          |
+| ----------- | ------ | -------- | -------------------- |
+| `agentId`   | string | Yes      | Agent UUID           |
+| `name`      | string | No       | Key label            |
+| `expiresAt` | string | No       | ISO 8601 expiry date |
 
 **Output:** Created key object including the `key` value (shown once only).
 
@@ -961,13 +961,13 @@ List the config revision history for an agent.
 **Input:**
 
 | Parameter | Type   | Required | Description |
-|-----------|--------|----------|-------------|
+| --------- | ------ | -------- | ----------- |
 | `agentId` | string | Yes      | Agent UUID  |
 
 **Output:** Array of config revision objects.
 
 | Field       | Type   | Description                        |
-|-------------|--------|------------------------------------|
+| ----------- | ------ | ---------------------------------- |
 | `id`        | string | Revision UUID                      |
 | `createdAt` | string | ISO 8601 timestamp of the revision |
 | `diff`      | object | What changed in this revision      |
@@ -983,7 +983,7 @@ Rollback an agent's config to a previous revision. Run ID header is injected aut
 **Input:**
 
 | Parameter    | Type   | Required | Description                         |
-|--------------|--------|----------|-------------------------------------|
+| ------------ | ------ | -------- | ----------------------------------- |
 | `agentId`    | string | Yes      | Agent UUID                          |
 | `revisionId` | string | Yes      | Config revision UUID to rollback to |
 
@@ -1013,11 +1013,11 @@ Set or clear the AGENTS.md instructions file path for an agent. Send `null` to c
 
 **Input:**
 
-| Parameter        | Type            | Required | Description                                                         |
-|------------------|-----------------|----------|---------------------------------------------------------------------|
-| `agentId`        | string          | Yes      | Agent UUID                                                          |
-| `path`           | string \| null  | Yes      | Path to AGENTS.md file, or `null` to clear                         |
-| `adapterConfigKey` | string        | No       | Adapter config key override for non-standard adapters               |
+| Parameter          | Type           | Required | Description                                           |
+| ------------------ | -------------- | -------- | ----------------------------------------------------- |
+| `agentId`          | string         | Yes      | Agent UUID                                            |
+| `path`             | string \| null | Yes      | Path to AGENTS.md file, or `null` to clear            |
+| `adapterConfigKey` | string         | No       | Adapter config key override for non-standard adapters |
 
 **Output:** Updated agent object with the new instructions path.
 
@@ -1082,10 +1082,10 @@ Sync the desired skill set for an agent — adds skills not yet assigned and rem
 
 **Input:**
 
-| Parameter      | Type     | Required | Description                                              |
-|----------------|----------|----------|----------------------------------------------------------|
-| `agentId`      | string   | Yes      | Agent UUID                                               |
-| `desiredSkills`| string[] | Yes      | Complete list of skill names the agent should have       |
+| Parameter       | Type     | Required | Description                                        |
+| --------------- | -------- | -------- | -------------------------------------------------- |
+| `agentId`       | string   | Yes      | Agent UUID                                         |
+| `desiredSkills` | string[] | Yes      | Complete list of skill names the agent should have |
 
 **Output:** Sync result object listing added and removed skills.
 
@@ -1119,13 +1119,13 @@ List all skills installed in the company.
 
 **Output:** Array of company skill objects.
 
-| Field       | Type   | Description                              |
-|-------------|--------|------------------------------------------|
-| `id`        | string | Skill UUID                               |
-| `name`      | string | Skill name (used in `desiredSkills`)     |
-| `title`     | string | Human-readable title                     |
-| `source`    | string | Origin of the skill (e.g. `scanned`)     |
-| `createdAt` | string | ISO 8601 timestamp                       |
+| Field       | Type   | Description                          |
+| ----------- | ------ | ------------------------------------ |
+| `id`        | string | Skill UUID                           |
+| `name`      | string | Skill name (used in `desiredSkills`) |
+| `title`     | string | Human-readable title                 |
+| `source`    | string | Origin of the skill (e.g. `scanned`) |
+| `createdAt` | string | ISO 8601 timestamp                   |
 
 **Example:**
 
@@ -1192,8 +1192,8 @@ List approval requests for the current company.
 
 **Input:**
 
-| Parameter | Type   | Required | Description                                          |
-|-----------|--------|----------|------------------------------------------------------|
+| Parameter | Type   | Required | Description                                             |
+| --------- | ------ | -------- | ------------------------------------------------------- |
 | `status`  | string | No       | Comma-separated status values (e.g. `pending,approved`) |
 
 **Output:** Array of approval objects.
@@ -1221,9 +1221,9 @@ Get a single approval request by ID, including its status and linked issues.
 
 **Input:**
 
-| Parameter    | Type   | Required | Description     |
-|--------------|--------|----------|-----------------|
-| `approvalId` | string | Yes      | Approval UUID   |
+| Parameter    | Type   | Required | Description   |
+| ------------ | ------ | -------- | ------------- |
+| `approvalId` | string | Yes      | Approval UUID |
 
 **Output:** Full approval object including `status`, `linkedIssueIds`, and audit timestamps.
 
@@ -1254,11 +1254,11 @@ Create a new approval request. The run ID header is injected automatically.
 
 **Input:**
 
-| Parameter        | Type     | Required | Description                              |
-|------------------|----------|----------|------------------------------------------|
-| `title`          | string   | Yes      | Approval request title                   |
-| `description`    | string   | No       | Description / justification (markdown)   |
-| `linkedIssueIds` | string[] | No       | Issue UUIDs to link to this approval     |
+| Parameter        | Type     | Required | Description                            |
+| ---------------- | -------- | -------- | -------------------------------------- |
+| `title`          | string   | Yes      | Approval request title                 |
+| `description`    | string   | No       | Description / justification (markdown) |
+| `linkedIssueIds` | string[] | No       | Issue UUIDs to link to this approval   |
 
 **Output:** Created approval object.
 
@@ -1283,7 +1283,7 @@ Approve an approval request. The run ID header is injected automatically.
 **Input:**
 
 | Parameter    | Type   | Required | Description   |
-|--------------|--------|----------|---------------|
+| ------------ | ------ | -------- | ------------- |
 | `approvalId` | string | Yes      | Approval UUID |
 
 **Output:** Updated approval object with `status: "approved"`.
@@ -1298,10 +1298,10 @@ Reject an approval request. The run ID header is injected automatically.
 
 **Input:**
 
-| Parameter    | Type   | Required | Description           |
-|--------------|--------|----------|-----------------------|
-| `approvalId` | string | Yes      | Approval UUID         |
-| `reason`     | string | No       | Reason for rejection  |
+| Parameter    | Type   | Required | Description          |
+| ------------ | ------ | -------- | -------------------- |
+| `approvalId` | string | Yes      | Approval UUID        |
+| `reason`     | string | No       | Reason for rejection |
 
 **Output:** Updated approval object with `status: "rejected"`.
 
@@ -1316,7 +1316,7 @@ Request a revision on a pending approval. The run ID header is injected automati
 **Input:**
 
 | Parameter    | Type   | Required | Description                      |
-|--------------|--------|----------|----------------------------------|
+| ------------ | ------ | -------- | -------------------------------- |
 | `approvalId` | string | Yes      | Approval UUID                    |
 | `feedback`   | string | No       | Feedback on what needs to change |
 
@@ -1332,10 +1332,10 @@ Resubmit an approval request after addressing revision feedback. The run ID head
 
 **Input:**
 
-| Parameter    | Type   | Required | Description               |
-|--------------|--------|----------|---------------------------|
-| `approvalId` | string | Yes      | Approval UUID             |
-| `comment`    | string | No       | Summary of changes made   |
+| Parameter    | Type   | Required | Description             |
+| ------------ | ------ | -------- | ----------------------- |
+| `approvalId` | string | Yes      | Approval UUID           |
+| `comment`    | string | No       | Summary of changes made |
 
 **Output:** Updated approval object with `status: "pending"`.
 
@@ -1350,7 +1350,7 @@ List comments on an approval request.
 **Input:**
 
 | Parameter    | Type   | Required | Description   |
-|--------------|--------|----------|---------------|
+| ------------ | ------ | -------- | ------------- |
 | `approvalId` | string | Yes      | Approval UUID |
 
 **Output:** Array of comment objects (same shape as issue comments).
@@ -1366,7 +1366,7 @@ Post a markdown comment on an approval request. The run ID header is injected au
 **Input:**
 
 | Parameter    | Type   | Required | Description             |
-|--------------|--------|----------|-------------------------|
+| ------------ | ------ | -------- | ----------------------- |
 | `approvalId` | string | Yes      | Approval UUID           |
 | `body`       | string | Yes      | Comment body (markdown) |
 
@@ -1382,14 +1382,14 @@ Create an agent hire request, which triggers the approval and onboarding flow. T
 
 **Input:**
 
-| Parameter      | Type   | Required | Description                             |
-|----------------|--------|----------|-----------------------------------------|
-| `name`         | string | Yes      | Agent display name                      |
-| `role`         | string | Yes      | Agent role (e.g. `engineer`, `cto`)     |
-| `title`        | string | No       | Job title                               |
-| `capabilities` | string | No       | Free-text capability description        |
-| `goalId`       | string | No       | Goal UUID to link the hire to           |
-| `projectId`    | string | No       | Project UUID to associate               |
+| Parameter      | Type   | Required | Description                         |
+| -------------- | ------ | -------- | ----------------------------------- |
+| `name`         | string | Yes      | Agent display name                  |
+| `role`         | string | Yes      | Agent role (e.g. `engineer`, `cto`) |
+| `title`        | string | No       | Job title                           |
+| `capabilities` | string | No       | Free-text capability description    |
+| `goalId`       | string | No       | Goal UUID to link the hire to       |
+| `projectId`    | string | No       | Project UUID to associate           |
 
 **Output:** Created hire request object, including the linked approval UUID.
 
@@ -1459,7 +1459,7 @@ Get a single goal by ID, including its status and linked projects.
 **Input:**
 
 | Parameter | Type   | Required | Description |
-|-----------|--------|----------|-------------|
+| --------- | ------ | -------- | ----------- |
 | `goalId`  | string | Yes      | Goal UUID   |
 
 **Output:** Full goal object including linked project UUIDs.
@@ -1491,13 +1491,13 @@ Create a new goal. `companyId` is injected from auth config. Run ID is injected 
 
 **Input:**
 
-| Parameter     | Type   | Required | Description                              |
-|---------------|--------|----------|------------------------------------------|
-| `title`       | string | Yes      | Goal title                               |
-| `description` | string | No       | Goal description (markdown)              |
-| `status`      | string | No       | Initial status (default: `active`)       |
-| `level`       | string | No       | Goal level (e.g. `company`, `team`)      |
-| `parentId`    | string | No       | Parent goal UUID for nested goals        |
+| Parameter     | Type   | Required | Description                         |
+| ------------- | ------ | -------- | ----------------------------------- |
+| `title`       | string | Yes      | Goal title                          |
+| `description` | string | No       | Goal description (markdown)         |
+| `status`      | string | No       | Initial status (default: `active`)  |
+| `level`       | string | No       | Goal level (e.g. `company`, `team`) |
+| `parentId`    | string | No       | Parent goal UUID for nested goals   |
 
 **Output:** Created goal object.
 
@@ -1530,12 +1530,12 @@ Update a goal's title, description, or status. Run ID is injected automatically.
 
 **Input:**
 
-| Parameter     | Type   | Required | Description          |
-|---------------|--------|----------|----------------------|
-| `goalId`      | string | Yes      | Goal UUID            |
-| `title`       | string | No       | New title            |
+| Parameter     | Type   | Required | Description                |
+| ------------- | ------ | -------- | -------------------------- |
+| `goalId`      | string | Yes      | Goal UUID                  |
+| `title`       | string | No       | New title                  |
 | `description` | string | No       | New description (markdown) |
-| `status`      | string | No       | New status           |
+| `status`      | string | No       | New status                 |
 
 At least one optional field must be provided.
 
@@ -1603,9 +1603,9 @@ Get a single project by ID, including its workspaces.
 
 **Input:**
 
-| Parameter   | Type   | Required | Description   |
-|-------------|--------|----------|---------------|
-| `projectId` | string | Yes      | Project UUID  |
+| Parameter   | Type   | Required | Description  |
+| ----------- | ------ | -------- | ------------ |
+| `projectId` | string | Yes      | Project UUID |
 
 **Output:** Full project object including `workspaces` array.
 
@@ -1637,15 +1637,15 @@ Create a new project. Optionally include a workspace config to create alongside 
 
 **Input:**
 
-| Parameter     | Type   | Required | Description                                          |
-|---------------|--------|----------|------------------------------------------------------|
-| `name`        | string | Yes      | Project name                                         |
-| `description` | string | No       | Project description (markdown)                       |
-| `status`      | string | No       | Initial status (default: `active`)                   |
-| `goalId`      | string | No       | Goal UUID to link the project to                     |
-| `workspace`   | object | No       | Optional workspace to create alongside the project   |
-| `workspace.cwd`     | string | No | Local working directory path                       |
-| `workspace.repoUrl` | string | No | Remote repository URL                              |
+| Parameter           | Type   | Required | Description                                        |
+| ------------------- | ------ | -------- | -------------------------------------------------- |
+| `name`              | string | Yes      | Project name                                       |
+| `description`       | string | No       | Project description (markdown)                     |
+| `status`            | string | No       | Initial status (default: `active`)                 |
+| `goalId`            | string | No       | Goal UUID to link the project to                   |
+| `workspace`         | object | No       | Optional workspace to create alongside the project |
+| `workspace.cwd`     | string | No       | Local working directory path                       |
+| `workspace.repoUrl` | string | No       | Remote repository URL                              |
 
 **Output:** Created project object.
 
@@ -1679,12 +1679,12 @@ Update a project's name, description, or status. Run ID is injected automaticall
 
 **Input:**
 
-| Parameter     | Type   | Required | Description          |
-|---------------|--------|----------|----------------------|
-| `projectId`   | string | Yes      | Project UUID         |
-| `name`        | string | No       | New name             |
+| Parameter     | Type   | Required | Description                |
+| ------------- | ------ | -------- | -------------------------- |
+| `projectId`   | string | Yes      | Project UUID               |
+| `name`        | string | No       | New name                   |
 | `description` | string | No       | New description (markdown) |
-| `status`      | string | No       | New status           |
+| `status`      | string | No       | New status                 |
 
 At least one optional field must be provided.
 
@@ -1701,17 +1701,17 @@ List workspaces for a project.
 **Input:**
 
 | Parameter   | Type   | Required | Description  |
-|-------------|--------|----------|--------------|
+| ----------- | ------ | -------- | ------------ |
 | `projectId` | string | Yes      | Project UUID |
 
 **Output:** Array of workspace objects.
 
-| Field      | Type           | Description                          |
-|------------|----------------|--------------------------------------|
-| `id`       | string         | Workspace UUID                       |
-| `cwd`      | string \| null | Local working directory path         |
-| `repoUrl`  | string \| null | Remote repository URL                |
-| `createdAt`| string         | ISO 8601 creation timestamp          |
+| Field       | Type           | Description                  |
+| ----------- | -------------- | ---------------------------- |
+| `id`        | string         | Workspace UUID               |
+| `cwd`       | string \| null | Local working directory path |
+| `repoUrl`   | string \| null | Remote repository URL        |
+| `createdAt` | string         | ISO 8601 creation timestamp  |
 
 **Errors:** 404 if project not found; 401 on auth failure.
 
@@ -1723,11 +1723,11 @@ Create a new workspace for a project. Provide at least one of `cwd` or `repoUrl`
 
 **Input:**
 
-| Parameter   | Type   | Required | Description                      |
-|-------------|--------|----------|----------------------------------|
-| `projectId` | string | Yes      | Project UUID                     |
-| `cwd`       | string | No       | Local working directory path     |
-| `repoUrl`   | string | No       | Remote repository URL            |
+| Parameter   | Type   | Required | Description                  |
+| ----------- | ------ | -------- | ---------------------------- |
+| `projectId` | string | Yes      | Project UUID                 |
+| `cwd`       | string | No       | Local working directory path |
+| `repoUrl`   | string | No       | Remote repository URL        |
 
 **Output:** Created workspace object.
 
@@ -1760,7 +1760,7 @@ Update a workspace's `cwd` or `repoUrl`. Run ID is injected automatically.
 **Input:**
 
 | Parameter     | Type   | Required | Description                      |
-|---------------|--------|----------|----------------------------------|
+| ------------- | ------ | -------- | -------------------------------- |
 | `projectId`   | string | Yes      | Project UUID                     |
 | `workspaceId` | string | Yes      | Workspace UUID                   |
 | `cwd`         | string | No       | New local working directory path |
@@ -1784,11 +1784,11 @@ Get audit trail activity for the current company. Optionally filter by agent, en
 
 **Input:**
 
-| Parameter    | Type   | Required | Description                                       |
-|--------------|--------|----------|---------------------------------------------------|
-| `agentId`    | string | No       | Filter by agent UUID                              |
-| `entityType` | string | No       | Filter by entity type (e.g. `issue`, `approval`)  |
-| `entityId`   | string | No       | Filter by entity UUID                             |
+| Parameter    | Type   | Required | Description                                      |
+| ------------ | ------ | -------- | ------------------------------------------------ |
+| `agentId`    | string | No       | Filter by agent UUID                             |
+| `entityType` | string | No       | Filter by entity type (e.g. `issue`, `approval`) |
+| `entityId`   | string | No       | Filter by entity UUID                            |
 
 **Output:** Array of activity event objects.
 
@@ -1838,11 +1838,11 @@ Get costs broken down by agent for the current company.
 
 **Output:** Array of per-agent cost objects.
 
-| Field     | Type   | Description                    |
-|-----------|--------|--------------------------------|
-| `agentId` | string | Agent UUID                     |
-| `name`    | string | Agent display name             |
-| `cents`   | number | Total spend in cents           |
+| Field     | Type   | Description          |
+| --------- | ------ | -------------------- |
+| `agentId` | string | Agent UUID           |
+| `name`    | string | Agent display name   |
+| `cents`   | number | Total spend in cents |
 
 **Errors:** 401 on auth failure.
 
@@ -1857,7 +1857,7 @@ Get costs broken down by project for the current company.
 **Output:** Array of per-project cost objects.
 
 | Field       | Type   | Description          |
-|-------------|--------|----------------------|
+| ----------- | ------ | -------------------- |
 | `projectId` | string | Project UUID         |
 | `name`      | string | Project name         |
 | `cents`     | number | Total spend in cents |
@@ -1889,7 +1889,7 @@ Get a single routine by ID, including its triggers and recent runs.
 **Input:**
 
 | Parameter   | Type   | Required | Description  |
-|-------------|--------|----------|--------------|
+| ----------- | ------ | -------- | ------------ |
 | `routineId` | string | Yes      | Routine UUID |
 
 **Output:** Full routine object including `triggers` array and `recentRuns` array.
@@ -1904,13 +1904,13 @@ Create a new routine for an agent. Add triggers separately with `paperclip_add_r
 
 **Input:**
 
-| Parameter           | Type   | Required | Description                                                      |
-|---------------------|--------|----------|------------------------------------------------------------------|
-| `agentId`           | string | Yes      | Agent UUID to run the routine                                    |
-| `name`              | string | Yes      | Routine name                                                     |
-| `description`       | string | No       | Routine description                                              |
+| Parameter           | Type   | Required | Description                                                         |
+| ------------------- | ------ | -------- | ------------------------------------------------------------------- |
+| `agentId`           | string | Yes      | Agent UUID to run the routine                                       |
+| `name`              | string | Yes      | Routine name                                                        |
+| `description`       | string | No       | Routine description                                                 |
 | `concurrencyPolicy` | string | No       | What to do if a run is already active: `allow`, `forbid`, `replace` |
-| `catchUpPolicy`     | string | No       | What to do with missed runs: `skip`, `run_once`                  |
+| `catchUpPolicy`     | string | No       | What to do with missed runs: `skip`, `run_once`                     |
 
 **Output:** Created routine object.
 
@@ -1945,13 +1945,13 @@ Update a routine's name, description, or scheduling policies. Run ID is injected
 
 **Input:**
 
-| Parameter           | Type   | Required | Description              |
-|---------------------|--------|----------|--------------------------|
-| `routineId`         | string | Yes      | Routine UUID             |
-| `name`              | string | No       | New name                 |
-| `description`       | string | No       | New description          |
-| `concurrencyPolicy` | string | No       | New concurrency policy   |
-| `catchUpPolicy`     | string | No       | New catch-up policy      |
+| Parameter           | Type   | Required | Description            |
+| ------------------- | ------ | -------- | ---------------------- |
+| `routineId`         | string | Yes      | Routine UUID           |
+| `name`              | string | No       | New name               |
+| `description`       | string | No       | New description        |
+| `concurrencyPolicy` | string | No       | New concurrency policy |
+| `catchUpPolicy`     | string | No       | New catch-up policy    |
 
 At least one optional field must be provided.
 
@@ -1967,12 +1967,12 @@ Add a trigger to a routine (schedule, webhook, or api). For schedule triggers, p
 
 **Input:**
 
-| Parameter      | Type   | Required | Description                                          |
-|----------------|--------|----------|------------------------------------------------------|
-| `routineId`    | string | Yes      | Routine UUID                                         |
-| `type`         | string | Yes      | Trigger type: `schedule`, `webhook`, or `api`        |
-| `config`       | object | No       | Trigger configuration                                |
-| `config.cron`  | string | No       | Cron expression (required when `type` is `schedule`) |
+| Parameter     | Type   | Required | Description                                          |
+| ------------- | ------ | -------- | ---------------------------------------------------- |
+| `routineId`   | string | Yes      | Routine UUID                                         |
+| `type`        | string | Yes      | Trigger type: `schedule`, `webhook`, or `api`        |
+| `config`      | object | No       | Trigger configuration                                |
+| `config.cron` | string | No       | Cron expression (required when `type` is `schedule`) |
 
 **Output:** Created trigger object including its UUID (needed for updates and deletes).
 
@@ -2006,12 +2006,12 @@ Update an existing routine trigger's type or config. Run ID is injected automati
 
 **Input:**
 
-| Parameter     | Type   | Required | Description                |
-|---------------|--------|----------|----------------------------|
-| `triggerId`   | string | Yes      | Routine trigger UUID       |
-| `type`        | string | No       | New trigger type           |
-| `config`      | object | No       | New trigger configuration  |
-| `config.cron` | string | No       | New cron expression        |
+| Parameter     | Type   | Required | Description               |
+| ------------- | ------ | -------- | ------------------------- |
+| `triggerId`   | string | Yes      | Routine trigger UUID      |
+| `type`        | string | No       | New trigger type          |
+| `config`      | object | No       | New trigger configuration |
+| `config.cron` | string | No       | New cron expression       |
 
 **Output:** Updated trigger object.
 
@@ -2026,7 +2026,7 @@ Delete a routine trigger. The routine itself is not deleted. Run ID is injected 
 **Input:**
 
 | Parameter   | Type   | Required | Description          |
-|-------------|--------|----------|----------------------|
+| ----------- | ------ | -------- | -------------------- |
 | `triggerId` | string | Yes      | Routine trigger UUID |
 
 **Output:** Deleted trigger object or confirmation.
@@ -2042,7 +2042,7 @@ Manually trigger a routine run immediately, bypassing its schedule. Run ID is in
 **Input:**
 
 | Parameter   | Type   | Required | Description  |
-|-------------|--------|----------|--------------|
+| ----------- | ------ | -------- | ------------ |
 | `routineId` | string | Yes      | Routine UUID |
 
 **Output:** Created run object with `id` and `status`.
@@ -2058,17 +2058,17 @@ List historical runs for a routine.
 **Input:**
 
 | Parameter   | Type   | Required | Description  |
-|-------------|--------|----------|--------------|
+| ----------- | ------ | -------- | ------------ |
 | `routineId` | string | Yes      | Routine UUID |
 
 **Output:** Array of run objects.
 
-| Field       | Type   | Description                                     |
-|-------------|--------|-------------------------------------------------|
-| `id`        | string | Run UUID                                        |
-| `status`    | string | Run status (`running`, `completed`, `failed`)   |
-| `startedAt` | string | ISO 8601 start timestamp                        |
-| `endedAt`   | string \| null | ISO 8601 end timestamp               |
+| Field       | Type           | Description                                   |
+| ----------- | -------------- | --------------------------------------------- |
+| `id`        | string         | Run UUID                                      |
+| `status`    | string         | Run status (`running`, `completed`, `failed`) |
+| `startedAt` | string         | ISO 8601 start timestamp                      |
+| `endedAt`   | string \| null | ISO 8601 end timestamp                        |
 
 **Errors:** 404 if routine not found; 401 on auth failure.
 
@@ -2085,18 +2085,18 @@ List all attachments on an issue.
 **Input:**
 
 | Parameter | Type   | Required | Description              |
-|-----------|--------|----------|--------------------------|
+| --------- | ------ | -------- | ------------------------ |
 | `issueId` | string | Yes      | Issue UUID or identifier |
 
 **Output:** Array of attachment metadata objects.
 
-| Field       | Type   | Description              |
-|-------------|--------|--------------------------|
-| `id`        | string | Attachment UUID          |
-| `filename`  | string | Original filename        |
-| `mimeType`  | string | MIME type                |
-| `size`      | number | File size in bytes       |
-| `createdAt` | string | ISO 8601 timestamp       |
+| Field       | Type   | Description        |
+| ----------- | ------ | ------------------ |
+| `id`        | string | Attachment UUID    |
+| `filename`  | string | Original filename  |
+| `mimeType`  | string | MIME type          |
+| `size`      | number | File size in bytes |
+| `createdAt` | string | ISO 8601 timestamp |
 
 **Errors:** 404 if issue not found; 401 on auth failure.
 
@@ -2109,7 +2109,7 @@ Upload a local file as an attachment to an issue. Provide the absolute file path
 **Input:**
 
 | Parameter  | Type   | Required | Description                                                          |
-|------------|--------|----------|----------------------------------------------------------------------|
+| ---------- | ------ | -------- | -------------------------------------------------------------------- |
 | `issueId`  | string | Yes      | Issue UUID or identifier                                             |
 | `filePath` | string | Yes      | Absolute path to the local file to upload                            |
 | `filename` | string | No       | Override filename in the upload (defaults to basename of `filePath`) |
@@ -2148,7 +2148,7 @@ Download the content of an attachment by ID. Returns the content as base64.
 **Input:**
 
 | Parameter      | Type   | Required | Description     |
-|----------------|--------|----------|-----------------|
+| -------------- | ------ | -------- | --------------- |
 | `attachmentId` | string | Yes      | Attachment UUID |
 
 **Output:** Object with `content` (base64-encoded file data) and `mimeType`.
@@ -2164,7 +2164,7 @@ Delete an attachment from an issue. Run ID is injected automatically.
 **Input:**
 
 | Parameter      | Type   | Required | Description     |
-|----------------|--------|----------|-----------------|
+| -------------- | ------ | -------- | --------------- |
 | `attachmentId` | string | Yes      | Attachment UUID |
 
 **Output:** Deleted attachment object or confirmation.

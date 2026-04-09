@@ -3,7 +3,7 @@
 ## Supported versions
 
 | Version | Supported |
-|---------|-----------|
+| ------- | --------- |
 | 0.1.x   | Yes       |
 
 ## Reporting a vulnerability
@@ -13,6 +13,7 @@
 To report a vulnerability, email the maintainers directly (see the `authors` field in `package.json`), or use GitHub's private [Security Advisories](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability) feature.
 
 Please include:
+
 - A description of the vulnerability and its potential impact
 - Steps to reproduce or a proof-of-concept
 - Any suggested mitigations you are aware of

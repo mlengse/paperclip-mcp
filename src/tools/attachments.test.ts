@@ -31,9 +31,7 @@ function mockFetch(status: number, body: unknown) {
 
 const listAttachments = attachmentTools.find((t) => t.name === "paperclip_list_attachments")!;
 const uploadAttachment = attachmentTools.find((t) => t.name === "paperclip_upload_attachment")!;
-const downloadAttachment = attachmentTools.find(
-  (t) => t.name === "paperclip_download_attachment"
-)!;
+const downloadAttachment = attachmentTools.find((t) => t.name === "paperclip_download_attachment")!;
 const deleteAttachment = attachmentTools.find((t) => t.name === "paperclip_delete_attachment")!;
 
 describe("paperclip_list_attachments", () => {

@@ -68,10 +68,7 @@ describe("paperclip_get_cost_summary", () => {
     const { fn, calls } = mockFetch(200, summary);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await getCostSummary.handler({}, client);
-    assert.equal(
-      calls[0]!.url,
-      "http://localhost:3100/api/companies/company-1/costs/summary"
-    );
+    assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/costs/summary");
     assert.equal(calls[0]!.init.method, "GET");
     assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(summary) }] });
   });
@@ -104,10 +101,7 @@ describe("paperclip_get_costs_by_agent", () => {
     const { fn, calls } = mockFetch(200, breakdown);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await getCostsByAgent.handler({}, client);
-    assert.equal(
-      calls[0]!.url,
-      "http://localhost:3100/api/companies/company-1/costs/by-agent"
-    );
+    assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/costs/by-agent");
     assert.equal(calls[0]!.init.method, "GET");
     assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(breakdown) }] });
   });
@@ -140,10 +134,7 @@ describe("paperclip_get_costs_by_project", () => {
     const { fn, calls } = mockFetch(200, breakdown);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await getCostsByProject.handler({}, client);
-    assert.equal(
-      calls[0]!.url,
-      "http://localhost:3100/api/companies/company-1/costs/by-project"
-    );
+    assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/costs/by-project");
     assert.equal(calls[0]!.init.method, "GET");
     assert.deepEqual(result, {
       content: [{ type: "text", text: JSON.stringify(breakdown) }],

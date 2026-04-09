@@ -54,17 +54,17 @@ Owns the `ToolDefinition` and `ToolAnnotations` interfaces:
 
 ```ts
 interface ToolAnnotations {
-  readOnlyHint?: boolean;     // true → tool never modifies state
-  destructiveHint?: boolean;  // true → tool may have irreversible side-effects
-  idempotentHint?: boolean;   // true → repeated calls with same args are safe
-  openWorldHint?: boolean;    // true → tool may interact with external services
+  readOnlyHint?: boolean; // true → tool never modifies state
+  destructiveHint?: boolean; // true → tool may have irreversible side-effects
+  idempotentHint?: boolean; // true → repeated calls with same args are safe
+  openWorldHint?: boolean; // true → tool may interact with external services
 }
 
 interface ToolDefinition {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>; // JSON Schema passed to the MCP host
-  annotations?: ToolAnnotations;        // optional MCP 1.5 behavioural hints
+  annotations?: ToolAnnotations; // optional MCP 1.5 behavioural hints
   handler: (args: unknown, client: PaperclipClient) => Promise<ToolResult>;
 }
 ```
@@ -73,10 +73,10 @@ Annotations are forwarded to the MCP host in `tools/list` responses, allowing ho
 
 `registerAllTools` builds a `Map<name, ToolDefinition>` from the `ALL_TOOLS` array (populated by tool modules) and registers two MCP request handlers:
 
-| Handler                  | MCP schema   | What it does                                                                          |
-| ------------------------ | ------------ | ------------------------------------------------------------------------------------- |
+| Handler                  | MCP schema   | What it does                                                                              |
+| ------------------------ | ------------ | ----------------------------------------------------------------------------------------- |
 | `ListToolsRequestSchema` | `tools/list` | Returns `name`, `description`, `inputSchema`, and `annotations` for every registered tool |
-| `CallToolRequestSchema`  | `tools/call` | Looks up the tool by name, calls its `handler`, returns `ToolResult`                  |
+| `CallToolRequestSchema`  | `tools/call` | Looks up the tool by name, calls its `handler`, returns `ToolResult`                      |
 
 An unknown tool name raises `McpError(ErrorCode.MethodNotFound)`.
 
@@ -84,33 +84,33 @@ An unknown tool name raises `McpError(ErrorCode.MethodNotFound)`.
 
 Each file exports an array of `ToolDefinition` objects. Tool groups:
 
-| Module          | Tools                                                                                                                                                                                                                                                                                         |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `identity.ts`   | `paperclip_get_me`, `paperclip_get_inbox`                                                                                                                                                                                                                                                     |
-| `issues.ts`     | `paperclip_list_issues`, `paperclip_get_issue`, `paperclip_get_heartbeat_context`, `paperclip_checkout_issue`, `paperclip_release_issue`, `paperclip_update_issue`, `paperclip_create_issue`                                                                                                  |
-| `comments.ts`   | `paperclip_list_comments`, `paperclip_add_comment`                                                                                                                                                                                                                                            |
-| `documents.ts`  | `paperclip_list_documents`, `paperclip_get_document`, `paperclip_upsert_document`                                                                                                                                                                                                             |
-| `agents.ts`     | `paperclip_list_agents`                                                                                                                                                                                                                                                                       |
-| `dashboard.ts`  | `paperclip_get_dashboard`                                                                                                                                                                                                                                                                     |
-| `approvals.ts`  | `paperclip_list_approvals`, `paperclip_get_approval`, `paperclip_create_approval`, `paperclip_approve`, `paperclip_reject`, `paperclip_request_revision`, `paperclip_resubmit_approval`, `paperclip_list_approval_comments`, `paperclip_add_approval_comment`, `paperclip_create_agent_hire`   |
-| `goals.ts`      | `paperclip_list_goals`, `paperclip_get_goal`, `paperclip_create_goal`, `paperclip_update_goal`                                                                                                                                                                                                |
-| `projects.ts`   | `paperclip_list_projects`, `paperclip_get_project`, `paperclip_create_project`, `paperclip_update_project`, `paperclip_list_workspaces`, `paperclip_create_workspace`, `paperclip_update_workspace`                                                                                           |
-| `activity.ts`   | `paperclip_get_activity`, `paperclip_get_cost_summary`, `paperclip_get_costs_by_agent`, `paperclip_get_costs_by_project`                                                                                                                                                                      |
-| `routines.ts`   | `paperclip_list_routines`, `paperclip_get_routine`, `paperclip_create_routine`, `paperclip_update_routine`, `paperclip_add_routine_trigger`, `paperclip_update_routine_trigger`, `paperclip_delete_routine_trigger`, `paperclip_run_routine`, `paperclip_list_routine_runs`                    |
-| `attachments.ts`| `paperclip_list_attachments`, `paperclip_upload_attachment`, `paperclip_download_attachment`, `paperclip_delete_attachment`                                                                                                                                                                   |
+| Module           | Tools                                                                                                                                                                                                                                                                                        |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `identity.ts`    | `paperclip_get_me`, `paperclip_get_inbox`                                                                                                                                                                                                                                                    |
+| `issues.ts`      | `paperclip_list_issues`, `paperclip_get_issue`, `paperclip_get_heartbeat_context`, `paperclip_checkout_issue`, `paperclip_release_issue`, `paperclip_update_issue`, `paperclip_create_issue`                                                                                                 |
+| `comments.ts`    | `paperclip_list_comments`, `paperclip_add_comment`                                                                                                                                                                                                                                           |
+| `documents.ts`   | `paperclip_list_documents`, `paperclip_get_document`, `paperclip_upsert_document`                                                                                                                                                                                                            |
+| `agents.ts`      | `paperclip_list_agents`                                                                                                                                                                                                                                                                      |
+| `dashboard.ts`   | `paperclip_get_dashboard`                                                                                                                                                                                                                                                                    |
+| `approvals.ts`   | `paperclip_list_approvals`, `paperclip_get_approval`, `paperclip_create_approval`, `paperclip_approve`, `paperclip_reject`, `paperclip_request_revision`, `paperclip_resubmit_approval`, `paperclip_list_approval_comments`, `paperclip_add_approval_comment`, `paperclip_create_agent_hire` |
+| `goals.ts`       | `paperclip_list_goals`, `paperclip_get_goal`, `paperclip_create_goal`, `paperclip_update_goal`                                                                                                                                                                                               |
+| `projects.ts`    | `paperclip_list_projects`, `paperclip_get_project`, `paperclip_create_project`, `paperclip_update_project`, `paperclip_list_workspaces`, `paperclip_create_workspace`, `paperclip_update_workspace`                                                                                          |
+| `activity.ts`    | `paperclip_get_activity`, `paperclip_get_cost_summary`, `paperclip_get_costs_by_agent`, `paperclip_get_costs_by_project`                                                                                                                                                                     |
+| `routines.ts`    | `paperclip_list_routines`, `paperclip_get_routine`, `paperclip_create_routine`, `paperclip_update_routine`, `paperclip_add_routine_trigger`, `paperclip_update_routine_trigger`, `paperclip_delete_routine_trigger`, `paperclip_run_routine`, `paperclip_list_routine_runs`                  |
+| `attachments.ts` | `paperclip_list_attachments`, `paperclip_upload_attachment`, `paperclip_download_attachment`, `paperclip_delete_attachment`                                                                                                                                                                  |
 
 ### `src/tools/validation.ts` — Shared helpers
 
 Central module imported by every tool handler. Exports:
 
-| Export           | Purpose                                                                                      |
-| ---------------- | -------------------------------------------------------------------------------------------- |
-| `validate`       | Parses args with a Zod schema; throws `McpError(InvalidParams)` on failure                   |
-| `handleApiError` | Converts `PaperclipApiError` → `{ isError: true }` result; re-throws all other error types   |
-| `NoInput`        | Zod schema for tools with no parameters                                                      |
-| `IssueIdSchema`  | Zod schema for `{ issueId: string }`                                                         |
-| `StatusSchema`   | Zod enum of valid issue status values                                                        |
-| `PrioritySchema` | Zod enum of valid priority values                                                            |
+| Export           | Purpose                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------ |
+| `validate`       | Parses args with a Zod schema; throws `McpError(InvalidParams)` on failure                 |
+| `handleApiError` | Converts `PaperclipApiError` → `{ isError: true }` result; re-throws all other error types |
+| `NoInput`        | Zod schema for tools with no parameters                                                    |
+| `IssueIdSchema`  | Zod schema for `{ issueId: string }`                                                       |
+| `StatusSchema`   | Zod enum of valid issue status values                                                      |
+| `PrioritySchema` | Zod enum of valid priority values                                                          |
 
 ### `src/client.ts` — `PaperclipClient`
 
@@ -195,13 +195,13 @@ All tool results share the shape:
 
 ## Error handling strategy
 
-| Layer               | Error type                 | How it surfaces                                                                        |
-| ------------------- | -------------------------- | -------------------------------------------------------------------------------------- |
-| Argument validation | `McpError(InvalidParams)`  | Thrown by `validate()`; re-thrown by `handleApiError`; SDK returns a JSON-RPC error    |
-| Unknown tool name   | `McpError(MethodNotFound)` | Raised in the registry dispatcher                                                      |
-| HTTP 4xx/5xx        | `PaperclipApiError`        | Caught by `handleApiError`; returned as `{ isError: true, content: [...] }`            |
-| Startup / config    | `Error` (plain)            | Thrown by `getAuthConfig`; caught in `main()`, logged to stderr, process exits 1       |
-| Unhandled fatal     | any                        | `main().catch(...)` logs and exits 1                                                   |
+| Layer               | Error type                 | How it surfaces                                                                     |
+| ------------------- | -------------------------- | ----------------------------------------------------------------------------------- |
+| Argument validation | `McpError(InvalidParams)`  | Thrown by `validate()`; re-thrown by `handleApiError`; SDK returns a JSON-RPC error |
+| Unknown tool name   | `McpError(MethodNotFound)` | Raised in the registry dispatcher                                                   |
+| HTTP 4xx/5xx        | `PaperclipApiError`        | Caught by `handleApiError`; returned as `{ isError: true, content: [...] }`         |
+| Startup / config    | `Error` (plain)            | Thrown by `getAuthConfig`; caught in `main()`, logged to stderr, process exits 1    |
+| Unhandled fatal     | any                        | `main().catch(...)` logs and exits 1                                                |
 
 Handlers follow the pattern:
 

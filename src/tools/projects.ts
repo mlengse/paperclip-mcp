@@ -201,8 +201,7 @@ export const projectTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_update_workspace",
-    description:
-      "Update a workspace's cwd or repoUrl. Run ID header is injected automatically.",
+    description: "Update a workspace's cwd or repoUrl. Run ID header is injected automatically.",
     inputSchema: {
       type: "object",
       properties: {
