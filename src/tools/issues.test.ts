@@ -212,6 +212,43 @@ describe("paperclip_update_issue", () => {
     assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
   });
 
+  it("forwards all 5 new fields (assigneeUserId, goalId, projectId, parentId, billingCode) in PATCH body", async () => {
+    const updated = { id: "issue-1", status: "in_review" };
+    const { fn, calls } = mockFetch(200, updated);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await updateIssue.handler(
+      {
+        issueId: "issue-1",
+        assigneeUserId: "user-abc",
+        goalId: "goal-1",
+        projectId: "proj-1",
+        parentId: "parent-issue-1",
+        billingCode: "TEAM-X",
+      },
+      client
+    );
+    const sentBody = JSON.parse(calls[0]!.init.body as string);
+    assert.equal(sentBody.assigneeUserId, "user-abc");
+    assert.equal(sentBody.goalId, "goal-1");
+    assert.equal(sentBody.projectId, "proj-1");
+    assert.equal(sentBody.parentId, "parent-issue-1");
+    assert.equal(sentBody.billingCode, "TEAM-X");
+  });
+
+  it("forwards null values for new fields to allow clearing/unassigning", async () => {
+    const updated = { id: "issue-1", assigneeUserId: null };
+    const { fn, calls } = mockFetch(200, updated);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await updateIssue.handler(
+      { issueId: "issue-1", assigneeUserId: null, goalId: null, assigneeAgentId: null },
+      client
+    );
+    const sentBody = JSON.parse(calls[0]!.init.body as string);
+    assert.equal(sentBody.assigneeUserId, null);
+    assert.equal(sentBody.goalId, null);
+    assert.equal(sentBody.assigneeAgentId, null);
+  });
+
   it("throws McpError when issueId is missing (validation failure, fetch not called)", async () => {
     const { fn, calls } = mockFetch(200, {});
     const client = new PaperclipClient(TEST_AUTH, fn);
