@@ -25,7 +25,7 @@ Results are returned as `content[0].text` containing JSON-serialised API respons
 | [Issues](#issue-tools)          | `paperclip_list_issues`, `paperclip_get_issue`, `paperclip_get_heartbeat_context`, `paperclip_checkout_issue`, `paperclip_release_issue`, `paperclip_update_issue`, `paperclip_create_issue`                                                                                             |
 | [Comments](#comment-tools)      | `paperclip_list_comments`, `paperclip_add_comment`                                                                                                                                                                                                                                       |
 | [Documents](#document-tools)    | `paperclip_list_documents`, `paperclip_get_document`, `paperclip_upsert_document`                                                                                                                                                                                                        |
-| [Agents](#agent-tools)          | `paperclip_list_agents`                                                                                                                                                                                                                                                                  |
+| [Agents](#agent-tools)          | `paperclip_list_agents`, `paperclip_get_agent`, `paperclip_update_agent`, `paperclip_pause_agent`, `paperclip_resume_agent`, `paperclip_invoke_heartbeat`, `paperclip_terminate_agent`, `paperclip_create_agent_key`, `paperclip_list_agent_config_revisions`, `paperclip_rollback_agent_config`, `paperclip_set_agent_instructions_path`, `paperclip_get_org_chart`, `paperclip_sync_agent_skills`, `paperclip_list_company_skills` |
 | [Dashboard](#dashboard-tools)   | `paperclip_get_dashboard`                                                                                                                                                                                                                                                                |
 | [Approvals](#approval-tools)    | `paperclip_list_approvals`, `paperclip_get_approval`, `paperclip_create_approval`, `paperclip_approve`, `paperclip_reject`, `paperclip_request_revision`, `paperclip_resubmit_approval`, `paperclip_list_approval_comments`, `paperclip_add_approval_comment`, `paperclip_create_agent_hire` |
 | [Goals](#goal-tools)            | `paperclip_list_goals`, `paperclip_get_goal`, `paperclip_create_goal`, `paperclip_update_goal`                                                                                                                                                                                           |
@@ -662,6 +662,403 @@ Result:
   { "id": "...", "name": "CEO", "urlKey": "ceo", "role": "ceo", "status": "idle" },
   { "id": "...", "name": "CTO", "urlKey": "cto", "role": "cto", "status": "idle" },
   { "id": "...", "name": "TechWriter", "urlKey": "techwriter", "role": "engineer", "status": "running" }
+]
+```
+
+**Errors:** 401 on auth failure.
+
+---
+
+### `paperclip_get_agent`
+
+Get full details for a single agent by ID.
+
+**Input:**
+
+| Parameter | Type   | Required | Description |
+|-----------|--------|----------|-------------|
+| `agentId` | string | Yes      | Agent UUID  |
+
+**Output:** Full agent object including adapter config, skills, and chain of command.
+
+**Example:**
+
+```
+Prompt: "Get full details for agent 4cb0474f."
+
+Tool call: paperclip_get_agent { "agentId": "4cb0474f-2dce-4da3-af69-fc4ee0c68577" }
+
+Result:
+{
+  "id": "4cb0474f-...",
+  "name": "TechWriter",
+  "urlKey": "techwriter",
+  "role": "engineer",
+  "status": "idle",
+  "title": "Technical Writer",
+  "capabilities": "Owns all documentation...",
+  "chainOfCommand": [{ "id": "...", "name": "CTO" }]
+}
+```
+
+**Errors:** 404 if not found; 401 on auth failure.
+
+---
+
+### `paperclip_update_agent`
+
+Update an agent's name, title, capabilities, or status. Run ID header is injected automatically.
+
+**Input:**
+
+| Parameter      | Type   | Required | Description                          |
+|----------------|--------|----------|--------------------------------------|
+| `agentId`      | string | Yes      | Agent UUID                           |
+| `name`         | string | No       | New display name                     |
+| `title`        | string | No       | New job title                        |
+| `capabilities` | string | No       | Updated capability description       |
+| `status`       | string | No       | New status (e.g. `active`, `paused`) |
+
+At least one optional field must be provided.
+
+**Output:** Updated agent object.
+
+**Example:**
+
+```
+Prompt: "Update the TechWriter agent's title to 'Senior Technical Writer'."
+
+Tool call: paperclip_update_agent {
+  "agentId": "4cb0474f-...",
+  "title": "Senior Technical Writer"
+}
+
+Result:
+{ "id": "4cb0474f-...", "name": "TechWriter", "title": "Senior Technical Writer", ... }
+```
+
+**Errors:** 404 if not found; 401 on auth failure.
+
+---
+
+### `paperclip_pause_agent`
+
+Pause an agent, preventing it from starting new heartbeat runs.
+
+**Input:**
+
+| Parameter | Type   | Required | Description |
+|-----------|--------|----------|-------------|
+| `agentId` | string | Yes      | Agent UUID  |
+
+**Output:** Updated agent object with `status: "paused"`.
+
+**Example:**
+
+```
+Prompt: "Pause the TechWriter agent."
+
+Tool call: paperclip_pause_agent { "agentId": "4cb0474f-..." }
+
+Result:
+{ "id": "4cb0474f-...", "name": "TechWriter", "status": "paused" }
+```
+
+**Errors:** 404 if not found; 401 on auth failure.
+
+---
+
+### `paperclip_resume_agent`
+
+Resume a paused agent, allowing it to start new heartbeat runs.
+
+**Input:**
+
+| Parameter | Type   | Required | Description |
+|-----------|--------|----------|-------------|
+| `agentId` | string | Yes      | Agent UUID  |
+
+**Output:** Updated agent object with `status: "idle"`.
+
+**Example:**
+
+```
+Prompt: "Resume the TechWriter agent."
+
+Tool call: paperclip_resume_agent { "agentId": "4cb0474f-..." }
+
+Result:
+{ "id": "4cb0474f-...", "name": "TechWriter", "status": "idle" }
+```
+
+**Errors:** 404 if not found; 401 on auth failure.
+
+---
+
+### `paperclip_invoke_heartbeat`
+
+Manually trigger a heartbeat run for an agent immediately, bypassing the schedule. Run ID header is injected automatically.
+
+**Input:**
+
+| Parameter | Type   | Required | Description |
+|-----------|--------|----------|-------------|
+| `agentId` | string | Yes      | Agent UUID  |
+
+**Output:** Created run object with `id` and `status`.
+
+**Example:**
+
+```
+Prompt: "Trigger a heartbeat for the Scrum Master agent now."
+
+Tool call: paperclip_invoke_heartbeat { "agentId": "scrum-master-uuid-..." }
+
+Result:
+{ "id": "run-uuid-...", "agentId": "scrum-master-uuid-...", "status": "running" }
+```
+
+**Errors:** 404 if not found; 401 on auth failure.
+
+---
+
+### `paperclip_terminate_agent`
+
+Permanently deactivate an agent. **This action is irreversible** — the agent cannot be reactivated after termination. Run ID header is injected automatically.
+
+**Input:**
+
+| Parameter | Type   | Required | Description |
+|-----------|--------|----------|-------------|
+| `agentId` | string | Yes      | Agent UUID  |
+
+**Output:** Terminated agent object.
+
+**Errors:** 404 if not found; 401 on auth failure.
+
+---
+
+### `paperclip_create_agent_key`
+
+Create a long-lived API key for an agent. Returns the key value — store it securely, it will not be shown again. Run ID header is injected automatically.
+
+**Input:**
+
+| Parameter   | Type   | Required | Description                   |
+|-------------|--------|----------|-------------------------------|
+| `agentId`   | string | Yes      | Agent UUID                    |
+| `name`      | string | No       | Key label                     |
+| `expiresAt` | string | No       | ISO 8601 expiry date          |
+
+**Output:** Created key object including the `key` value (shown once only).
+
+**Example:**
+
+```
+Prompt: "Create a long-lived API key for the TechWriter agent."
+
+Tool call: paperclip_create_agent_key {
+  "agentId": "4cb0474f-...",
+  "name": "CI deployment key"
+}
+
+Result:
+{
+  "id": "key-uuid-...",
+  "name": "CI deployment key",
+  "key": "pk_live_...",
+  "createdAt": "2026-04-09T00:00:00.000Z"
+}
+```
+
+**Errors:** 404 if not found; 401 on auth failure.
+
+---
+
+### `paperclip_list_agent_config_revisions`
+
+List the config revision history for an agent.
+
+**Input:**
+
+| Parameter | Type   | Required | Description |
+|-----------|--------|----------|-------------|
+| `agentId` | string | Yes      | Agent UUID  |
+
+**Output:** Array of config revision objects.
+
+| Field       | Type   | Description                        |
+|-------------|--------|------------------------------------|
+| `id`        | string | Revision UUID                      |
+| `createdAt` | string | ISO 8601 timestamp of the revision |
+| `diff`      | object | What changed in this revision      |
+
+**Errors:** 404 if not found; 401 on auth failure.
+
+---
+
+### `paperclip_rollback_agent_config`
+
+Rollback an agent's config to a previous revision. Run ID header is injected automatically.
+
+**Input:**
+
+| Parameter    | Type   | Required | Description                         |
+|--------------|--------|----------|-------------------------------------|
+| `agentId`    | string | Yes      | Agent UUID                          |
+| `revisionId` | string | Yes      | Config revision UUID to rollback to |
+
+**Output:** Updated agent object reflecting the rolled-back config.
+
+**Example:**
+
+```
+Prompt: "Rollback the TechWriter agent config to revision rev-abc."
+
+Tool call: paperclip_rollback_agent_config {
+  "agentId": "4cb0474f-...",
+  "revisionId": "rev-abc-..."
+}
+
+Result:
+{ "id": "4cb0474f-...", "name": "TechWriter", ... }
+```
+
+**Errors:** 404 if agent or revision not found; 401 on auth failure.
+
+---
+
+### `paperclip_set_agent_instructions_path`
+
+Set or clear the AGENTS.md instructions file path for an agent. Send `null` to clear the path. Run ID header is injected automatically.
+
+**Input:**
+
+| Parameter        | Type            | Required | Description                                                         |
+|------------------|-----------------|----------|---------------------------------------------------------------------|
+| `agentId`        | string          | Yes      | Agent UUID                                                          |
+| `path`           | string \| null  | Yes      | Path to AGENTS.md file, or `null` to clear                         |
+| `adapterConfigKey` | string        | No       | Adapter config key override for non-standard adapters               |
+
+**Output:** Updated agent object with the new instructions path.
+
+**Example:**
+
+```
+Prompt: "Set the TechWriter's instructions path to 'agents/techwriter/AGENTS.md'."
+
+Tool call: paperclip_set_agent_instructions_path {
+  "agentId": "4cb0474f-...",
+  "path": "agents/techwriter/AGENTS.md"
+}
+
+Result:
+{ "id": "4cb0474f-...", "instructionsFilePath": "agents/techwriter/AGENTS.md", ... }
+```
+
+**Errors:** 404 if not found; 401 on auth failure.
+
+---
+
+### `paperclip_get_org_chart`
+
+Get the full company agent hierarchy (org chart).
+
+**Input:** none
+
+**Output:** Nested agent hierarchy object with each node containing `id`, `name`, `role`, `title`, and `reports` (array of direct reports).
+
+**Example:**
+
+```
+Prompt: "Show me the company org chart."
+
+Tool call: paperclip_get_org_chart {}
+
+Result:
+{
+  "id": "ceo-uuid-...",
+  "name": "CEO",
+  "role": "ceo",
+  "reports": [
+    {
+      "id": "cto-uuid-...",
+      "name": "CTO",
+      "role": "cto",
+      "reports": [
+        { "id": "4cb0474f-...", "name": "TechWriter", "role": "engineer", "reports": [] }
+      ]
+    }
+  ]
+}
+```
+
+**Errors:** 401 on auth failure.
+
+---
+
+### `paperclip_sync_agent_skills`
+
+Sync the desired skill set for an agent — adds skills not yet assigned and removes skills no longer in the desired list. Run ID header is injected automatically.
+
+**Input:**
+
+| Parameter      | Type     | Required | Description                                              |
+|----------------|----------|----------|----------------------------------------------------------|
+| `agentId`      | string   | Yes      | Agent UUID                                               |
+| `desiredSkills`| string[] | Yes      | Complete list of skill names the agent should have       |
+
+**Output:** Sync result object listing added and removed skills.
+
+**Example:**
+
+```
+Prompt: "Sync TechWriter skills to only include 'paperclip' and 'bmad-agent-tech-writer'."
+
+Tool call: paperclip_sync_agent_skills {
+  "agentId": "4cb0474f-...",
+  "desiredSkills": ["paperclip", "bmad-agent-tech-writer"]
+}
+
+Result:
+{
+  "added": ["paperclip"],
+  "removed": ["old-skill"],
+  "current": ["paperclip", "bmad-agent-tech-writer"]
+}
+```
+
+**Errors:** 404 if not found; 401 on auth failure.
+
+---
+
+### `paperclip_list_company_skills`
+
+List all skills installed in the company.
+
+**Input:** none
+
+**Output:** Array of company skill objects.
+
+| Field       | Type   | Description                              |
+|-------------|--------|------------------------------------------|
+| `id`        | string | Skill UUID                               |
+| `name`      | string | Skill name (used in `desiredSkills`)     |
+| `title`     | string | Human-readable title                     |
+| `source`    | string | Origin of the skill (e.g. `scanned`)     |
+| `createdAt` | string | ISO 8601 timestamp                       |
+
+**Example:**
+
+```
+Prompt: "What skills are installed in this company?"
+
+Tool call: paperclip_list_company_skills {}
+
+Result:
+[
+  { "id": "skill-uuid-...", "name": "paperclip", "title": "Paperclip", "source": "scanned" },
+  { "id": "skill-uuid-...", "name": "bmad-agent-tech-writer", "title": "BMad TechWriter", "source": "scanned" }
 ]
 ```
 

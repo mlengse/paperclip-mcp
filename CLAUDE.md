@@ -42,7 +42,7 @@ paperclip-mcp is a Model Context Protocol (MCP) stdio server that exposes the Pa
 | `issues.ts` | 7 issue lifecycle tools (list, get, checkout, release, update, create, heartbeat) |
 | `comments.ts` | `paperclip_list_comments`, `paperclip_add_comment` |
 | `documents.ts` | `paperclip_list_documents`, `paperclip_get_document`, `paperclip_upsert_document` |
-| `agents.ts` | `paperclip_list_agents` |
+| `agents.ts` | `paperclip_list_agents`, `paperclip_get_agent`, `paperclip_update_agent`, `paperclip_pause_agent`, `paperclip_resume_agent`, `paperclip_invoke_heartbeat`, `paperclip_terminate_agent`, `paperclip_create_agent_key`, `paperclip_list_agent_config_revisions`, `paperclip_rollback_agent_config`, `paperclip_set_agent_instructions_path`, `paperclip_get_org_chart`, `paperclip_sync_agent_skills`, `paperclip_list_company_skills` |
 | `dashboard.ts` | `paperclip_get_dashboard` |
 | `goals.ts` | `paperclip_list_goals`, `paperclip_get_goal`, `paperclip_create_goal`, `paperclip_update_goal` |
 | `projects.ts` | `paperclip_list_projects`, `paperclip_get_project`, `paperclip_create_project`, `paperclip_update_project`, `paperclip_list_workspaces`, `paperclip_create_workspace`, `paperclip_update_workspace` |
