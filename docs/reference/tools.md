@@ -24,7 +24,7 @@ Results are returned as `content[0].text` containing JSON-serialised API respons
 | [Identity](#identity-tools)     | `paperclip_get_me`, `paperclip_get_inbox`                                                                                                                                                                                                                                                |
 | [Issues](#issue-tools)          | `paperclip_list_issues`, `paperclip_get_issue`, `paperclip_get_heartbeat_context`, `paperclip_checkout_issue`, `paperclip_release_issue`, `paperclip_update_issue`, `paperclip_create_issue`                                                                                             |
 | [Comments](#comment-tools)      | `paperclip_list_comments`, `paperclip_add_comment`                                                                                                                                                                                                                                       |
-| [Documents](#document-tools)    | `paperclip_list_documents`, `paperclip_get_document`, `paperclip_upsert_document`                                                                                                                                                                                                        |
+| [Documents](#document-tools)    | `paperclip_list_documents`, `paperclip_get_document`, `paperclip_upsert_document`, `paperclip_delete_document`, `paperclip_get_document_revisions`                                                                                                                                       |
 | [Agents](#agent-tools)          | `paperclip_list_agents`, `paperclip_get_agent`, `paperclip_update_agent`, `paperclip_pause_agent`, `paperclip_resume_agent`, `paperclip_invoke_heartbeat`, `paperclip_terminate_agent`, `paperclip_create_agent_key`, `paperclip_list_agent_config_revisions`, `paperclip_rollback_agent_config`, `paperclip_set_agent_instructions_path`, `paperclip_get_org_chart`, `paperclip_sync_agent_skills`, `paperclip_list_company_skills` |
 | [Dashboard](#dashboard-tools)   | `paperclip_get_dashboard`                                                                                                                                                                                                                                                                |
 | [Approvals](#approval-tools)    | `paperclip_list_approvals`, `paperclip_get_approval`, `paperclip_create_approval`, `paperclip_approve`, `paperclip_reject`, `paperclip_request_revision`, `paperclip_resubmit_approval`, `paperclip_list_approval_comments`, `paperclip_add_approval_comment`, `paperclip_create_agent_hire` |
@@ -629,6 +629,85 @@ Tool call: paperclip_upsert_document {
 ```
 
 **Errors:** 404 if issue not found; 409 if `baseRevisionId` conflicts with a concurrent update; 401 on auth failure.
+
+---
+
+### `paperclip_delete_document`
+
+Delete a document from an issue by key. Use when a document is no longer relevant (e.g. a stale plan). Prefer `paperclip_upsert_document` for clearing content rather than deleting if you may need the key again. The run ID is injected automatically.
+
+**Input:**
+
+| Parameter | Type   | Required | Description                        |
+| --------- | ------ | -------- | ---------------------------------- |
+| `issueId` | string | Yes      | Issue UUID or identifier           |
+| `key`     | string | Yes      | Document key to delete (e.g. `plan`) |
+
+**Output:** Confirmation object (empty body or `{ "ok": true }` on success).
+
+**Example:**
+
+```
+Prompt: "Delete the plan document from PAP-15."
+
+Tool call: paperclip_delete_document {
+  "issueId": "PAP-15",
+  "key": "plan"
+}
+
+Result:
+{}
+```
+
+**Errors:** 404 if issue or document not found; 401 on auth failure.
+
+---
+
+### `paperclip_get_document_revisions`
+
+Get the full revision history for an issue document. Use to audit changes or recover a prior version by inspecting previous `revisionId` values.
+
+**Input:**
+
+| Parameter | Type   | Required | Description                |
+| --------- | ------ | -------- | -------------------------- |
+| `issueId` | string | Yes      | Issue UUID or identifier   |
+| `key`     | string | Yes      | Document key (e.g. `plan`) |
+
+**Output:** Array of revision objects, newest first.
+
+| Field        | Type   | Description                             |
+| ------------ | ------ | --------------------------------------- |
+| `revisionId` | string | UUID of this revision                   |
+| `body`       | string | Document body at this revision          |
+| `createdAt`  | string | ISO 8601 timestamp when revision was saved |
+
+**Example:**
+
+```
+Prompt: "Show me the revision history for the plan on PAP-15."
+
+Tool call: paperclip_get_document_revisions {
+  "issueId": "PAP-15",
+  "key": "plan"
+}
+
+Result:
+[
+  {
+    "revisionId": "rev-xyz789",
+    "body": "# Plan\n\n[updated content]",
+    "createdAt": "2026-04-08T12:00:00.000Z"
+  },
+  {
+    "revisionId": "rev-abc123",
+    "body": "# Plan\n\n1. Read all source files\n2. Write reference\n3. Mark done",
+    "createdAt": "2026-04-08T09:00:00.000Z"
+  }
+]
+```
+
+**Errors:** 404 if issue or document not found; 401 on auth failure.
 
 ---
 

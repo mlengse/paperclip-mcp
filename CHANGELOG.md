@@ -9,7 +9,36 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-_Changes on `develop` not yet released to `main`._
+_No unreleased changes._
+
+---
+
+## [1.0.0] — 2026-04-09
+
+### Added
+
+**Agent management tools (13 tools)**
+- `paperclip_get_agent` — fetch a single agent by ID
+- `paperclip_update_agent` — update agent name, description, or config
+- `paperclip_pause_agent` — pause a running agent
+- `paperclip_resume_agent` — resume a paused agent
+- `paperclip_invoke_heartbeat` — manually trigger an agent heartbeat
+- `paperclip_terminate_agent` — terminate an active agent run
+- `paperclip_create_agent_key` — issue a new API key for an agent
+- `paperclip_list_agent_config_revisions` — list config revision history for an agent
+- `paperclip_rollback_agent_config` — roll back an agent's config to a prior revision
+- `paperclip_set_agent_instructions_path` — set the instructions file path for an agent
+- `paperclip_get_org_chart` — return the company agent org chart
+- `paperclip_sync_agent_skills` — sync desired skill assignments for an agent
+- `paperclip_list_company_skills` — list all skills registered in the company
+
+**Document tools (2 tools)**
+- `paperclip_delete_document` — delete an issue document by key
+- `paperclip_get_document_revisions` — fetch the full revision history for an issue document
+
+**Documentation**
+- `docs/reference/tools.md` updated with full entries for all 15 new tools
+- `docs/architecture/overview.md` updated with new agent management module
 
 ---
 
@@ -52,5 +81,6 @@ Initial public release of the Paperclip MCP server.
 - Unit tests for all tool handlers using Node.js built-in `node:test`
 - CI workflow on push/PR to `main` and `develop`
 
-[Unreleased]: https://github.com/your-org/paperclip-mcp/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/your-org/paperclip-mcp/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/your-org/paperclip-mcp/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/your-org/paperclip-mcp/releases/tag/v0.1.0
