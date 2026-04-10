@@ -35,16 +35,19 @@ The description is markdown. It must contain three sections in order:
 
 ### Required fields (API)
 
-| Field             | Required for                   | Notes                                                                                |
-| ----------------- | ------------------------------ | ------------------------------------------------------------------------------------ |
-| `title`           | All issues                     | See title format above                                                               |
-| `description`     | All issues                     | Markdown, structured per above                                                       |
-| `goalId`          | All issues                     | Link to the active company goal. If no goal applies, escalate to PM before creating. |
-| `projectId`       | All issues                     | Link to the owning project.                                                          |
-| `parentId`        | Sub-tasks, follow-up tasks     | Required when the issue is a decomposition of a larger issue.                        |
-| `priority`        | All issues                     | `critical`, `high`, `medium`, or `low`. Default `medium` if genuinely unclear.       |
-| `status`          | All issues                     | Agents create as `backlog`. Scrum Master promotes to `todo`.                         |
-| `assigneeAgentId` | When the target agent is known | Leave unset if routing is uncertain — Scrum Master assigns.                          |
+| Field                                  | Required for                   | Notes                                                                                                                                                    |
+| -------------------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`                                | All issues                     | See title format above                                                                                                                                   |
+| `description`                          | All issues                     | Markdown, structured per above                                                                                                                           |
+| `goalId`                               | All issues                     | Link to the active company goal. If no goal applies, escalate to PM before creating.                                                                     |
+| `projectId`                            | All issues                     | Link to the owning project.                                                                                                                              |
+| `parentId`                             | Sub-tasks, follow-up tasks     | Required when the issue is a decomposition of a larger issue.                                                                                            |
+| `priority`                             | All issues                     | `critical`, `high`, `medium`, or `low`. Default `medium` if genuinely unclear.                                                                           |
+| `status`                               | All issues                     | **Always pass explicitly.** The API default is `todo`, which bypasses backlog triage. Agents create as `backlog`; Scrum Master promotes to `todo`.       |
+| `assigneeAgentId`                      | When the target agent is known | Leave unset if routing is uncertain — Scrum Master assigns.                                                                                              |
+| `labelIds`                             | All issues (see bootstrap)     | Array of label UUIDs from the bootstrap cache. Always include source, quality (refined/unrefined), type, and agent axes. Names are not accepted — UUIDs. |
+| `billingCode`                          | Cross-project work             | Optional; include only when the issue crosses project boundaries for cost attribution.                                                                   |
+| `inheritExecutionWorkspaceFromIssueId` | Workspace-linked follow-ups    | Optional; use when the new issue must run in the same checkout / worktree as an existing parent issue.                                                   |
 
 ### Affected files / components (in description)
 
@@ -63,9 +66,9 @@ Bug and MCP failure issues must additionally include in the description:
 
 ## Label Taxonomy
 
-Labels are managed via the Paperclip UI (or a direct API call — `labelId` is accepted as a filter by `paperclip_list_issues` but label creation and assignment are not yet exposed via MCP tools). Until a `paperclip_create_label` / `paperclip_add_label_to_issue` tool is available, agents must note the intended labels in a comment on the issue immediately after creation, and Carlos or the Scrum Master applies them via the UI.
+Labels are managed directly via MCP tools. `paperclip_list_labels` returns the full taxonomy with UUIDs, `paperclip_create_label` creates new labels, and both `paperclip_create_issue` and `paperclip_update_issue` accept a `labelIds` array (UUIDs, not names). Every agent that will create or update issues must bootstrap its label UUID cache at the start of a run — see [Label Bootstrap](#label-bootstrap) below.
 
-The comment format is: `Labels: <label-name>, <label-name>`
+> **Legacy fallback.** If `paperclip_list_labels` itself fails and UUIDs are unavailable, create the issue first, then post a `Labels: <label-name>, <label-name>` comment so the Scrum Master or Carlos can apply them via the UI. Do not block issue creation on the label bootstrap.
 
 ### Source axis
 
@@ -109,6 +112,17 @@ Used when an issue is created by or for a specific agent type and routing clarit
 ### Priority hints
 
 Priority is already a first-class field on the issue (`critical` / `high` / `medium` / `low`). Do not use labels to duplicate priority. Only add a label if the priority field is unavailable for some reason.
+
+### Label Bootstrap
+
+At the start of any agent run that may create or update issues, execute this sequence once and cache the results for the remainder of the run:
+
+1. Call `paperclip_list_labels`. Build a local `name → uuid` map.
+2. Compare the map against the required taxonomy (all entries in the Source, Quality, Type, and Agent axes above).
+3. For any missing taxonomy label, call `paperclip_create_label` with the canonical `name` and the color from the table in [`docs/guides/issue-creation-standard.md`](issue-creation-standard.md). Add the returned UUID to the local map.
+4. When creating or updating any issue, pass `labelIds` as an array of cached UUIDs — never label name strings.
+
+An agent that skips label bootstrap cannot pass `labelIds` on create and will fall through to the legacy comment fallback, which is a correctness regression. Bootstrap is cheap — one GET plus at most a handful of POSTs per session.
 
 ---
 
@@ -179,7 +193,7 @@ Call the `sequential-thinking` MCP server. Use it to think through:
 
 ### Step 3 — Create the issue
 
-Call `paperclip_create_issue` with all required fields:
+Call `paperclip_create_issue` with all required fields **including `labelIds`** from the bootstrap cache. Always pass `status` explicitly — the API default is `todo`, which bypasses backlog triage.
 
 ```json
 {
@@ -190,31 +204,47 @@ Call `paperclip_create_issue` with all required fields:
   "goalId": "<uuid>",
   "projectId": "<uuid>",
   "parentId": "<uuid or omit>",
-  "assigneeAgentId": "<uuid or omit>"
+  "assigneeAgentId": "<uuid or omit>",
+  "labelIds": [
+    "<uuid-of-source:agent>",
+    "<uuid-of-status:unrefined-or-refined>",
+    "<uuid-of-type:...>",
+    "<uuid-of-agent:your-role>"
+  ]
 }
 ```
 
-If the MCP call fails (tool returns `isError: true`), fall back to curl:
+Notes on optional fields:
+
+- `billingCode` — include only when the issue crosses project boundaries for cost attribution.
+- `inheritExecutionWorkspaceFromIssueId` — use when creating a follow-up task that must run in the same checkout / worktree as a parent issue.
+
+Capture the returned `identifier` (e.g. `PAP-42`).
+
+#### Step 3a — Attach supporting artifacts (bugs / MCP failures only)
+
+For `type:bug` or `type:mcp-failure` issues, attach verbatim context after the issue is created so reviewers don't have to reconstruct the failure:
+
+- `paperclip_upload_attachment` — attach local log files, stack trace files, or failing-test output directly.
+- `paperclip_upsert_document` with `key: "investigation"` — attach a structured markdown investigation document when the analysis exceeds what fits in the issue description.
+
+Reference the issue UUID or identifier returned by Step 3.
+
+#### Step 3 fallback — curl
+
+If `paperclip_create_issue` itself fails (tool returns `isError: true` after one retry), fall back to curl. Use the same JSON body shape as the MCP call, including `labelIds` if the bootstrap cache is available:
 
 ```bash
 curl -s -X POST \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
-  -d '{"title":"...","description":"...","status":"backlog","priority":"medium","goalId":"...","projectId":"..."}' \
+  -d '{"title":"...","description":"...","status":"backlog","priority":"medium","goalId":"...","projectId":"...","labelIds":["..."]}' \
   "http://127.0.0.1:3100/api/companies/$PAPERCLIP_COMPANY_ID/issues"
 ```
 
-Capture the returned `identifier` (e.g. `PAP-42`).
+If label UUIDs are also unavailable, omit `labelIds` from the body and post a `Labels: <name>, <name>` comment on the new issue immediately after creation so Scrum Master or Carlos can apply them via the UI.
 
-### Step 4 — Post label comment
-
-Immediately after creation, call `paperclip_add_comment` on the new issue:
-
-```
-Labels: source:agent, status:unrefined, type:<feature|bug|chore|docs|security|mcp-failure>, agent:<your-role>
-```
-
-### Step 5 — Notify Scrum Master
+### Step 4 — Notify Scrum Master
 
 Post a comment on the **current issue** (the one you are working on) or on the new issue itself:
 
@@ -222,13 +252,11 @@ Post a comment on the **current issue** (the one you are working on) or on the n
 @Scrum Master — created PAP-XX for <one-sentence reason>. Needs refinement before promotion.
 ```
 
-If the new issue is directly actionable without refinement (e.g. you have full context and wrote a complete description), instead post:
+If the new issue is directly actionable without refinement (e.g. you have full context, wrote a complete description, and applied `status:refined` via `labelIds` at creation time), instead post:
 
 ```
 @Scrum Master — created PAP-XX for <one-sentence reason>. Refined and ready for assignment.
 ```
-
-And post the label comment as `Labels: source:agent, status:refined, type:...`.
 
 ---
 
@@ -360,7 +388,66 @@ Expected behavior: `{ content: [{ type: "text", text: "<valid JSON>" }] }`
 - [ ] The test file `src/tools/<module>.test.ts` has a test case covering this failure path.
 - [ ] `npm run test && npm run typecheck && npm run lint` all pass.
 
-````
+`````
+
+---
+
+### Template 4: Chore
+
+**Title pattern:** `Remove|Refactor|Upgrade <thing> in <component> to <outcome>`
+
+Use this template for internal improvements with no direct user-visible behavior change (dependency bumps, refactors, config tweaks, cleanup). Chores must still have testable AC — "no behavior change" is not an AC, "tests still pass" and "no new lint warnings" are.
+
+**Description:**
+
+````markdown
+## Context
+
+<Why is this chore needed now? What pain does it solve — flaky test, outdated dep with CVE, tangled module boundary, duplicated code? Reference the trigger: an issue, a scan result, or an audit finding. One to three sentences.>
+
+## What needs to happen
+
+<Specific files or modules to touch. Specific commands to run (e.g. `npm update <pkg>`, `npm run lint -- --fix`). If a refactor, describe the before/after shape in one paragraph.>
+
+Affected files: `<path>`, `<path>`
+
+## Acceptance Criteria
+
+- [ ] `<specific change>` is applied in the files listed above.
+- [ ] `npm run test && npm run lint && npm run typecheck && npm run format:check` all pass with no new warnings.
+- [ ] No user-visible behavior change (document explicitly if any edge-case behavior shifts as a side effect).
+`````
+
+---
+
+### Template 5: Docs
+
+**Title pattern:** `Document <topic> in <location> so that <audience> can <action>`
+
+Use this template for documentation-only changes (no code edits). Every docs issue must identify the audience and the concrete action the audience will take after reading the doc.
+
+**Description:**
+
+```markdown
+## Context
+
+<What gap or trigger surfaced this? Which agent run hit the missing doc? Which external contributor feedback referenced it? Reference the specific confusion or failure that this doc prevents.>
+
+## What needs to happen
+
+- Create or update `<file path>` with <specific section titles>.
+- Cross-link the new content from `<existing doc>` so it is reachable via the TOC.
+- Include a code example / diagram / table where appropriate.
+
+Target audience: <Paperclip agent | external contributor | new maintainer | board operator>
+
+## Acceptance Criteria
+
+- [ ] `<file path>` exists (or the update is applied) with the sections listed above.
+- [ ] `<existing doc>` links to the new content from at least one location the audience will naturally reach.
+- [ ] `npm run docs:check` passes (no broken links).
+- [ ] `npm run format:check` passes on the changed files.
+```
 
 ---
 
@@ -384,4 +471,4 @@ After creating, immediately post a label comment: `Labels: source:agent, status:
 Then notify Scrum Master: `@Scrum Master — created PAP-XX for <reason>.`
 
 Full protocol, label taxonomy, templates, and refinement workflow: [`docs/guides/issue-creation-standard.md`](docs/guides/issue-creation-standard.md).
-````
+```
