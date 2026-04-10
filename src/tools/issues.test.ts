@@ -217,6 +217,74 @@ describe("paperclip_release_issue", () => {
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("404"));
   });
+
+  // Regression tests for PAP-90: release endpoint must clear executionRunId and executionLockedAt
+  it("PAP-90 regression: release response has executionRunId null", async () => {
+    const released = {
+      id: "issue-1",
+      status: "todo",
+      executionRunId: null,
+      executionLockedAt: null,
+    };
+    const { fn } = mockFetch(200, released);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await releaseIssue.handler({ issueId: "issue-1" }, client);
+    const body = JSON.parse(result.content[0]!.text);
+    assert.equal(body.executionRunId, null, "executionRunId must be null after release");
+  });
+
+  it("PAP-90 regression: release response has executionLockedAt null", async () => {
+    const released = {
+      id: "issue-1",
+      status: "todo",
+      executionRunId: null,
+      executionLockedAt: null,
+    };
+    const { fn } = mockFetch(200, released);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await releaseIssue.handler({ issueId: "issue-1" }, client);
+    const body = JSON.parse(result.content[0]!.text);
+    assert.equal(body.executionLockedAt, null, "executionLockedAt must be null after release");
+  });
+
+  it("PAP-90 regression: checkout succeeds after release (no 409)", async () => {
+    // Simulates the full release → re-checkout flow.
+    // A bug in the release endpoint that left executionRunId set would cause the
+    // checkout to return 409; this test fails if that happens.
+    const released = {
+      id: "issue-1",
+      status: "todo",
+      executionRunId: null,
+      executionLockedAt: null,
+    };
+    const checkedOut = { id: "issue-1", status: "in_progress" };
+
+    let callCount = 0;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const sequentialFetch = async (url: string, _: RequestInit): Promise<Response> => {
+      callCount++;
+      const body = url.endsWith("/release") ? released : checkedOut;
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: new Headers({ "Content-Type": "application/json" }),
+      });
+    };
+
+    const client = new PaperclipClient(TEST_AUTH, sequentialFetch);
+
+    const releaseResult = await releaseIssue.handler({ issueId: "issue-1" }, client);
+    assert.equal(releaseResult.isError, undefined, "release must not return isError");
+
+    const checkoutResult = await checkoutIssue.handler({ issueId: "issue-1" }, client);
+    assert.equal(
+      checkoutResult.isError,
+      undefined,
+      "checkout after release must not return isError (no 409)"
+    );
+    const checkoutBody = JSON.parse(checkoutResult.content[0]!.text);
+    assert.equal(checkoutBody.status, "in_progress");
+    assert.equal(callCount, 2);
+  });
 });
 
 describe("paperclip_update_issue", () => {
