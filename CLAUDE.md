@@ -8,18 +8,18 @@ paperclip-mcp is a Model Context Protocol (MCP) stdio server that exposes the Pa
 
 ## Commands
 
-| Task                    | Command                                            |
-| ----------------------- | -------------------------------------------------- |
-| Build                   | `npm run build`                                    |
-| Dev (live TS)           | `npm run dev`                                      |
-| Start (compiled)        | `npm run start`                                    |
-| Type-check only         | `npm run typecheck`                                |
-| Lint                    | `npm run lint`                                     |
-| Format                  | `npm run format`                                   |
-| Format check (manual)   | `npm run format:check`                             |
-| Run all tests           | `npm run test`                                     |
-| Run single test         | `node --import tsx/esm --test src/path/to.test.ts` |
-| Check doc links         | `npm run docs:check`                               |
+| Task                  | Command                                            |
+| --------------------- | -------------------------------------------------- |
+| Build                 | `npm run build`                                    |
+| Dev (live TS)         | `npm run dev`                                      |
+| Start (compiled)      | `npm run start`                                    |
+| Type-check only       | `npm run typecheck`                                |
+| Lint                  | `npm run lint`                                     |
+| Format                | `npm run format`                                   |
+| Format check (manual) | `npm run format:check`                             |
+| Run all tests         | `npm run test`                                     |
+| Run single test       | `node --import tsx/esm --test src/path/to.test.ts` |
+| Check doc links       | `npm run docs:check`                               |
 
 > **Pre-commit automation:** `npm run lint` and `npm run format` run automatically on staged files at commit time via husky + lint-staged. You do not need to run `format:check` manually before committing.
 
@@ -67,11 +67,11 @@ paperclip-mcp is a Model Context Protocol (MCP) stdio server that exposes the Pa
 
 ## CI/CD
 
-| Layer        | Tooling                  | Triggers                              | What it does                                     |
-| ------------ | ------------------------ | ------------------------------------- | ------------------------------------------------ |
-| Pre-commit   | husky + lint-staged      | Every `git commit`                    | ESLint fix + Prettier write on staged files      |
-| Quality gate | `quality-gate.yml`       | PR to `main` or `develop`; push to `main` | typecheck, lint, format:check, test, build, docs |
-| Release      | `release.yml`            | Push to `main` (conventional commits) | semantic-release → npm publish + GitHub release  |
+| Layer        | Tooling             | Triggers                                  | What it does                                     |
+| ------------ | ------------------- | ----------------------------------------- | ------------------------------------------------ |
+| Pre-commit   | husky + lint-staged | Every `git commit`                        | ESLint fix + Prettier write on staged files      |
+| Quality gate | `quality-gate.yml`  | PR to `main` or `develop`; push to `main` | typecheck, lint, format:check, test, build, docs |
+| Release      | `release.yml`       | Push to `main` (conventional commits)     | semantic-release → npm publish + GitHub release  |
 
 See [`docs/ci-strategy.md`](docs/ci-strategy.md) for rationale, trigger matrix, and how to extend CI steps.
 

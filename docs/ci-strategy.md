@@ -16,10 +16,10 @@ GitHub Actions minutes are a shared budget. Running the full quality gate on eve
 
 Runs locally on every `git commit` against staged files only.
 
-| File pattern        | Actions                              |
-| ------------------- | ------------------------------------ |
-| `*.ts`              | `eslint --fix`, `prettier --write`   |
-| `*.{js,json,md}`    | `prettier --write`                   |
+| File pattern     | Actions                            |
+| ---------------- | ---------------------------------- |
+| `*.ts`           | `eslint --fix`, `prettier --write` |
+| `*.{js,json,md}` | `prettier --write`                 |
 
 Setup is automatic: `npm install` runs `prepare`, which installs husky. No manual step required.
 
@@ -40,10 +40,10 @@ Does **not** run on pushes to `develop` — those are covered by pre-commit and 
 
 **Jobs:**
 
-| Job          | Steps                                                      |
-| ------------ | ---------------------------------------------------------- |
-| `build`      | typecheck → lint → format:check → test → build            |
-| `docs-lint`  | markdown-link-check on `docs/**/*.md`                      |
+| Job         | Steps                                          |
+| ----------- | ---------------------------------------------- |
+| `build`     | typecheck → lint → format:check → test → build |
+| `docs-lint` | markdown-link-check on `docs/**/*.md`          |
 
 All steps must pass for a PR to be mergeable to `main`.
 
@@ -57,25 +57,25 @@ Requires `NPM_TOKEN` secret set in the repository.
 
 ## Workflow Trigger Matrix
 
-| Event                          | Pre-commit | Quality gate | Release |
-| ------------------------------ | :--------: | :----------: | :-----: |
-| `git commit` (local)           | ✓          |              |         |
-| Push to feature branch         |            |              |         |
-| PR → `develop`                 |            | ✓            |         |
-| PR → `main`                    |            | ✓            |         |
-| Push to `main`                 |            | ✓            |         |
-| GitHub Release published       |            |              | ✓       |
+| Event                    | Pre-commit | Quality gate | Release |
+| ------------------------ | :--------: | :----------: | :-----: |
+| `git commit` (local)     |     ✓      |              |         |
+| Push to feature branch   |            |              |         |
+| PR → `develop`           |            |      ✓       |         |
+| PR → `main`              |            |      ✓       |         |
+| Push to `main`           |            |      ✓       |         |
+| GitHub Release published |            |              |    ✓    |
 
 ## Commit Convention (semantic-release)
 
 Releases are version-bumped automatically based on commit message prefixes:
 
-| Prefix      | Version bump | Example                                    |
-| ----------- | ------------ | ------------------------------------------ |
-| `fix:`      | patch        | `fix(auth): handle expired tokens`         |
-| `feat:`     | minor        | `feat(tools): add paperclip_list_goals`    |
-| `BREAKING CHANGE:` | major | `feat!: remove legacy endpoint`           |
-| `chore:`, `docs:`, `test:` | none | `docs: update readme`         |
+| Prefix                     | Version bump | Example                                 |
+| -------------------------- | ------------ | --------------------------------------- |
+| `fix:`                     | patch        | `fix(auth): handle expired tokens`      |
+| `feat:`                    | minor        | `feat(tools): add paperclip_list_goals` |
+| `BREAKING CHANGE:`         | major        | `feat!: remove legacy endpoint`         |
+| `chore:`, `docs:`, `test:` | none         | `docs: update readme`                   |
 
 Non-conforming commits are ignored by semantic-release and produce no release.
 
