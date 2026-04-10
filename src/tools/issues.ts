@@ -83,7 +83,7 @@ export const issueTools: ToolDefinition[] = [
       "List issues for the current company with client-side pagination. " +
       "Optionally filter by status (comma-separated), assigneeAgentId, projectId, goalId, labelId, or full-text search query. " +
       `Use limit (max ${ISSUES_MAX_LIMIT}, default ${ISSUES_DEFAULT_LIMIT}) and offset to page through results. ` +
-      "Returns a JSON array of at most limit issues, starting at the given offset.",
+      "Returns { issues, total, limit, offset } where total is the unsliced count so clients can detect truncation.",
     inputSchema: {
       type: "object",
       properties: {
@@ -123,8 +123,12 @@ export const issueTools: ToolDefinition[] = [
         const all = await client.get<unknown[]>(path);
         const limit = input.limit ?? ISSUES_DEFAULT_LIMIT;
         const offset = input.offset ?? 0;
-        const page = all.slice(offset, offset + limit);
-        return { content: [{ type: "text", text: JSON.stringify(page) }] };
+        const issues = all.slice(offset, offset + limit);
+        return {
+          content: [
+            { type: "text", text: JSON.stringify({ issues, total: all.length, limit, offset }) },
+          ],
+        };
       } catch (err) {
         return handleApiError(err);
       }

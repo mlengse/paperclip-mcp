@@ -40,7 +40,8 @@ describe("paperclip_list_issues", () => {
     assert.equal(calls.length, 1);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/issues");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: "[]" }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, { issues: [], total: 0, limit: 50, offset: 0 });
   });
 
   it("appends query params when filters are provided", async () => {
@@ -67,6 +68,78 @@ describe("paperclip_list_issues", () => {
     const result = await listIssues.handler({}, client);
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("500"));
+  });
+
+  it("pagination: limit=5, offset=0 returns first 5 of 10 with total=10", async () => {
+    const allIssues = Array.from({ length: 10 }, (_, i) => ({ id: `issue-${i}` }));
+    const { fn } = mockFetch(200, allIssues);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler({ limit: 5, offset: 0 }, client);
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.equal(parsed.total, 10);
+    assert.equal(parsed.limit, 5);
+    assert.equal(parsed.offset, 0);
+    assert.equal(parsed.issues.length, 5);
+    assert.deepEqual(parsed.issues, allIssues.slice(0, 5));
+  });
+
+  it("pagination: limit=5, offset=5 returns items 5–9 with total=10", async () => {
+    const allIssues = Array.from({ length: 10 }, (_, i) => ({ id: `issue-${i}` }));
+    const { fn } = mockFetch(200, allIssues);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler({ limit: 5, offset: 5 }, client);
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.equal(parsed.total, 10);
+    assert.equal(parsed.issues.length, 5);
+    assert.deepEqual(parsed.issues, allIssues.slice(5, 10));
+  });
+
+  it("pagination: offset past end returns empty issues with correct total", async () => {
+    const allIssues = Array.from({ length: 3 }, (_, i) => ({ id: `issue-${i}` }));
+    const { fn } = mockFetch(200, allIssues);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler({ limit: 5, offset: 10 }, client);
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.equal(parsed.total, 3);
+    assert.deepEqual(parsed.issues, []);
+  });
+
+  it("pagination validation: limit=0 throws McpError before fetch", async () => {
+    const { fn, calls } = mockFetch(200, []);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => listIssues.handler({ limit: 0 }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("pagination validation: limit=101 throws McpError before fetch", async () => {
+    const { fn, calls } = mockFetch(200, []);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => listIssues.handler({ limit: 101 }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("pagination default: no limit/offset applies default limit=50", async () => {
+    const allIssues = Array.from({ length: 60 }, (_, i) => ({ id: `issue-${i}` }));
+    const { fn } = mockFetch(200, allIssues);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler({}, client);
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.equal(parsed.total, 60);
+    assert.equal(parsed.limit, 50);
+    assert.equal(parsed.offset, 0);
+    assert.equal(parsed.issues.length, 50);
   });
 });
 
