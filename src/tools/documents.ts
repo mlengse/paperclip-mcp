@@ -111,7 +111,8 @@ export const documentTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_delete_document",
-    description: "Delete a document from an issue by key. Run ID header is injected automatically.",
+    description:
+      "Board/human users only — agents receive 403. Delete a document from an issue by key. Run ID header is injected automatically.",
     inputSchema: {
       type: "object",
       properties: {

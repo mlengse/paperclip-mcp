@@ -673,7 +673,7 @@ Tool call: paperclip_upsert_document {
 
 ### `paperclip_delete_document`
 
-Delete a document from an issue by key. Use when a document is no longer relevant (e.g. a stale plan). Prefer `paperclip_upsert_document` for clearing content rather than deleting if you may need the key again. The run ID is injected automatically.
+**Board/human users only — agents receive 403.** Delete a document from an issue by key. Use when a document is no longer relevant (e.g. a stale plan). Prefer `paperclip_upsert_document` for clearing content rather than deleting if you may need the key again. The run ID is injected automatically.
 
 **Input:**
 
