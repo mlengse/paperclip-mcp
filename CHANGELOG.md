@@ -1,3 +1,10 @@
+## [1.2.5](https://github.com/bruhsb/paperclip-mcp/compare/v1.2.4...v1.2.5) (2026-04-10)
+
+
+### Bug Fixes
+
+* **identity:** call agent-scoped endpoints directly, drop /api/agents/me priority (PAP-128) ([8028de8](https://github.com/bruhsb/paperclip-mcp/commit/8028de8147c6bf8310dfba12416d65e3fa21ef67))
+
 ## [1.2.4](https://github.com/bruhsb/paperclip-mcp/compare/v1.2.3...v1.2.4) (2026-04-10)
 
 
