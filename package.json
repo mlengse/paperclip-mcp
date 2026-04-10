@@ -19,7 +19,7 @@
   "mcpName": "paperclip",
   "repository": {
     "type": "git",
-    "url": "https://github.com/bruhsb/paperclip-mcp.git"
+    "url": "git+https://github.com/bruhsb/paperclip-mcp.git"
   },
   "bugs": {
     "url": "https://github.com/bruhsb/paperclip-mcp/issues"
