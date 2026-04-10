@@ -27,7 +27,7 @@
   "homepage": "https://github.com/bruhsb/paperclip-mcp#readme",
   "scripts": {
     "build": "tsc && shx chmod +x dist/*.js",
-    "prepare": "npm run build && husky",
+    "prepare": "npm run build && ([ -f node_modules/.bin/husky ] && husky || true)",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "lint": "eslint src",
