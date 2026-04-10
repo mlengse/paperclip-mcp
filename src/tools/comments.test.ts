@@ -26,6 +26,7 @@ function mockFetch(status: number, body: unknown) {
 
 const listComments = commentTools.find((t) => t.name === "paperclip_list_comments")!;
 const addComment = commentTools.find((t) => t.name === "paperclip_add_comment")!;
+const getComment = commentTools.find((t) => t.name === "paperclip_get_comment")!;
 
 describe("paperclip_list_comments", () => {
   it("calls GET /api/issues/{id}/comments with no query params when only issueId given", async () => {
@@ -146,5 +147,42 @@ describe("paperclip_add_comment", () => {
     const result = await addComment.handler({ issueId: "issue-1", body: "Hello" }, client);
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("403"));
+  });
+});
+
+describe("paperclip_get_comment", () => {
+  it("calls GET /api/issues/{id}/comments/{commentId}", async () => {
+    const comment = { id: "c-42", body: "Wake comment body", authorAgentId: "agent-1" };
+    const { fn, calls } = mockFetch(200, comment);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getComment.handler({ issueId: "issue-1", commentId: "c-42" }, client);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1/comments/c-42");
+    assert.equal(calls[0]!.init.method, "GET");
+    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(comment) }] });
+  });
+
+  it("throws McpError when commentId is missing (validation failure, fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => getComment.handler({ issueId: "issue-1" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("returns isError response on 404 API error", async () => {
+    const { fn } = mockFetch(404, { message: "Comment not found" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getComment.handler(
+      { issueId: "issue-1", commentId: "no-such-id" },
+      client
+    );
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("404"));
   });
 });
