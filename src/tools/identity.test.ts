@@ -75,16 +75,26 @@ describe("paperclip_get_me", () => {
 });
 
 describe("paperclip_get_inbox", () => {
-  it("returns inbox data and calls GET /api/companies/{companyId}/issues?assigneeAgentId={agentId}", async () => {
-    const inbox = [{ id: "issue-1", title: "Fix bug", status: "todo" }];
+  it("returns inbox data and calls GET /api/agents/me/inbox-lite", async () => {
+    const inbox = [
+      {
+        id: "issue-1",
+        identifier: "PAP-1",
+        title: "Fix bug",
+        status: "todo",
+        priority: "high",
+        projectId: "project-1",
+        goalId: "goal-1",
+        parentId: null,
+        updatedAt: "2026-01-01T00:00:00.000Z",
+        activeRun: null,
+      },
+    ];
     const { fn, calls } = mockFetch(200, inbox);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await getInbox.handler({}, client);
     assert.equal(calls.length, 1);
-    assert.equal(
-      calls[0]!.url,
-      "http://localhost:3100/api/companies/company-1/issues?assigneeAgentId=agent-1"
-    );
+    assert.equal(calls[0]!.url, "http://localhost:3100/api/agents/me/inbox-lite");
     assert.equal(calls[0]!.init.method, "GET");
     assert.deepEqual(result, {
       content: [{ type: "text", text: JSON.stringify(inbox) }],
@@ -104,22 +114,32 @@ describe("paperclip_get_inbox", () => {
     assert.equal(calls.length, 0);
   });
 
-  it("calls GET /api/companies/{companyId}/issues?assigneeAgentId={agentId} directly (no inbox-lite fallback)", async () => {
-    const issues = [{ id: "issue-1", title: "Fix bug", status: "todo" }];
+  it("calls GET /api/agents/me/inbox-lite (agent-scoped endpoint, no company fallback)", async () => {
+    const issues = [
+      {
+        id: "issue-1",
+        identifier: "PAP-1",
+        title: "Fix bug",
+        status: "in_progress",
+        priority: "medium",
+        projectId: "project-1",
+        goalId: "goal-1",
+        parentId: null,
+        updatedAt: "2026-01-01T00:00:00.000Z",
+        activeRun: { id: "run-1" },
+      },
+    ];
     const { fn, calls } = mockFetch(200, issues);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await getInbox.handler({}, client);
     assert.equal(calls.length, 1);
-    assert.equal(
-      calls[0]!.url,
-      "http://localhost:3100/api/companies/company-1/issues?assigneeAgentId=agent-1"
-    );
+    assert.equal(calls[0]!.url, "http://localhost:3100/api/agents/me/inbox-lite");
     assert.deepEqual(result, {
       content: [{ type: "text", text: JSON.stringify(issues) }],
     });
   });
 
-  it("returns isError when company issues endpoint returns 401", async () => {
+  it("returns isError when inbox-lite endpoint returns 401", async () => {
     const { fn } = mockFetch(401, { error: "Agent authentication required" });
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await getInbox.handler({}, client);
