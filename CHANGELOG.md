@@ -1,3 +1,10 @@
+## [1.2.4](https://github.com/bruhsb/paperclip-mcp/compare/v1.2.3...v1.2.4) (2026-04-10)
+
+
+### Bug Fixes
+
+* **checkout:** detect stale executionRunId post-release and surface descriptive error (PAP-125) ([cfcaaa4](https://github.com/bruhsb/paperclip-mcp/commit/cfcaaa456dfc05e24cb4454ce2528146a07be8b5))
+
 ## [1.2.3](https://github.com/bruhsb/paperclip-mcp/compare/v1.2.2...v1.2.3) (2026-04-10)
 
 
