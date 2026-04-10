@@ -14,8 +14,13 @@ const CreateApprovalInput = z.object({
   type: z
     .enum(["hire_agent", "approve_ceo_strategy", "budget_override_required"])
     .describe("Approval type: hire_agent | approve_ceo_strategy | budget_override_required"),
-  payload: z.record(z.string(), z.unknown()).describe("Type-specific payload object (required by the API)"),
-  requestedByAgentId: z.string().optional().describe("Agent UUID of the requester (defaults to caller)"),
+  payload: z
+    .record(z.string(), z.unknown())
+    .describe("Type-specific payload object (required by the API)"),
+  requestedByAgentId: z
+    .string()
+    .optional()
+    .describe("Agent UUID of the requester (defaults to caller)"),
 });
 
 const ApprovalCommentInput = z.object({
@@ -79,7 +84,8 @@ export const approvalTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_get_approval",
-    description: "Get a single approval request by ID, including its status and linked issues.",
+    description:
+      "Get a single approval request by ID. Returns the approval object only (status, type, payload, etc.). Linked issues are not included in this response.",
     inputSchema: {
       type: "object",
       properties: {
@@ -126,7 +132,8 @@ export const approvalTools: ToolDefinition[] = [
       try {
         const input = validate(CreateApprovalInput, args);
         const body: Record<string, unknown> = { type: input.type, payload: input.payload };
-        if (input.requestedByAgentId !== undefined) body.requestedByAgentId = input.requestedByAgentId;
+        if (input.requestedByAgentId !== undefined)
+          body.requestedByAgentId = input.requestedByAgentId;
         const data = await client.post<unknown>(
           `/api/companies/${client.companyId}/approvals`,
           body
