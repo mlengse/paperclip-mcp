@@ -4,13 +4,13 @@
 
 | Version | Supported |
 | ------- | --------- |
-| 0.1.x   | Yes       |
+| 1.x     | Yes       |
 
 ## Reporting a vulnerability
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 
-To report a vulnerability, email the maintainers directly (see the `authors` field in `package.json`), or use GitHub's private [Security Advisories](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability) feature.
+To report a vulnerability, use GitHub's private [Security Advisories](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability) feature.
 
 Please include:
 
