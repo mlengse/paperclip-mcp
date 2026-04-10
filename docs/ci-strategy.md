@@ -23,6 +23,8 @@ Runs locally on every `git commit` against staged files only.
 
 Setup is automatic: `npm install` runs `prepare`, which installs husky. No manual step required.
 
+The `prepare` script skips husky gracefully when `node_modules/.bin/husky` is not present (e.g. `npm publish --dry-run`, `npm pack`, or environments where devDependencies are not installed). This prevents a `command not found` error in those contexts while preserving normal hook installation for local development.
+
 To skip the hook in an emergency (not recommended):
 
 ```sh
