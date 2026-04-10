@@ -135,21 +135,53 @@ Any agent can create a `backlog` issue when they discover a gap, blocker, or imp
 - Include: clear title, description with context, acceptance criteria, goalId, parentId.
 - Post `@Scrum Master — created PAP-XX for {reason}`.
 
+**Follow the full issue creation standard:** [`docs/guides/issue-creation-standard.md`](docs/guides/issue-creation-standard.md)
+
+Key requirements enforced by the standard:
+
+- Use `sequential-thinking` to draft and review the issue content before calling `paperclip_create_issue`
+- Every issue must have: `goalId`, `projectId`, `priority`, structured description with Context / What needs to happen / Acceptance Criteria
+- After creating, post a comment: `Labels: source:agent, <type>` (until label API is writable via MCP)
+- Post `@Scrum Master — created PAP-XX for {reason}`
+
+### MCP Tool Failover
+
+When any `paperclip_*` MCP tool call fails (error response, timeout, or tool not found):
+
+1. **Retry once.** If the second attempt also fails, do not retry again.
+2. **Use `sequential-thinking`** to structure a backlog issue capturing the failure:
+   - Title: `MCP tool failure: <tool_name> — <short error description>`
+   - Description: include the tool name, arguments passed, full error message, and what the agent was trying to accomplish.
+3. **POST the issue via curl:**
+
+```bash
+curl -s -X POST \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
+  -d '{
+    "title": "MCP tool failure: <tool_name> — <short error>",
+    "description": "<structured description from sequential-thinking>",
+    "status": "backlog",
+    "priority": "high",
+    "projectId": "<YOUR_PROJECT_ID>",
+    "goalId": "<YOUR_GOAL_ID>"
+  }' \
+  "http://127.0.0.1:3100/api/companies/<YOUR_COMPANY_ID>/issues"
+```
+
+4. **Stop the current task** and report the curl result (issue identifier) in your response. Do not continue work that depended on the failed tool.
+
 ### Role-Specific Guidance
 
-**Scrum Master (coordinator)** — Only scheduled heartbeat. Feeds pipeline: backlog → todo → assign → @-mention. Closes done epics. Cleans the board. Max 2 IC agents active at once.
+**Scrum Master (coordinator)** — Only scheduled heartbeat. Feeds pipeline: backlog → todo → assign → @-mention. Closes done epics. Cleans the board. Max 2 IC agents active at once. When a new specialist agent is needed, invoke the `paperclip-hire-agent` skill to draft the hire proposal.
 
-**CTO** — Technical authority. Wakes on @-mention. Architecture decisions, unblocking, escalation handling. Never coordinates kanban, never reviews code.
+**CTO** — Technical authority. Wakes on @-mention. Architecture decisions, unblocking, escalation handling. Never coordinates kanban, never reviews code. When a new specialist agent is needed, invoke the `paperclip-hire-agent` skill — it guides research, sequential-thinking design, and governance submission.
 
 **Engineer** — Implements tools. Wakes on @-mention. One issue at a time. Marks `in_review` → @QA.
 
 **QA (sole reviewer)** — Reviews code + writes tests. Wakes on @-mention. APPROVE/REQUEST_CHANGES/ESCALATE.
 
 **TechWriter** — Updates docs. Wakes on @-mention. Marks done → @Scrum Master.
-
-**PM (Feature Guardian)** — Validates features against Paperclip API specs. Creates backlog issues for requirement adjustments. Ensures product alignment.
-
-**CEO** — Escalation point. Handles blocked issues. Guided by goals. Opens adjustment issues.
 
 **PM (Feature Guardian)** — Validates features against Paperclip API specs. Creates backlog issues for requirement adjustments. Ensures product alignment.
 
@@ -176,9 +208,9 @@ When BMAD workflows would normally write local epic/story/sprint files, follow t
 
 - **No local story files.** Paperclip issues ARE the stories. Never write to `_bmad-output/implementation-artifacts/` for stories or sprint tracking.
 - **`/bmad-create-epics-and-stories`** — After designing the epic/story breakdown, use `/bmad-paperclip-dispatch` to create Paperclip issues instead of writing local files.
-- **`/bmad-sprint-planning`** — Read Paperclip issues via `curl -s "http://127.0.0.1:3100/api/companies/00041315-a3cb-4cd0-99e4-c715ebf13326/issues"` instead of `sprint-status.yaml`.
+- **`/bmad-sprint-planning`** — Read Paperclip issues via `curl -s "http://127.0.0.1:3100/api/companies/<YOUR_COMPANY_ID>/issues"` instead of `sprint-status.yaml`.
 - **`/bmad-dev-story`** — Do NOT use this skill. Paperclip agents handle implementation autonomously.
-- **`/bmad-sprint-status`** — Read Paperclip dashboard via `curl -s "http://127.0.0.1:3100/api/companies/00041315-a3cb-4cd0-99e4-c715ebf13326/dashboard"`.
+- **`/bmad-sprint-status`** — Read Paperclip dashboard via `curl -s "http://127.0.0.1:3100/api/companies/<YOUR_COMPANY_ID>/dashboard"`.
 - **`/bmad-retrospective`** — Read completed issues and comments from Paperclip for context. Action items become new Paperclip issues via dispatch.
 - **Any identified code changes** — Always create a Paperclip issue. Never modify `src/` directly from BMAD.
 
@@ -193,15 +225,17 @@ BMAD agents Quinn (QA) and Amelia (Developer) have fundamental ownership to revi
 
 ### Paperclip API (Direct Access)
 
+> Replace `<YOUR_COMPANY_ID>`, `<YOUR_PROJECT_ID>`, `<YOUR_GOAL_ID>`, and `<YOUR_CTO_AGENT_ID>` with the actual UUIDs from your Paperclip account settings.
+
 While the MCP server is under development, use curl for Paperclip operations:
 
-| Operation     | Command                                                                                                                                                                                                                                                                                                                                                      |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| List issues   | `curl -s "http://127.0.0.1:3100/api/companies/00041315-a3cb-4cd0-99e4-c715ebf13326/issues"`                                                                                                                                                                                                                                                                  |
-| Create issue  | `curl -s -X POST -H "Content-Type: application/json" -d '{"title":"...","status":"todo","priority":"medium","projectId":"b368fc4b-b137-42c6-8038-a699cb32f609","goalId":"467f800f-b971-4494-b25e-bc1d573ad70c","assigneeAgentId":"959ce36e-5398-4980-b5b3-df7dd999bcb3"}' "http://127.0.0.1:3100/api/companies/00041315-a3cb-4cd0-99e4-c715ebf13326/issues"` |
-| Get dashboard | `curl -s "http://127.0.0.1:3100/api/companies/00041315-a3cb-4cd0-99e4-c715ebf13326/dashboard"`                                                                                                                                                                                                                                                               |
-| Trigger CTO   | `curl -s -X POST "http://127.0.0.1:3100/api/agents/959ce36e-5398-4980-b5b3-df7dd999bcb3/heartbeat/invoke"`                                                                                                                                                                                                                                                   |
-| List agents   | `curl -s "http://127.0.0.1:3100/api/companies/00041315-a3cb-4cd0-99e4-c715ebf13326/agents"`                                                                                                                                                                                                                                                                  |
+| Operation     | Command                                                                                                                                                                                                                                                                         |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| List issues   | `curl -s "http://127.0.0.1:3100/api/companies/<YOUR_COMPANY_ID>/issues"`                                                                                                                                                                                                        |
+| Create issue  | `curl -s -X POST -H "Content-Type: application/json" -d '{"title":"...","status":"todo","priority":"medium","projectId":"<YOUR_PROJECT_ID>","goalId":"<YOUR_GOAL_ID>","assigneeAgentId":"<YOUR_CTO_AGENT_ID>"}' "http://127.0.0.1:3100/api/companies/<YOUR_COMPANY_ID>/issues"` |
+| Get dashboard | `curl -s "http://127.0.0.1:3100/api/companies/<YOUR_COMPANY_ID>/dashboard"`                                                                                                                                                                                                     |
+| Trigger CTO   | `curl -s -X POST "http://127.0.0.1:3100/api/agents/<YOUR_CTO_AGENT_ID>/heartbeat/invoke"`                                                                                                                                                                                       |
+| List agents   | `curl -s "http://127.0.0.1:3100/api/companies/<YOUR_COMPANY_ID>/agents"`                                                                                                                                                                                                        |
 
 ## MCP Servers
 
