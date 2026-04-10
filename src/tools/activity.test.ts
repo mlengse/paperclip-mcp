@@ -172,6 +172,7 @@ describe("paperclip_report_cost_event", () => {
     inputTokens: 1000,
     outputTokens: 500,
     costCents: 12,
+    occurredAt: "2026-04-10T02:00:00Z",
   };
 
   it("calls POST /api/companies/{id}/cost-events with correct body", async () => {
