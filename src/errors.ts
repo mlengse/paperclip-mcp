@@ -5,7 +5,7 @@ export class PaperclipApiError extends Error {
     public readonly body: unknown,
     message?: string
   ) {
-    super(message ?? `Paperclip API error ${status}: ${statusText}`);
+    super(message ?? `Paperclip API error ${status} ${statusText}: ${JSON.stringify(body)}`);
     this.name = "PaperclipApiError";
   }
 }
