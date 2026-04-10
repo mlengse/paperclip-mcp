@@ -14,7 +14,7 @@ npm install
 
 ```bash
 export PAPERCLIP_API_KEY=<your-api-key>
-export PAPERCLIP_API_URL=http://127.0.0.1:3100
+export PAPERCLIP_API_URL=<your-paperclip-api-url>  # local dev default: http://127.0.0.1:3100
 export PAPERCLIP_AGENT_ID=<your-agent-id>
 export PAPERCLIP_COMPANY_ID=<your-company-id>
 ```
@@ -39,7 +39,7 @@ feature/<topic>  →  develop  →  main
 
 - `develop` is the default integration branch — all PRs target `develop`.
 - `main` is for releases only. Never commit directly to `main`.
-- Branch naming: `feature/<topic>`, `fix/<topic>`, or `{agent-urlkey}/PAP-XX` for Paperclip-orchestrated agents.
+- Branch naming: `feature/<topic>` or `fix/<topic>` for human contributors. The `{agent-urlkey}/PAP-XX` pattern is reserved for Paperclip-orchestrated agent runs.
 
 ## Commit format
 
