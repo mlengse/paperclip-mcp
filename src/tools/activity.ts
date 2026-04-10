@@ -9,6 +9,7 @@ const ReportCostEventInput = z.object({
   inputTokens: z.number().int().nonnegative().describe("Number of input tokens consumed"),
   outputTokens: z.number().int().nonnegative().describe("Number of output tokens generated"),
   costCents: z.number().nonnegative().describe("Total cost in cents"),
+  occurredAt: z.string().describe("ISO 8601 timestamp of when the cost was incurred"),
 });
 
 const GetActivityInput = z.object({
@@ -129,8 +130,12 @@ export const activityTools: ToolDefinition[] = [
           description: "Number of output tokens generated",
         },
         costCents: { type: "number", description: "Total cost in cents" },
+        occurredAt: {
+          type: "string",
+          description: "ISO 8601 timestamp of when the cost was incurred",
+        },
       },
-      required: ["agentId", "provider", "model", "inputTokens", "outputTokens", "costCents"],
+      required: ["agentId", "provider", "model", "inputTokens", "outputTokens", "costCents", "occurredAt"],
     },
     annotations: { readOnlyHint: false, openWorldHint: false },
     async handler(args, client) {
