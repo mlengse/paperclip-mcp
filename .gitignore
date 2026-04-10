@@ -26,3 +26,22 @@ Thumbs.db
 .paperclip/worktrees/
 .remember/
 worktrees/
+
+# npm auth token — never commit
+.npmrc
+
+# BMAD framework install and output
+_bmad/
+_bmad-output/
+
+# Claude Code local config (skills, memory, local settings)
+.claude/
+
+# Agent runtime config (local skill packs, local paths)
+.agents/
+
+# MCP dev server config (personal/per-developer — use .mcp.json.example for sharing)
+.mcp.json
+
+# Stale BMAD template artifact (miscreated directory)
+{output_folder}/
