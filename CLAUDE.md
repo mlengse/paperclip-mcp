@@ -83,35 +83,54 @@ This section is for Paperclip-orchestrated agents. Human developers can skip it.
 
 ### Orchestration Model
 
-- **Scrum Master is the sole coordinator** — only agent with a scheduled heartbeat (every 30 min).
-- **All other agents wake only when @-mentioned** in a Paperclip issue comment.
+- **Scrum Master is the SOLE agent with a scheduled heartbeat** (every 5 min). All 7 other agents (CEO, CTO, PM, Engineer, QA, DevOps, TechWriter) have `heartbeat.enabled: false` and wake ONLY on @-mention.
 - **Max 3 agents running at any time** (Scrum Master + 2 IC agents).
 - **One issue per agent** — finish it completely before picking up another.
+- **QA is the SOLE merge owner.** IC agents push feature branches and set `in_review`; QA's APPROVE decision performs the merge, worktree cleanup, and `done` transition. IC agents never call `git merge` or `git push origin develop`.
+- **CEO is the SOLE agent hirer.** All new specialist agents go through CEO using the `paperclip-hire-agent` skill, subject to board approval. CTO, Scrum Master, PM, and everyone else must NOT invoke the skill or draft hire proposals unilaterally.
 
 ### @-Mention Flow
 
 ```
 Scrum Master (heartbeat) → picks backlog → assigns → @Engineer "PAP-XX ready"
-Engineer → implements → commits → merges to develop → sets in_review → @QA "ready for review"
-QA (sole reviewer) → APPROVE (done) / REQUEST_CHANGES (todo + @Engineer) / ESCALATE (blocked + @CTO)
-Scrum Master (next heartbeat) → catches orphaned in_review → @QA · closes done epics · cleans board
+Engineer → implements → commits → push branch → set in_review → @QA "ready for review" → EXIT
+QA (sole reviewer + merger) → APPROVE (merge to develop + delete branch + done) / REQUEST_CHANGES (todo + @role) / ESCALATE (blocked + @CTO)
+Scrum Master (next heartbeat) → catches orphaned in_review → @QA · clears stale locks · closes done epics · cleans board
 ```
 
-### Agent Protocol (all agents)
+### Agent Protocol (IC agents: Engineer / DevOps / TechWriter)
 
 1. `paperclip_get_me` — confirm identity.
-2. Check `PAPERCLIP_TASK_ID` / `PAPERCLIP_WAKE_REASON` — find why you woke.
+2. Check `PAPERCLIP_TASK_ID` / `PAPERCLIP_WAKE_REASON` — find why you woke. You were woken by an explicit @-mention (no heartbeat fires for you); identify the trigger.
 3. **Label Bootstrap.** Call `paperclip_list_labels` once and cache the `name → uuid` map for the run. If any required taxonomy labels are missing (`source:*`, `status:refined|unrefined`, `type:*`, `agent:*`), call `paperclip_create_label` to seed them before proceeding. Full taxonomy and colors: [`docs/guides/issue-creation-standard.md`](docs/guides/issue-creation-standard.md#label-taxonomy).
 4. `paperclip_get_inbox` — find your assigned issue.
 5. `paperclip_checkout_issue` — claim it, **passing `expectedStatuses` for your role** so the server atomically validates the kanban column before flipping status. Engineer / DevOps / TechWriter pass `["todo"]`; QA passes `["in_review"]` for code review or `["todo"]` for test-writing tasks. **Never retry a 409 and never retry a status-mismatch rejection.** If the checkout fails for either reason, post `Wake mismatch: PAP-XX is in status <X>, expected [<expected>]. Not claiming. @Scrum Master — please verify assignment.` on the issue, then exit cleanly. Do not mutate any other state.
-6. Do the work on a feature branch (`{agent-urlkey}/{PAP-XX}`). Follow conventions above.
-7. Commit all changes to the branch. Push the branch. **Do NOT merge to develop yet.**
-8. Set `in_review` + post `@QA — ready for review on PAP-XX`.
-9. Exit and wait for QA.
+6. **Board comment precedence check.** Immediately after a successful checkout, fetch the last 5 comments on the issue. If any were authored by `local-board` in the last 24h with blocking language (`blocked`, `cancelled`, `parked`, `hold`, `do not promote`, `needs board decision`, `board action`), release the checkout and exit with a deferral comment. The board's state takes precedence over a Scrum Master assignment.
+7. Do the work on a feature branch (`{agent-urlkey}/{PAP-XX}`). Follow conventions above.
+8. Commit all changes to the branch. **Verify `git rev-parse --abbrev-ref HEAD` after each commit** to catch any husky/lint-staged branch drift (PAP-107 regression guard). Push the branch. **Never merge to `develop` — QA is the sole merge owner.**
+9. Set `in_review` + post `@QA — ready for review on PAP-XX. Changes: {summary}`.
+10. **Exit cleanly.** Your run is done. QA will merge on APPROVE; you will only be re-woken if QA posts `@<your-role> — changes needed on PAP-XX` (REQUEST_CHANGES flow) or escalates to CTO. If you are woken on an issue already `done` or already merged, exit without action.
 
-**After QA approves (APPROVE):** 10. Merge branch to `develop`, clean worktree. No leftovers. 11. Set issue to `done`. Post closing comment. 12. Exit cleanly.
+### QA Protocol (reviewer + merger)
 
-**Merge to develop happens ONLY after all "done" requirements are met (code + review + tests pass).**
+Steps 1-4 are the same as the IC Protocol (identity, wake reason, Label Bootstrap, inbox).
+
+- **Step 5** — `paperclip_checkout_issue` with `expectedStatuses: ["in_review"]` for code review, or `["todo"]` for test-writing tasks.
+- **Step 6** — Board comment precedence check (same rule as IC).
+- **Step 7** — Review the feature branch diff, run the full quality gate (`npm run test && npm run lint && npm run typecheck && npm run format:check && npm run docs:check` — all required).
+- **Step 8 — Decision:**
+  - **APPROVE** → execute the merge sequence: `git checkout develop && git pull`, `git merge --no-ff <feature-branch>`, re-run quality gate on merged develop, `git push origin develop`, delete local + remote feature branch, `paperclip_update_issue` to `done` with a structured closing comment.
+  - **REQUEST_CHANGES** → set issue to `todo`, post `@<role> — changes needed on PAP-XX:\n- {bullet list}` matching the issue's `assigneeAgentId`. The feature branch stays open for the IC agent to push fixes.
+  - **ESCALATE** → set issue to `blocked`, post `@CTO — needs escalation on PAP-XX: {reason}`.
+
+### Coordinator Protocol (SM / CEO / CTO / PM)
+
+These agents do NOT call `paperclip_checkout_issue`. They mutate via `paperclip_update_issue` and `paperclip_add_comment`. Their AGENTS.md files document per-role workflows — read the relevant file for your role. Key rules:
+
+- **SM** is the only heartbeat-driven agent; runs every 5 minutes; owns promotions, refinement triggers, orphan catches, stale-lock scans (PAP-90 workaround), and epic closure.
+- **CEO** is the sole agent hirer — invoke `.agents/skills/paperclip-hire-agent/SKILL.md` when the board approves a new specialist role. CTO, SM, and others must @-mention CEO with `@CEO — hire proposal: <role> for <scope>. Rationale: <one line>` rather than drafting proposals themselves.
+- **CTO** owns technical decisions, unblocking, and architecture review. Never implements code, never reviews line-by-line, never hires.
+- **PM** is the sole refiner — wakes on `@PM — please refine this issue` from SM or the board. Updates title/description/labels via `paperclip_update_issue`; never changes `status` (SM promotes).
 
 ### Comment Format
 
