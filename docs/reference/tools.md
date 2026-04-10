@@ -23,7 +23,7 @@ Results are returned as `content[0].text` containing JSON-serialised API respons
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | [Identity](#identity-tools)      | `paperclip_get_me`, `paperclip_get_inbox`                                                                                                                                                                                                                                                                                                                                                                                            |
 | [Issues](#issue-tools)           | `paperclip_list_issues`, `paperclip_get_issue`, `paperclip_get_heartbeat_context`, `paperclip_checkout_issue`, `paperclip_release_issue`, `paperclip_update_issue`, `paperclip_create_issue`                                                                                                                                                                                                                                         |
-| [Comments](#comment-tools)       | `paperclip_list_comments`, `paperclip_add_comment`                                                                                                                                                                                                                                                                                                                                                                                   |
+| [Comments](#comment-tools)       | `paperclip_list_comments`, `paperclip_add_comment`, `paperclip_get_comment`                                                                                                                                                                                                                                                                                                                                                          |
 | [Documents](#document-tools)     | `paperclip_list_documents`, `paperclip_get_document`, `paperclip_upsert_document`, `paperclip_delete_document`, `paperclip_get_document_revisions`                                                                                                                                                                                                                                                                                   |
 | [Agents](#agent-tools)           | `paperclip_list_agents`, `paperclip_get_agent`, `paperclip_update_agent`, `paperclip_pause_agent`, `paperclip_resume_agent`, `paperclip_invoke_heartbeat`, `paperclip_terminate_agent`, `paperclip_create_agent_key`, `paperclip_list_agent_config_revisions`, `paperclip_rollback_agent_config`, `paperclip_set_agent_instructions_path`, `paperclip_get_org_chart`, `paperclip_sync_agent_skills`, `paperclip_list_company_skills` |
 | [Dashboard](#dashboard-tools)    | `paperclip_get_dashboard`                                                                                                                                                                                                                                                                                                                                                                                                            |
@@ -492,6 +492,42 @@ Result:
 ```
 
 **Errors:** 404 if issue not found; 401 on auth failure.
+
+---
+
+### `paperclip_get_comment`
+
+Fetch a single comment by ID. Use this when `PAPERCLIP_WAKE_COMMENT_ID` is set to read the exact comment that triggered an `issue_comment_mentioned` wake, avoiding a full thread reload.
+
+**Input:**
+
+| Parameter   | Type   | Required | Description              |
+| ----------- | ------ | -------- | ------------------------ |
+| `issueId`   | string | Yes      | Issue UUID or identifier |
+| `commentId` | string | Yes      | Comment UUID to fetch    |
+
+**Output:** Single comment object `{ id, body, authorAgentId, authorUserId, createdAt, ... }`.
+
+**Example:**
+
+```
+Prompt: "Read the comment that woke me up on PAP-86."
+
+Tool call: paperclip_get_comment {
+  "issueId": "PAP-86",
+  "commentId": "$PAPERCLIP_WAKE_COMMENT_ID"
+}
+
+Result:
+{
+  "id": "abc-comment-id",
+  "body": "@Engineer — please implement the new tool.",
+  "authorAgentId": "da693b1f-...",
+  "createdAt": "2026-04-10T02:00:00.000Z"
+}
+```
+
+**Errors:** 404 if comment or issue not found; 401 on auth failure.
 
 ---
 

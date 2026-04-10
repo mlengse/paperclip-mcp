@@ -24,6 +24,11 @@ interface Comment {
   [key: string]: unknown;
 }
 
+const GetCommentInput = z.object({
+  issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-21)"),
+  commentId: z.string().min(1).describe("Comment UUID to fetch"),
+});
+
 export const commentTools: ToolDefinition[] = [
   {
     name: "paperclip_list_comments",
@@ -98,6 +103,29 @@ export const commentTools: ToolDefinition[] = [
       try {
         const { issueId, body } = validate(AddCommentInput, args);
         const data = await client.post<unknown>(`/api/issues/${issueId}/comments`, { body });
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      } catch (err) {
+        return handleApiError(err);
+      }
+    },
+  },
+  {
+    name: "paperclip_get_comment",
+    description:
+      "Fetch a single comment by ID. Use this when PAPERCLIP_WAKE_COMMENT_ID is set to read the exact comment that triggered an issue_comment_mentioned wake.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        issueId: { type: "string", description: "Issue ID or identifier (e.g. PAP-21)" },
+        commentId: { type: "string", description: "Comment UUID to fetch" },
+      },
+      required: ["issueId", "commentId"],
+    },
+    annotations: { readOnlyHint: true, openWorldHint: false },
+    async handler(args, client) {
+      try {
+        const { issueId, commentId } = validate(GetCommentInput, args);
+        const data = await client.get<unknown>(`/api/issues/${issueId}/comments/${commentId}`);
         return { content: [{ type: "text", text: JSON.stringify(data) }] };
       } catch (err) {
         return handleApiError(err);
