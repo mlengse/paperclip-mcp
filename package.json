@@ -10,6 +10,8 @@
   "files": [
     "dist"
   ],
+  "license": "MIT",
+  "author": "Bruno S. Brasil",
   "keywords": [
     "mcp",
     "paperclip",
