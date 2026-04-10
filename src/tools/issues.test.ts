@@ -348,4 +348,33 @@ describe("paperclip_create_issue", () => {
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("400"));
   });
+
+  it("forwards labelIds in POST body (PAP-99)", async () => {
+    const created = { id: "issue-new", title: "Tagged issue", labelIds: ["label-1", "label-2"] };
+    const { fn, calls } = mockFetch(200, created);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await createIssue.handler({ title: "Tagged issue", labelIds: ["label-1", "label-2"] }, client);
+    const sentBody = JSON.parse(calls[0]!.init.body as string);
+    assert.deepEqual(sentBody.labelIds, ["label-1", "label-2"]);
+  });
+});
+
+describe("paperclip_update_issue (labelIds)", () => {
+  it("forwards labelIds in PATCH body (PAP-99)", async () => {
+    const updated = { id: "issue-1", labelIds: ["label-1"] };
+    const { fn, calls } = mockFetch(200, updated);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await updateIssue.handler({ issueId: "issue-1", labelIds: ["label-1"] }, client);
+    const sentBody = JSON.parse(calls[0]!.init.body as string);
+    assert.deepEqual(sentBody.labelIds, ["label-1"]);
+  });
+
+  it("forwards empty labelIds array to clear all labels (PAP-99)", async () => {
+    const updated = { id: "issue-1", labelIds: [] };
+    const { fn, calls } = mockFetch(200, updated);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await updateIssue.handler({ issueId: "issue-1", labelIds: [] }, client);
+    const sentBody = JSON.parse(calls[0]!.init.body as string);
+    assert.deepEqual(sentBody.labelIds, []);
+  });
 });
