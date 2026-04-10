@@ -1,3 +1,10 @@
+## [1.2.2](https://github.com/bruhsb/paperclip-mcp/compare/v1.2.1...v1.2.2) (2026-04-10)
+
+
+### Bug Fixes
+
+* **identity:** fall back to agent-id endpoint when /api/agents/me returns 401 (PAP-117) ([3c095bb](https://github.com/bruhsb/paperclip-mcp/commit/3c095bb260007185b6d248c7ef2726b53c966500))
+
 ## [1.2.1](https://github.com/bruhsb/paperclip-mcp/compare/v1.2.0...v1.2.1) (2026-04-10)
 
 
