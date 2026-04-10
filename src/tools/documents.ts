@@ -5,22 +5,25 @@ import { validate, IssueIdSchema, handleApiError } from "./validation.js";
 const ListDocumentsInput = IssueIdSchema;
 
 const GetDocumentInput = z.object({
-  issueId: z.string().min(1),
-  key: z.string().min(1),
+  issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-22)"),
+  key: z.string().min(1).describe("Document key (e.g. `plan`)"),
 });
 
 const UpsertDocumentInput = z.object({
-  issueId: z.string().min(1),
-  key: z.string().min(1),
-  title: z.string().min(1),
-  body: z.string().min(1),
-  format: z.enum(["markdown"]).optional(),
-  baseRevisionId: z.string().optional(),
+  issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-22)"),
+  key: z.string().min(1).describe("Document key (e.g. `plan`)"),
+  title: z.string().min(1).describe("Document title"),
+  body: z.string().min(1).describe("Document body (markdown)"),
+  format: z.enum(["markdown"]).optional().describe("Document format (default: markdown)"),
+  baseRevisionId: z
+    .string()
+    .optional()
+    .describe("Current revision ID for optimistic concurrency — omit on first create"),
 });
 
 const DocumentKeyInput = z.object({
-  issueId: z.string().min(1),
-  key: z.string().min(1),
+  issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-22)"),
+  key: z.string().min(1).describe("Document key (e.g. `plan`)"),
 });
 
 export const documentTools: ToolDefinition[] = [
