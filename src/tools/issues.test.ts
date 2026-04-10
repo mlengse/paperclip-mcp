@@ -137,7 +137,7 @@ describe("paperclip_get_heartbeat_context", () => {
 });
 
 describe("paperclip_checkout_issue", () => {
-  it("calls POST /api/issues/{id}/checkout with optional expectedStatuses", async () => {
+  it("calls POST /api/issues/{id}/checkout with agentId and optional expectedStatuses", async () => {
     const updated = { id: "issue-1", status: "in_progress" };
     const { fn, calls } = mockFetch(200, updated);
     const client = new PaperclipClient(TEST_AUTH, fn);
@@ -147,8 +147,21 @@ describe("paperclip_checkout_issue", () => {
     );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1/checkout");
     assert.equal(calls[0]!.init.method, "POST");
-    assert.equal(calls[0]!.init.body, JSON.stringify({ expectedStatuses: ["todo"] }));
+    assert.equal(
+      calls[0]!.init.body,
+      JSON.stringify({ agentId: "agent-1", expectedStatuses: ["todo"] })
+    );
     assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+  });
+
+  it("always includes agentId in POST body even without expectedStatuses", async () => {
+    const updated = { id: "issue-1", status: "in_progress" };
+    const { fn, calls } = mockFetch(200, updated);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await checkoutIssue.handler({ issueId: "issue-1" }, client);
+    const sentBody = JSON.parse(calls[0]!.init.body as string);
+    assert.equal(sentBody.agentId, "agent-1");
+    assert.equal(sentBody.expectedStatuses, undefined);
   });
 
   it("throws McpError when issueId is missing (validation failure, fetch not called)", async () => {

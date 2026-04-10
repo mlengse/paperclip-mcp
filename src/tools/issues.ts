@@ -152,7 +152,7 @@ export const issueTools: ToolDefinition[] = [
     async handler(args, client) {
       try {
         const { issueId, expectedStatuses } = validate(CheckoutIssueInput, args);
-        const body: Record<string, unknown> = {};
+        const body: Record<string, unknown> = { agentId: client.agentId };
         if (expectedStatuses) body["expectedStatuses"] = expectedStatuses;
         const data = await client.post<unknown>(`/api/issues/${issueId}/checkout`, body);
         return { content: [{ type: "text", text: JSON.stringify(data) }] };
