@@ -39,13 +39,58 @@ describe("paperclip_list_comments", () => {
     assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(comments) }] });
   });
 
-  it("appends after and order query params when provided", async () => {
+  it("appends order query param when provided without after", async () => {
     const { fn, calls } = mockFetch(200, []);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    await listComments.handler({ issueId: "issue-1", after: "c-5", order: "desc" }, client);
+    await listComments.handler({ issueId: "issue-1", order: "desc" }, client);
     const url = calls[0]!.url;
-    assert.ok(url.includes("after=c-5"), `URL missing after param: ${url}`);
     assert.ok(url.includes("order=desc"), `URL missing order param: ${url}`);
+    assert.ok(!url.includes("after="), `URL should not include after param: ${url}`);
+  });
+
+  it("uses client-side workaround when after is provided: fetches with order=asc&limit=500, not after param", async () => {
+    const allComments = [
+      { id: "c-1", body: "First" },
+      { id: "c-2", body: "Second" },
+      { id: "c-3", body: "Third" },
+    ];
+    const { fn, calls } = mockFetch(200, allComments);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listComments.handler({ issueId: "issue-1", after: "c-1" }, client);
+    const url = calls[0]!.url;
+    assert.ok(url.includes("order=asc"), `URL missing order=asc: ${url}`);
+    assert.ok(url.includes("limit=500"), `URL missing limit=500: ${url}`);
+    assert.ok(!url.includes("after="), `URL should not include after param: ${url}`);
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.ok(parsed._note, "Result should include _note field");
+    assert.deepEqual(parsed.comments, [
+      { id: "c-2", body: "Second" },
+      { id: "c-3", body: "Third" },
+    ]);
+  });
+
+  it("returns all comments when after ID is not found in response", async () => {
+    const allComments = [
+      { id: "c-1", body: "First" },
+      { id: "c-2", body: "Second" },
+    ];
+    const { fn } = mockFetch(200, allComments);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listComments.handler({ issueId: "issue-1", after: "c-999" }, client);
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed.comments, allComments);
+  });
+
+  it("returns empty comments array when after ID is the last comment", async () => {
+    const allComments = [
+      { id: "c-1", body: "First" },
+      { id: "c-2", body: "Last" },
+    ];
+    const { fn } = mockFetch(200, allComments);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listComments.handler({ issueId: "issue-1", after: "c-2" }, client);
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed.comments, []);
   });
 
   it("throws McpError when issueId is missing (validation failure, fetch not called)", async () => {
