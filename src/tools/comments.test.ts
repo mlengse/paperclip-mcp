@@ -1,0 +1,105 @@
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+import { McpError } from "@modelcontextprotocol/sdk/types.js";
+import { PaperclipClient } from "../client.js";
+import { commentTools } from "./comments.js";
+
+const TEST_AUTH = {
+  apiKey: "test-jwt",
+  apiUrl: "http://localhost:3100",
+  agentId: "agent-1",
+  companyId: "company-1",
+};
+
+function mockFetch(status: number, body: unknown) {
+  const calls: { url: string; init: RequestInit }[] = [];
+  const fn = async (url: string, init: RequestInit): Promise<Response> => {
+    calls.push({ url, init });
+    return new Response(body !== undefined ? JSON.stringify(body) : null, {
+      status,
+      statusText: status >= 200 && status < 300 ? "OK" : "Error",
+      headers: new Headers({ "Content-Type": "application/json" }),
+    });
+  };
+  return { fn, calls };
+}
+
+const listComments = commentTools.find((t) => t.name === "paperclip_list_comments")!;
+const addComment = commentTools.find((t) => t.name === "paperclip_add_comment")!;
+
+describe("paperclip_list_comments", () => {
+  it("calls GET /api/issues/{id}/comments with no query params when only issueId given", async () => {
+    const comments = [{ id: "c-1", body: "Hello" }];
+    const { fn, calls } = mockFetch(200, comments);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listComments.handler({ issueId: "issue-1" }, client);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1/comments");
+    assert.equal(calls[0]!.init.method, "GET");
+    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(comments) }] });
+  });
+
+  it("appends after and order query params when provided", async () => {
+    const { fn, calls } = mockFetch(200, []);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await listComments.handler({ issueId: "issue-1", after: "c-5", order: "desc" }, client);
+    const url = calls[0]!.url;
+    assert.ok(url.includes("after=c-5"), `URL missing after param: ${url}`);
+    assert.ok(url.includes("order=desc"), `URL missing order param: ${url}`);
+  });
+
+  it("throws McpError when issueId is missing (validation failure, fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => listComments.handler({}, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("returns isError response on 404 API error", async () => {
+    const { fn } = mockFetch(404, { message: "Issue not found" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listComments.handler({ issueId: "PAP-99" }, client);
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("404"));
+  });
+});
+
+describe("paperclip_add_comment", () => {
+  it("calls POST /api/issues/{id}/comments with body payload", async () => {
+    const created = { id: "c-new", body: "Work done." };
+    const { fn, calls } = mockFetch(200, created);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await addComment.handler({ issueId: "issue-1", body: "Work done." }, client);
+    assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1/comments");
+    assert.equal(calls[0]!.init.method, "POST");
+    assert.equal(calls[0]!.init.body, JSON.stringify({ body: "Work done." }));
+    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(created) }] });
+  });
+
+  it("throws McpError when body is empty string (validation failure, fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => addComment.handler({ issueId: "issue-1", body: "" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("returns isError response on 403 API error", async () => {
+    const { fn } = mockFetch(403, { message: "Forbidden" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await addComment.handler({ issueId: "issue-1", body: "Hello" }, client);
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("403"));
+  });
+});

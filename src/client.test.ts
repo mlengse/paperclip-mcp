@@ -13,16 +13,20 @@ const TEST_AUTH = {
 function mockFetch(
   status: number,
   body: unknown,
-  headers: Record<string, string> = {},
-): { fn: (url: string, init: RequestInit) => Promise<Response>; calls: { url: string; init: RequestInit }[] } {
+  headers: Record<string, string> = {}
+): {
+  fn: (url: string, init: RequestInit) => Promise<Response>;
+  calls: { url: string; init: RequestInit }[];
+} {
   const calls: { url: string; init: RequestInit }[] = [];
   const fn = async (url: string, init: RequestInit): Promise<Response> => {
     calls.push({ url, init });
     const responseHeaders = new Headers({ "Content-Type": "application/json", ...headers });
-    return new Response(
-      body !== undefined ? JSON.stringify(body) : null,
-      { status, statusText: status === 200 ? "OK" : "Error", headers: responseHeaders },
-    );
+    return new Response(body !== undefined ? JSON.stringify(body) : null, {
+      status,
+      statusText: status === 200 ? "OK" : "Error",
+      headers: responseHeaders,
+    });
   };
   return { fn, calls };
 }
@@ -87,7 +91,7 @@ describe("PaperclipClient.get", () => {
         assert.ok(err instanceof PaperclipApiError);
         assert.equal(err.status, 404);
         return true;
-      },
+      }
     );
   });
 });

@@ -3,7 +3,7 @@ export class PaperclipApiError extends Error {
     public readonly status: number,
     public readonly statusText: string,
     public readonly body: unknown,
-    message?: string,
+    message?: string
   ) {
     super(message ?? `Paperclip API error ${status}: ${statusText}`);
     this.name = "PaperclipApiError";
