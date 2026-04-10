@@ -4,11 +4,12 @@ Paperclip MCP exposes the [Paperclip](https://paperclip.ing) control plane API a
 
 ## Sections
 
-| Section                                | Description                          |
-| -------------------------------------- | ------------------------------------ |
-| [Guides](guides/README.md)             | Step-by-step guides — start here     |
-| [Reference](reference/README.md)       | MCP tool reference                   |
-| [Architecture](architecture/README.md) | Internal design and extension points |
+| Section                                    | Description                                           |
+| ------------------------------------------ | ----------------------------------------------------- |
+| [Guides](guides/README.md)                 | Step-by-step guides — start here                      |
+| [Reference](reference/README.md)           | MCP tool reference                                    |
+| [Architecture](architecture/README.md)     | Internal design and extension points                  |
+| [Quality](quality/mcp-reliability-plan.md) | MCP reliability and API-compatibility validation plan |
 
 ## Quick links
 
