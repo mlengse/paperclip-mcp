@@ -101,13 +101,16 @@ Every new issue starts as `status:unrefined`. The refiner agent (PM) switches it
 
 Used when an issue is created by or for a specific agent type and routing clarity is needed.
 
-| Label                | Purpose                                                             |
-| -------------------- | ------------------------------------------------------------------- |
-| `agent:engineer`     | Created by or assigned to the Engineer agent.                       |
-| `agent:qa`           | Created by or assigned to the QA agent.                             |
-| `agent:devops`       | Created by or assigned to the DevOps agent.                         |
-| `agent:pm`           | Created by or for the PM agent (usually refinement or spec issues). |
-| `agent:scrum-master` | Orchestration-level issue owned by the Scrum Master.                |
+| Label                | Purpose                                                                                 |
+| -------------------- | --------------------------------------------------------------------------------------- |
+| `agent:engineer`     | Created by or assigned to the Engineer agent.                                           |
+| `agent:qa`           | Created by or assigned to the QA agent.                                                 |
+| `agent:devops`       | Created by or assigned to the DevOps agent.                                             |
+| `agent:techwriter`   | Created by or assigned to the TechWriter agent (docs work).                             |
+| `agent:pm`           | Created by or for the PM agent (usually refinement or spec issues).                     |
+| `agent:scrum-master` | Orchestration-level issue owned by the Scrum Master (release coordination, kanban ops). |
+| `agent:cto`          | Architecture decision, unblocking, or technical escalation owned by the CTO.            |
+| `agent:ceo`          | Strategic delegation or heartbeat orchestration owned by the CEO.                       |
 
 ### Priority hints
 
