@@ -49,22 +49,35 @@ All steps must pass for a PR to be mergeable to `main`.
 
 ### 3. Release (`release.yml`)
 
-Triggered when a GitHub Release is published (which semantic-release creates automatically on push to `main`).
+Triggered on every **push to `main`** (including PR merges from `develop`).
 
-Steps: install → test → build → `npm publish`.
+Runs `npx semantic-release`, which orchestrates the full plugin chain in this order:
 
-Requires `NPM_TOKEN` secret set in the repository.
+| Plugin                                      | What it does                                                          |
+| ------------------------------------------- | --------------------------------------------------------------------- |
+| `@semantic-release/commit-analyzer`         | Reads conventional commits since the last release; determines bump    |
+| `@semantic-release/release-notes-generator` | Generates human-readable release notes                                |
+| `@semantic-release/changelog`               | Writes/updates `CHANGELOG.md`                                         |
+| `@semantic-release/npm`                     | Bumps `version` in `package.json` and publishes to npm                |
+| `@semantic-release/git`                     | Back-commits `CHANGELOG.md` + `package.json` with `[skip ci]` message |
+| `@semantic-release/github`                  | Creates a GitHub Release with the generated release notes             |
+
+**`[skip ci]` back-commit:** After publishing, semantic-release commits the updated `CHANGELOG.md` and `package.json` back to `main` with the message `chore(release): <version> [skip ci]`. The `[skip ci]` marker prevents `release.yml` from re-triggering on that commit.
+
+**Required secrets:** `NPM_TOKEN` (npm publish), `GITHUB_TOKEN` (auto-injected by Actions — no manual setup needed).
+
+If semantic-release finds no `fix:`, `feat:`, or `BREAKING CHANGE:` commits since the last release tag, it exits with no release and no publish.
 
 ## Workflow Trigger Matrix
 
-| Event                    | Pre-commit | Quality gate | Release |
-| ------------------------ | :--------: | :----------: | :-----: |
-| `git commit` (local)     |     ✓      |              |         |
-| Push to feature branch   |            |              |         |
-| PR → `develop`           |            |      ✓       |         |
-| PR → `main`              |            |      ✓       |         |
-| Push to `main`           |            |      ✓       |         |
-| GitHub Release published |            |              |    ✓    |
+| Event                  | Pre-commit | Quality gate | Release |
+| ---------------------- | :--------: | :----------: | :-----: |
+| `git commit` (local)   |     ✓      |              |         |
+| Push to feature branch |            |              |         |
+| PR → `develop`         |            |      ✓       |         |
+| PR → `main`            |            |      ✓       |         |
+| Push to `main`         |            |      ✓       |    ✓    |
+| `[skip ci]` back-push  |            |              |         |
 
 ## Commit Convention (semantic-release)
 
