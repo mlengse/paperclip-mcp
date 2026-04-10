@@ -3,13 +3,33 @@ import type { ToolDefinition } from "./index.js";
 import { validate, IssueIdSchema, handleApiError } from "./validation.js";
 import { PaperclipApiError } from "../errors.js";
 
+const ISSUES_MAX_LIMIT = 100;
+const ISSUES_DEFAULT_LIMIT = 50;
+
 const ListIssuesInput = z.object({
-  status: z.string().optional(),
-  assigneeAgentId: z.string().optional(),
-  projectId: z.string().optional(),
-  goalId: z.string().optional(),
-  labelId: z.string().optional(),
-  q: z.string().optional(),
+  status: z.string().optional().describe("Comma-separated status values (e.g. 'todo,in_progress')"),
+  assigneeAgentId: z.string().optional().describe("Filter by assignee agent ID"),
+  projectId: z.string().optional().describe("Filter by project ID"),
+  goalId: z.string().optional().describe("Filter by goal ID"),
+  labelId: z.string().optional().describe("Filter by label ID"),
+  q: z.string().optional().describe("Full-text search query"),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(ISSUES_MAX_LIMIT)
+    .default(ISSUES_DEFAULT_LIMIT)
+    .optional()
+    .describe(
+      `Maximum number of issues to return (1–${ISSUES_MAX_LIMIT}, default ${ISSUES_DEFAULT_LIMIT})`
+    ),
+  offset: z
+    .number()
+    .int()
+    .min(0)
+    .default(0)
+    .optional()
+    .describe("Number of issues to skip before returning results (default 0)"),
 });
 
 const IssueIdInput = IssueIdSchema;
@@ -60,7 +80,10 @@ export const issueTools: ToolDefinition[] = [
   {
     name: "paperclip_list_issues",
     description:
-      "List issues for the current company. Optionally filter by status (comma-separated), assigneeAgentId, projectId, goalId, labelId, or full-text search query.",
+      "List issues for the current company with client-side pagination. " +
+      "Optionally filter by status (comma-separated), assigneeAgentId, projectId, goalId, labelId, or full-text search query. " +
+      `Use limit (max ${ISSUES_MAX_LIMIT}, default ${ISSUES_DEFAULT_LIMIT}) and offset to page through results. ` +
+      "Returns a JSON array of at most limit issues, starting at the given offset.",
     inputSchema: {
       type: "object",
       properties: {
@@ -73,6 +96,14 @@ export const issueTools: ToolDefinition[] = [
         goalId: { type: "string", description: "Filter by goal ID" },
         labelId: { type: "string", description: "Filter by label ID" },
         q: { type: "string", description: "Full-text search query" },
+        limit: {
+          type: "number",
+          description: `Maximum number of issues to return (1–${ISSUES_MAX_LIMIT}, default ${ISSUES_DEFAULT_LIMIT})`,
+        },
+        offset: {
+          type: "number",
+          description: "Number of issues to skip before returning results (default 0)",
+        },
       },
       required: [],
     },
@@ -89,8 +120,11 @@ export const issueTools: ToolDefinition[] = [
         if (input.q) params.set("q", input.q);
         const qs = params.toString();
         const path = `/api/companies/${client.companyId}/issues${qs ? `?${qs}` : ""}`;
-        const data = await client.get<unknown>(path);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const all = await client.get<unknown[]>(path);
+        const limit = input.limit ?? ISSUES_DEFAULT_LIMIT;
+        const offset = input.offset ?? 0;
+        const page = all.slice(offset, offset + limit);
+        return { content: [{ type: "text", text: JSON.stringify(page) }] };
       } catch (err) {
         return handleApiError(err);
       }
