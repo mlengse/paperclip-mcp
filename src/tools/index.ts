@@ -30,6 +30,9 @@ export interface ToolAnnotations {
   destructiveHint?: boolean;
   idempotentHint?: boolean;
   openWorldHint?: boolean;
+  /** Set to true when the underlying API endpoint requires board (human-user) authentication.
+   *  Agent callers will always receive HTTP 403 from these endpoints. */
+  boardOnlyHint?: boolean;
 }
 
 export interface ToolDefinition {

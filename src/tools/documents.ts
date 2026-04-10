@@ -120,7 +120,7 @@ export const documentTools: ToolDefinition[] = [
       },
       required: ["issueId", "key"],
     },
-    annotations: { destructiveHint: true, openWorldHint: false },
+    annotations: { destructiveHint: true, openWorldHint: false, boardOnlyHint: true },
     async handler(args, client) {
       try {
         const { issueId, key } = validate(DocumentKeyInput, args);
