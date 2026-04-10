@@ -495,3 +495,106 @@ describe("paperclip_checkout_issue (expectedStatuses JSON-string, PAP-120)", () 
     assert.deepEqual(sentBody.expectedStatuses, ["todo"]);
   });
 });
+
+describe("paperclip_checkout_issue (PAP-123: auto-release stale executionRunId)", () => {
+  it("PAP-123: auto-releases stale executionRunId and retries when checkoutRunId is null", async () => {
+    const checkedOut = { id: "issue-1", status: "in_progress" };
+    const urls: string[] = [];
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const statefulFetch = async (url: string, _: RequestInit): Promise<Response> => {
+      urls.push(url);
+      if (url.endsWith("/checkout") && urls.filter((u) => u.endsWith("/checkout")).length === 1) {
+        return new Response(
+          JSON.stringify({
+            error: "Issue checkout conflict",
+            details: { issueId: "issue-1", checkoutRunId: null, executionRunId: "run-stale" },
+          }),
+          {
+            status: 409,
+            statusText: "Conflict",
+            headers: new Headers({ "Content-Type": "application/json" }),
+          }
+        );
+      }
+      if (url.endsWith("/release")) {
+        return new Response(JSON.stringify({ id: "issue-1", status: "todo" }), {
+          status: 200,
+          headers: new Headers({ "Content-Type": "application/json" }),
+        });
+      }
+      return new Response(JSON.stringify(checkedOut), {
+        status: 200,
+        headers: new Headers({ "Content-Type": "application/json" }),
+      });
+    };
+
+    const client = new PaperclipClient(TEST_AUTH, statefulFetch);
+    const result = await checkoutIssue.handler(
+      { issueId: "issue-1", expectedStatuses: ["todo"] },
+      client
+    );
+
+    assert.equal(result.isError, undefined, "should not return isError");
+    assert.equal(urls.length, 3, "should make 3 calls: checkout, release, checkout-retry");
+    assert.ok(urls[1]!.endsWith("/release"), "second call must be the release endpoint");
+    assert.deepEqual(JSON.parse(result.content[0]!.text), checkedOut);
+  });
+
+  // PAP-123: when checkoutRunId is non-null, no release is attempted — use mockFetch (uniform 409)
+  it("PAP-123: propagates 409 immediately when checkoutRunId is non-null (active holder)", async () => {
+    const { fn, calls } = mockFetch(409, {
+      error: "Issue checkout conflict",
+      details: {
+        issueId: "issue-1",
+        checkoutRunId: "run-active-holder",
+        executionRunId: "run-stale",
+      },
+    });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await checkoutIssue.handler({ issueId: "issue-1" }, client);
+
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("409"));
+    assert.equal(
+      calls.length,
+      1,
+      "should make only 1 call — no release attempted for active holder"
+    );
+  });
+
+  it("PAP-123: surfaces original 409 when release or retry fails", async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const statefulFetch = async (url: string, _: RequestInit): Promise<Response> => {
+      if (url.endsWith("/checkout")) {
+        return new Response(
+          JSON.stringify({
+            error: "Issue checkout conflict",
+            details: { issueId: "issue-1", checkoutRunId: null, executionRunId: "run-stale" },
+          }),
+          {
+            status: 409,
+            statusText: "Conflict",
+            headers: new Headers({ "Content-Type": "application/json" }),
+          }
+        );
+      }
+      // Release call fails
+      return new Response(JSON.stringify({ error: "Release failed" }), {
+        status: 500,
+        statusText: "Error",
+        headers: new Headers({ "Content-Type": "application/json" }),
+      });
+    };
+
+    const client = new PaperclipClient(TEST_AUTH, statefulFetch);
+    const result = await checkoutIssue.handler({ issueId: "issue-1" }, client);
+
+    assert.equal(result.isError, true);
+    // Must surface the original 409, not the 500 from the release call
+    assert.ok(
+      result.content[0]!.text.includes("409"),
+      "error text must contain original 409 status"
+    );
+  });
+});

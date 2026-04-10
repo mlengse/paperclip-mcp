@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
 import { validate, IssueIdSchema, handleApiError } from "./validation.js";
+import { PaperclipApiError } from "../errors.js";
 
 const ListIssuesInput = z.object({
   status: z.string().optional(),
@@ -160,8 +161,33 @@ export const issueTools: ToolDefinition[] = [
         const { issueId, expectedStatuses } = validate(CheckoutIssueInput, args);
         const body: Record<string, unknown> = { agentId: client.agentId };
         if (expectedStatuses) body["expectedStatuses"] = expectedStatuses;
-        const data = await client.post<unknown>(`/api/issues/${issueId}/checkout`, body);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+
+        let conflictErr: PaperclipApiError | undefined;
+        try {
+          const data = await client.post<unknown>(`/api/issues/${issueId}/checkout`, body);
+          return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        } catch (err) {
+          if (!(err instanceof PaperclipApiError) || err.status !== 409) throw err;
+          conflictErr = err;
+        }
+
+        // Parse the 409 body to distinguish a stale execution lock from an active hold.
+        // The API returns details.checkoutRunId=null when no agent actively holds the checkout.
+        const details = (conflictErr.body as Record<string, unknown>)?.["details"];
+        const checkoutRunId = (details as Record<string, unknown> | undefined)?.["checkoutRunId"];
+
+        // Active holder — propagate 409 immediately without attempting release.
+        if (checkoutRunId !== null) throw conflictErr;
+
+        // Stale executionRunId with no active holder: release the lock and retry once.
+        // If release or retry fails, surface the original 409 unchanged.
+        try {
+          await client.post<unknown>(`/api/issues/${issueId}/release`);
+          const data = await client.post<unknown>(`/api/issues/${issueId}/checkout`, body);
+          return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        } catch {
+          throw conflictErr;
+        }
       } catch (err) {
         return handleApiError(err);
       }
