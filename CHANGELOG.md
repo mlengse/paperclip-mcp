@@ -1,3 +1,14 @@
+## [1.2.3](https://github.com/bruhsb/paperclip-mcp/compare/v1.2.2...v1.2.3) (2026-04-10)
+
+
+### Bug Fixes
+
+* **agents:** add regression tests for non-existent UUID in paperclip_get_agent (PAP-119) ([10344bc](https://github.com/bruhsb/paperclip-mcp/commit/10344bc5710883c813bc433efb89da8d8d91b43d))
+* **agents:** pass companyId query param on paperclip_get_agent to avoid 422 (PAP-119) ([4ebf258](https://github.com/bruhsb/paperclip-mcp/commit/4ebf258c52551fcf12edbb733bc23da28f838ab5))
+* **issues:** accept labelIds and expectedStatuses as JSON-string (PAP-120) ([2fc34f3](https://github.com/bruhsb/paperclip-mcp/commit/2fc34f337f2b82b50c0b16cdb2f5e71a4bf42ad1))
+* **issues:** auto-release stale executionRunId before retrying 409 in paperclip_checkout_issue (PAP-123) ([ce537e5](https://github.com/bruhsb/paperclip-mcp/commit/ce537e56b97def65ffcf63b634d6692ac8f53a5f))
+* **issues:** restore preprocess fix lost in lint-staged race (PAP-120) ([f3a86a0](https://github.com/bruhsb/paperclip-mcp/commit/f3a86a0cf9861c781ba22a3da25b661c29c15d68))
+
 ## [1.2.2](https://github.com/bruhsb/paperclip-mcp/compare/v1.2.1...v1.2.2) (2026-04-10)
 
 

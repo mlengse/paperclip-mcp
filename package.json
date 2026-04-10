@@ -1,6 +1,6 @@
 {
   "name": "paperclip-mcp",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Paperclip MCP server for Claude Code agents",
   "type": "module",
   "main": "dist/index.js",
