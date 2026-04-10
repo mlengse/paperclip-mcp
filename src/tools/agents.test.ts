@@ -567,6 +567,19 @@ describe("paperclip_sync_agent_skills", () => {
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("404"));
   });
+
+  it("accepts desiredSkills as a JSON-encoded string (PAP-120 regression)", async () => {
+    const resp = { agentId: "agent-1", skills: ["skill-1", "skill-2"] };
+    const { fn, calls } = mockFetch(200, resp);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await syncAgentSkills.handler(
+      { agentId: "agent-1", desiredSkills: JSON.stringify(["skill-1", "skill-2"]) },
+      client
+    );
+    const body = JSON.parse(calls[0]!.init.body as string);
+    assert.deepEqual(body.desiredSkills, ["skill-1", "skill-2"]);
+    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(resp) }] });
+  });
 });
 
 describe("paperclip_list_company_skills", () => {

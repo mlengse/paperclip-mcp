@@ -34,9 +34,13 @@ const SetInstructionsPathInput = z.object({
     .describe("Adapter config key override for non-standard adapters"),
 });
 
+const jsonArrayPreprocess = (v: unknown) => (typeof v === "string" ? JSON.parse(v) : v);
+
 const SyncAgentSkillsInput = z.object({
   agentId: z.string().min(1).describe("Agent UUID"),
-  desiredSkills: z.array(z.string()).describe("List of skill names to sync onto the agent"),
+  desiredSkills: z
+    .preprocess(jsonArrayPreprocess, z.array(z.string()))
+    .describe("List of skill names to sync onto the agent"),
 });
 
 export const agentTools: ToolDefinition[] = [
