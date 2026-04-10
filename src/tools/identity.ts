@@ -1,6 +1,5 @@
 import type { ToolDefinition } from "./index.js";
 import { validate, NoInput, handleApiError } from "./validation.js";
-import { PaperclipApiError } from "../errors.js";
 
 export const identityTools: ToolDefinition[] = [
   {
@@ -16,18 +15,11 @@ export const identityTools: ToolDefinition[] = [
     async handler(args, client) {
       try {
         validate(NoInput, args);
-        try {
-          const data = await client.get<unknown>("/api/agents/me");
-          return { content: [{ type: "text", text: JSON.stringify(data) }] };
-        } catch (primaryErr) {
-          if (primaryErr instanceof PaperclipApiError && primaryErr.status === 401) {
-            // /api/agents/me requires a JWT with agent sub claim; fall back to the
-            // agent-scoped endpoint which works with any company-level API key.
-            const data = await client.get<unknown>(`/api/agents/${client.agentId}`);
-            return { content: [{ type: "text", text: JSON.stringify(data) }] };
-          }
-          throw primaryErr;
-        }
+        // Use the agent-scoped endpoint directly. /api/agents/me resolves the
+        // API key's principal, which is the CEO when a company-level key is used —
+        // not the dispatched agent. The ID-scoped path always returns the correct agent.
+        const data = await client.get<unknown>(`/api/agents/${client.agentId}`);
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -46,20 +38,12 @@ export const identityTools: ToolDefinition[] = [
     async handler(args, client) {
       try {
         validate(NoInput, args);
-        try {
-          const data = await client.get<unknown>("/api/agents/me/inbox-lite");
-          return { content: [{ type: "text", text: JSON.stringify(data) }] };
-        } catch (primaryErr) {
-          if (primaryErr instanceof PaperclipApiError && primaryErr.status === 401) {
-            // /api/agents/me/inbox-lite requires a JWT with agent sub claim; fall back
-            // to filtering company issues by assignee, which works with any API key.
-            const data = await client.get<unknown>(
-              `/api/companies/${client.companyId}/issues?assigneeAgentId=${client.agentId}`
-            );
-            return { content: [{ type: "text", text: JSON.stringify(data) }] };
-          }
-          throw primaryErr;
-        }
+        // Use the company-issues endpoint filtered by assignee. /api/agents/me/inbox-lite
+        // resolves by API key principal (CEO with a company-level key), so skip it entirely.
+        const data = await client.get<unknown>(
+          `/api/companies/${client.companyId}/issues?assigneeAgentId=${client.agentId}`
+        );
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
       } catch (err) {
         return handleApiError(err);
       }

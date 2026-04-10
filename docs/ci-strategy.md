@@ -74,14 +74,40 @@ If semantic-release finds no `fix:`, `feat:`, or `BREAKING CHANGE:` commits sinc
 
 ## Workflow Trigger Matrix
 
-| Event                  | Pre-commit | Quality gate | Pre-commit regression | Release |
-| ---------------------- | :--------: | :----------: | :-------------------: | :-----: |
-| `git commit` (local)   |     ✓      |              |                       |         |
-| Push to feature branch |            |              |                       |         |
-| PR → `develop`         |            |      ✓       |           ✓           |         |
-| PR → `main`            |            |      ✓       |           ✓           |         |
-| Push to `main`         |            |      ✓       |           ✓           |    ✓    |
-| `[skip ci]` back-push  |            |              |                       |         |
+| Event                   | Pre-commit | Quality gate | Pre-commit regression | Release | Stale-lock detector |
+| ----------------------- | :--------: | :----------: | :-------------------: | :-----: | :-----------------: |
+| `git commit` (local)    |     ✓      |              |                       |         |                     |
+| Push to feature branch  |            |              |                       |         |                     |
+| PR → `develop`          |            |      ✓       |           ✓           |         |                     |
+| PR → `main`             |            |      ✓       |           ✓           |         |                     |
+| Push to `main`          |            |      ✓       |           ✓           |    ✓    |                     |
+| `[skip ci]` back-push   |            |              |                       |         |                     |
+| Schedule (every 30 min) |            |              |                       |         |          ✓          |
+| Manual dispatch         |            |              |                       |         |          ✓          |
+
+### 4. Stale-Lock Detector (`stale-lock-detector.yml`)
+
+Triggered on a 30-minute schedule and on-demand via `workflow_dispatch`.
+
+Detects Paperclip issues that are in the stale-lock state caused by the platform bug tracked in [PAP-127](/PAP/issues/PAP-127): `POST /api/issues/{id}/release` clears `checkoutRunId` but does not clear `executionRunId`. A new agent dispatch then receives a persistent 409 on checkout even though no active agent holds the lock.
+
+**What it does:**
+
+| Step   | Action                                                                                       |
+| ------ | -------------------------------------------------------------------------------------------- |
+| Fetch  | Queries all `in_progress` issues (or a single issue if `issue_id` input is provided)         |
+| Detect | Identifies issues with `checkoutRunId = null` AND `executionRunId != null`                   |
+| Report | Writes a step summary listing affected issues; fails the run to trigger GitHub notifications |
+
+**Required secrets** (must be set in the repo's Actions secrets before this workflow is useful):
+
+| Secret                 | Value                                                                |
+| ---------------------- | -------------------------------------------------------------------- |
+| `PAPERCLIP_API_KEY`    | Agent API key with issue read access                                 |
+| `PAPERCLIP_API_URL`    | Paperclip API base URL (e.g. via ngrok tunnel for local deployments) |
+| `PAPERCLIP_COMPANY_ID` | Company UUID                                                         |
+
+**Limitations:** This workflow detects and reports stale locks but cannot clear them. Clearing `executionRunId` requires a platform-side fix to the `/release` endpoint (PAP-127). Until that fix is deployed, board intervention (direct DB patch) is required for each detected stale lock.
 
 ## Commit Convention (semantic-release)
 

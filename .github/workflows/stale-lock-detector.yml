@@ -1,0 +1,126 @@
+name: Paperclip Stale-Lock Detector
+
+# Automated detection for issues where POST /release cleared checkoutRunId
+# but executionRunId was not cleared — a known Paperclip platform bug (PAP-127).
+#
+# When stale locks are found:
+#   - The workflow run is marked as FAILED (triggers GitHub notification).
+#   - A step summary lists each affected issue with its lock fields.
+#   - Board (Bruno) or Scrum Master can then clear the lock by fixing the
+#     Paperclip platform's /release endpoint or applying a direct DB patch.
+#
+# Required GitHub secrets / variables:
+#   PAPERCLIP_API_KEY    — agent API key with read access to issues
+#   PAPERCLIP_API_URL    — e.g. http://127.0.0.1:3100 (or tunnel URL for GHA)
+#   PAPERCLIP_COMPANY_ID — company UUID
+
+on:
+  schedule:
+    # Runs every 30 minutes. Adjust frequency as needed.
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+    inputs:
+      issue_id:
+        description: "Optional: check a specific issue UUID instead of scanning all in_progress issues"
+        required: false
+        type: string
+
+jobs:
+  detect-stale-locks:
+    name: Scan for stale execution locks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check required secrets
+        env:
+          API_URL: ${{ secrets.PAPERCLIP_API_URL }}
+          API_KEY: ${{ secrets.PAPERCLIP_API_KEY }}
+          COMPANY_ID: ${{ secrets.PAPERCLIP_COMPANY_ID }}
+        run: |
+          if [[ -z "$API_URL" || -z "$API_KEY" || -z "$COMPANY_ID" ]]; then
+            echo "::error::Missing required secrets: PAPERCLIP_API_URL, PAPERCLIP_API_KEY, PAPERCLIP_COMPANY_ID"
+            exit 1
+          fi
+
+      - name: Fetch issues to inspect
+        id: fetch
+        env:
+          API_URL: ${{ secrets.PAPERCLIP_API_URL }}
+          API_KEY: ${{ secrets.PAPERCLIP_API_KEY }}
+          COMPANY_ID: ${{ secrets.PAPERCLIP_COMPANY_ID }}
+          SINGLE_ISSUE_ID: ${{ inputs.issue_id }}
+        run: |
+          if [[ -n "$SINGLE_ISSUE_ID" ]]; then
+            # Single-issue mode: fetch the specific issue
+            ISSUES=$(curl -sf \
+              -H "Authorization: Bearer $API_KEY" \
+              "$API_URL/api/issues/$SINGLE_ISSUE_ID" \
+              | jq -c '[.]')
+          else
+            # Scan mode: fetch all in_progress issues
+            ISSUES=$(curl -sf \
+              -H "Authorization: Bearer $API_KEY" \
+              "$API_URL/api/companies/$COMPANY_ID/issues?status=in_progress" \
+              | jq -c '.')
+          fi
+          echo "issues<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$ISSUES" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Detect stale locks and report
+        id: detect
+        env:
+          ISSUES_JSON: ${{ steps.fetch.outputs.issues }}
+        run: |
+          STALE=$(echo "$ISSUES_JSON" | jq -c '
+            [.[] |
+              select(
+                .checkoutRunId == null and
+                .executionRunId != null
+              ) |
+              {
+                identifier,
+                id,
+                title: .title[:80],
+                status,
+                checkoutRunId,
+                executionRunId
+              }
+            ]
+          ')
+
+          COUNT=$(echo "$STALE" | jq 'length')
+          echo "stale_count=$COUNT" >> "$GITHUB_OUTPUT"
+
+          # Build step summary
+          {
+            echo "## Paperclip Stale-Lock Detector"
+            echo ""
+            echo "**Run:** $(date -u '+%Y-%m-%d %H:%M UTC')"
+            echo ""
+            if [[ "$COUNT" -eq 0 ]]; then
+              echo "**No stale locks detected.** All in_progress issues have consistent lock state."
+            else
+              echo "### :warning: $COUNT stale-locked issue(s) found"
+              echo ""
+              echo "These issues have \`checkoutRunId = null\` (released) but \`executionRunId\` still set."
+              echo "Agents will receive a 409 conflict when attempting checkout from a new dispatch."
+              echo ""
+              echo "| Identifier | Status | executionRunId | Title |"
+              echo "| ---------- | ------ | -------------- | ----- |"
+              echo "$STALE" | jq -r '.[] | "| \(.identifier) | \(.status) | \(.executionRunId[:8])... | \(.title) |"'
+              echo ""
+              echo "**Root cause:** Paperclip platform \`POST /api/issues/{id}/release\` does not"
+              echo "atomically clear \`executionRunId\` — only \`checkoutRunId\` is cleared (PAP-127)."
+              echo ""
+              echo "**Resolution required:** Direct DB patch on the Paperclip platform to set"
+              echo "\`executionRunId = NULL\` for each affected issue, then redeploy the \`/release\`"
+              echo "endpoint fix to prevent recurrence."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail if stale locks found
+        if: steps.detect.outputs.stale_count != '0'
+        run: |
+          echo "::error::Found ${{ steps.detect.outputs.stale_count }} stale-locked issue(s). See step summary for details."
+          exit 1
