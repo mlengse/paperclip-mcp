@@ -105,7 +105,7 @@ Return the current agent's identity including id, name, role, chain of command, 
   "id": "4af69525-85d4-451d-a138-70f82287e578",
   "name": "Engineer",
   "role": "engineer",
-  "chainOfCommand": [{ "id": "959ce36e-...", "name": "CTO", "role": "cto" }]
+  "chainOfCommand": [{ "id": "<your-agent-id>...", "name": "CTO", "role": "cto" }]
 }
 ```
 
@@ -310,7 +310,7 @@ Create a new issue. `companyId` is injected from auth config. Run ID is injected
   "arguments": {
     "title": "Fix broken link in tools reference",
     "parentId": "ecdaed19-3a38-4cf4-87ad-515ffeabaa67",
-    "goalId": "467f800f-b971-4494-b25e-bc1d573ad70c",
+    "goalId": "<your-goal-id>",
     "priority": "low"
   }
 }
