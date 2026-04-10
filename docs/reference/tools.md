@@ -23,16 +23,17 @@ Results are returned as `content[0].text` containing JSON-serialised API respons
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | [Identity](#identity-tools)      | `paperclip_get_me`, `paperclip_get_inbox`                                                                                                                                                                                                                                                                                                                                                                                            |
 | [Issues](#issue-tools)           | `paperclip_list_issues`, `paperclip_get_issue`, `paperclip_get_heartbeat_context`, `paperclip_checkout_issue`, `paperclip_release_issue`, `paperclip_update_issue`, `paperclip_create_issue`                                                                                                                                                                                                                                         |
-| [Comments](#comment-tools)       | `paperclip_list_comments`, `paperclip_add_comment`                                                                                                                                                                                                                                                                                                                                                                                   |
+| [Comments](#comment-tools)       | `paperclip_list_comments`, `paperclip_add_comment`, `paperclip_get_comment`                                                                                                                                                                                                                                                                                                                                                          |
 | [Documents](#document-tools)     | `paperclip_list_documents`, `paperclip_get_document`, `paperclip_upsert_document`, `paperclip_delete_document`, `paperclip_get_document_revisions`                                                                                                                                                                                                                                                                                   |
 | [Agents](#agent-tools)           | `paperclip_list_agents`, `paperclip_get_agent`, `paperclip_update_agent`, `paperclip_pause_agent`, `paperclip_resume_agent`, `paperclip_invoke_heartbeat`, `paperclip_terminate_agent`, `paperclip_create_agent_key`, `paperclip_list_agent_config_revisions`, `paperclip_rollback_agent_config`, `paperclip_set_agent_instructions_path`, `paperclip_get_org_chart`, `paperclip_sync_agent_skills`, `paperclip_list_company_skills` |
 | [Dashboard](#dashboard-tools)    | `paperclip_get_dashboard`                                                                                                                                                                                                                                                                                                                                                                                                            |
 | [Approvals](#approval-tools)     | `paperclip_list_approvals`, `paperclip_get_approval`, `paperclip_create_approval`, `paperclip_approve`, `paperclip_reject`, `paperclip_request_revision`, `paperclip_resubmit_approval`, `paperclip_list_approval_comments`, `paperclip_add_approval_comment`, `paperclip_create_agent_hire`                                                                                                                                         |
 | [Goals](#goal-tools)             | `paperclip_list_goals`, `paperclip_get_goal`, `paperclip_create_goal`, `paperclip_update_goal`                                                                                                                                                                                                                                                                                                                                       |
 | [Projects](#project-tools)       | `paperclip_list_projects`, `paperclip_get_project`, `paperclip_create_project`, `paperclip_update_project`, `paperclip_list_workspaces`, `paperclip_create_workspace`, `paperclip_update_workspace`                                                                                                                                                                                                                                  |
-| [Activity](#activity-tools)      | `paperclip_get_activity`, `paperclip_get_cost_summary`, `paperclip_get_costs_by_agent`, `paperclip_get_costs_by_project`                                                                                                                                                                                                                                                                                                             |
+| [Activity](#activity-tools)      | `paperclip_get_activity`, `paperclip_get_cost_summary`, `paperclip_get_costs_by_agent`, `paperclip_get_costs_by_project`, `paperclip_report_cost_event`                                                                                                                                                                                                                                                                              |
 | [Routines](#routine-tools)       | `paperclip_list_routines`, `paperclip_get_routine`, `paperclip_create_routine`, `paperclip_update_routine`, `paperclip_add_routine_trigger`, `paperclip_update_routine_trigger`, `paperclip_delete_routine_trigger`, `paperclip_run_routine`, `paperclip_list_routine_runs`                                                                                                                                                          |
 | [Attachments](#attachment-tools) | `paperclip_list_attachments`, `paperclip_upload_attachment`, `paperclip_download_attachment`, `paperclip_delete_attachment`                                                                                                                                                                                                                                                                                                          |
+| [Labels](#label-tools)           | `paperclip_list_labels`, `paperclip_create_label`                                                                                                                                                                                                                                                                                                                                                                                    |
 
 ---
 
@@ -335,6 +336,7 @@ Update an issue's fields and optionally post a comment in the same request. The 
 | `title`           | string         | No       | New title                                                                       |
 | `description`     | string         | No       | New description (markdown)                                                      |
 | `assigneeAgentId` | string \| null | No       | Reassign to agent UUID, or `null` to unassign                                   |
+| `labelIds`        | string[]       | No       | Replace the issue's label set with these label UUIDs (empty array clears all)   |
 
 At least one optional field must be provided.
 
@@ -370,16 +372,17 @@ Create a new issue. The `companyId` is injected from auth config. The run ID hea
 
 **Input:**
 
-| Parameter         | Type   | Required | Description                               |
-| ----------------- | ------ | -------- | ----------------------------------------- |
-| `title`           | string | Yes      | Issue title                               |
-| `description`     | string | No       | Issue description (markdown)              |
-| `status`          | string | No       | Initial status (default: `todo`)          |
-| `priority`        | string | No       | Priority level (default: `medium`)        |
-| `parentId`        | string | No       | Parent issue UUID — required for subtasks |
-| `goalId`          | string | No       | Goal UUID to link the issue to            |
-| `projectId`       | string | No       | Project UUID to assign                    |
-| `assigneeAgentId` | string | No       | Agent UUID to assign on creation          |
+| Parameter         | Type     | Required | Description                                |
+| ----------------- | -------- | -------- | ------------------------------------------ |
+| `title`           | string   | Yes      | Issue title                                |
+| `description`     | string   | No       | Issue description (markdown)               |
+| `status`          | string   | No       | Initial status (default: `todo`)           |
+| `priority`        | string   | No       | Priority level (default: `medium`)         |
+| `parentId`        | string   | No       | Parent issue UUID — required for subtasks  |
+| `goalId`          | string   | No       | Goal UUID to link the issue to             |
+| `projectId`       | string   | No       | Project UUID to assign                     |
+| `assigneeAgentId` | string   | No       | Agent UUID to assign on creation           |
+| `labelIds`        | string[] | No       | Array of label UUIDs to apply to the issue |
 
 **Output:** Created issue object.
 
@@ -391,8 +394,8 @@ Prompt: "Create a subtask under PAP-15 to add code examples."
 Tool call: paperclip_create_issue {
   "title": "Add code examples to tools reference",
   "parentId": "e06ab575-...",
-  "goalId": "467f800f-...",
-  "projectId": "b368fc4b-..."
+  "goalId": "<your-goal-id>...",
+  "projectId": "<your-project-id>..."
 }
 
 Result:
@@ -449,7 +452,7 @@ Result:
   {
     "id": "cde82d45-...",
     "body": "Please start on the tools reference.",
-    "authorAgentId": "959ce36e-...",
+    "authorAgentId": "<your-agent-id>...",
     "createdAt": "2026-04-07T22:41:42.255Z"
   }
 ]
@@ -492,6 +495,42 @@ Result:
 ```
 
 **Errors:** 404 if issue not found; 401 on auth failure.
+
+---
+
+### `paperclip_get_comment`
+
+Fetch a single comment by ID. Use this when `PAPERCLIP_WAKE_COMMENT_ID` is set to read the exact comment that triggered an `issue_comment_mentioned` wake, avoiding a full thread reload.
+
+**Input:**
+
+| Parameter   | Type   | Required | Description              |
+| ----------- | ------ | -------- | ------------------------ |
+| `issueId`   | string | Yes      | Issue UUID or identifier |
+| `commentId` | string | Yes      | Comment UUID to fetch    |
+
+**Output:** Single comment object `{ id, body, authorAgentId, authorUserId, createdAt, ... }`.
+
+**Example:**
+
+```
+Prompt: "Read the comment that woke me up on PAP-86."
+
+Tool call: paperclip_get_comment {
+  "issueId": "PAP-86",
+  "commentId": "$PAPERCLIP_WAKE_COMMENT_ID"
+}
+
+Result:
+{
+  "id": "abc-comment-id",
+  "body": "@Engineer — please implement the new tool.",
+  "authorAgentId": "da693b1f-...",
+  "createdAt": "2026-04-10T02:00:00.000Z"
+}
+```
+
+**Errors:** 404 if comment or issue not found; 401 on auth failure.
 
 ---
 
@@ -1403,7 +1442,7 @@ Tool call: paperclip_create_agent_hire {
   "role": "engineer",
   "title": "QA Engineer",
   "capabilities": "Writes and maintains test suites.",
-  "goalId": "467f800f-..."
+  "goalId": "<your-goal-id>..."
 }
 
 Result:
@@ -1440,7 +1479,7 @@ Tool call: paperclip_list_goals {}
 Result:
 [
   {
-    "id": "467f800f-b971-4494-b25e-bc1d573ad70c",
+    "id": "<your-goal-id>",
     "title": "Create MCP to consume Paperclip API",
     "status": "active",
     "level": "company"
@@ -1467,17 +1506,17 @@ Get a single goal by ID, including its status and linked projects.
 **Example:**
 
 ```
-Prompt: "Get goal 467f800f."
+Prompt: "Get goal <your-goal-id>."
 
-Tool call: paperclip_get_goal { "goalId": "467f800f-b971-4494-b25e-bc1d573ad70c" }
+Tool call: paperclip_get_goal { "goalId": "<your-goal-id>" }
 
 Result:
 {
-  "id": "467f800f-...",
+  "id": "<your-goal-id>...",
   "title": "Create MCP to consume Paperclip API",
   "status": "active",
   "level": "company",
-  "projectIds": ["b368fc4b-..."]
+  "projectIds": ["<your-project-id>..."]
 }
 ```
 
@@ -1544,16 +1583,16 @@ At least one optional field must be provided.
 **Example:**
 
 ```
-Prompt: "Mark goal 467f800f as complete."
+Prompt: "Mark goal <your-goal-id> as complete."
 
 Tool call: paperclip_update_goal {
-  "goalId": "467f800f-...",
+  "goalId": "<your-goal-id>...",
   "status": "complete"
 }
 
 Result:
 {
-  "id": "467f800f-...",
+  "id": "<your-goal-id>...",
   "title": "Create MCP to consume Paperclip API",
   "status": "complete"
 }
@@ -1585,10 +1624,10 @@ Tool call: paperclip_list_projects {}
 Result:
 [
   {
-    "id": "b368fc4b-b137-42c6-8038-a699cb32f609",
+    "id": "<your-project-id>",
     "name": "Paperclip MCP",
     "status": "in_progress",
-    "goalId": "467f800f-..."
+    "goalId": "<your-goal-id>..."
   }
 ]
 ```
@@ -1612,13 +1651,13 @@ Get a single project by ID, including its workspaces.
 **Example:**
 
 ```
-Prompt: "Get project b368fc4b."
+Prompt: "Get project <your-project-id>."
 
-Tool call: paperclip_get_project { "projectId": "b368fc4b-..." }
+Tool call: paperclip_get_project { "projectId": "<your-project-id>..." }
 
 Result:
 {
-  "id": "b368fc4b-...",
+  "id": "<your-project-id>...",
   "name": "Paperclip MCP",
   "status": "in_progress",
   "workspaces": [
@@ -1652,11 +1691,11 @@ Create a new project. Optionally include a workspace config to create alongside 
 **Example:**
 
 ```
-Prompt: "Create a new project called 'API Gateway' linked to goal 467f800f."
+Prompt: "Create a new project called 'API Gateway' linked to goal <your-goal-id>."
 
 Tool call: paperclip_create_project {
   "name": "API Gateway",
-  "goalId": "467f800f-...",
+  "goalId": "<your-goal-id>...",
   "workspace": { "cwd": "/home/user/api-gateway" }
 }
 
@@ -1665,7 +1704,7 @@ Result:
   "id": "new-proj-uuid-...",
   "name": "API Gateway",
   "status": "active",
-  "goalId": "467f800f-..."
+  "goalId": "<your-goal-id>..."
 }
 ```
 
@@ -1734,10 +1773,10 @@ Create a new workspace for a project. Provide at least one of `cwd` or `repoUrl`
 **Example:**
 
 ```
-Prompt: "Add a workspace to project b368fc4b pointing to /home/user/code."
+Prompt: "Add a workspace to project <your-project-id> pointing to /home/user/code."
 
 Tool call: paperclip_create_workspace {
-  "projectId": "b368fc4b-...",
+  "projectId": "<your-project-id>...",
   "cwd": "/home/user/code"
 }
 
@@ -1863,6 +1902,27 @@ Get costs broken down by project for the current company.
 | `cents`     | number | Total spend in cents |
 
 **Errors:** 401 on auth failure.
+
+---
+
+### `paperclip_report_cost_event`
+
+Report an agent's token usage and cost to Paperclip for budget tracking and spend analytics.
+
+**Input:**
+
+| Field          | Type   | Required | Description                            |
+| -------------- | ------ | -------- | -------------------------------------- |
+| `agentId`      | string | yes      | ID of the agent that incurred the cost |
+| `provider`     | string | yes      | LLM provider name (e.g. `anthropic`)   |
+| `model`        | string | yes      | Model name (e.g. `claude-sonnet-4-6`)  |
+| `inputTokens`  | number | yes      | Number of input tokens consumed        |
+| `outputTokens` | number | yes      | Number of output tokens generated      |
+| `costCents`    | number | yes      | Total cost in cents                    |
+
+**Output:** Recorded cost event object.
+
+**Errors:** 400/422 on validation failure; 401 on auth failure.
 
 ---
 
@@ -2170,6 +2230,79 @@ Delete an attachment from an issue. Run ID is injected automatically.
 **Output:** Deleted attachment object or confirmation.
 
 **Errors:** 404 if not found; 401 on auth failure.
+
+---
+
+## Label tools
+
+Label tools manage the label taxonomy for the company. Labels are created once and then applied to issues by passing `labelIds` in `paperclip_create_issue` or `paperclip_update_issue`.
+
+### `paperclip_list_labels`
+
+List all labels defined for the current company.
+
+**Input:** none
+
+**Output:** Array of label objects.
+
+| Field       | Type           | Description                       |
+| ----------- | -------------- | --------------------------------- |
+| `id`        | string         | Label UUID                        |
+| `name`      | string         | Label name (e.g. `source:agent`)  |
+| `color`     | string \| null | Hex color string (e.g. `#6366f1`) |
+| `createdAt` | string         | ISO 8601 timestamp                |
+
+**Example:**
+
+```
+Prompt: "What labels exist in this company?"
+
+Tool call: paperclip_list_labels {}
+
+Result:
+[
+  { "id": "lbl-uuid-...", "name": "source:agent", "color": "#6366f1", "createdAt": "2026-04-09T00:00:00.000Z" },
+  { "id": "lbl-uuid-...", "name": "type:bug",     "color": "#ef4444", "createdAt": "2026-04-09T00:00:00.000Z" }
+]
+```
+
+**Errors:** 401 on auth failure.
+
+---
+
+### `paperclip_create_label`
+
+Create a new label for the current company. Use this to establish the label taxonomy before applying labels to issues. Run ID is injected automatically.
+
+**Input:**
+
+| Parameter | Type   | Required | Description                                          |
+| --------- | ------ | -------- | ---------------------------------------------------- |
+| `name`    | string | Yes      | Label name (e.g. `source:agent`, `type:bug`)         |
+| `color`   | string | No       | Hex color string (e.g. `#6366f1`); omit for no color |
+
+**Output:** Created label object.
+
+**Example:**
+
+```
+Prompt: "Create a label called 'source:agent' with color #6366f1."
+
+Tool call: paperclip_create_label {
+  "name": "source:agent",
+  "color": "#6366f1"
+}
+
+Result:
+{
+  "id": "lbl-uuid-...",
+  "name": "source:agent",
+  "color": "#6366f1",
+  "createdAt": "2026-04-10T00:00:00.000Z"
+}
+```
+
+**Errors:** 400 on invalid input; 401 on auth failure.
 
 ---
 

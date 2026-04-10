@@ -137,7 +137,7 @@ describe("paperclip_get_heartbeat_context", () => {
 });
 
 describe("paperclip_checkout_issue", () => {
-  it("calls POST /api/issues/{id}/checkout with optional expectedStatuses", async () => {
+  it("calls POST /api/issues/{id}/checkout with agentId and optional expectedStatuses", async () => {
     const updated = { id: "issue-1", status: "in_progress" };
     const { fn, calls } = mockFetch(200, updated);
     const client = new PaperclipClient(TEST_AUTH, fn);
@@ -147,8 +147,21 @@ describe("paperclip_checkout_issue", () => {
     );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1/checkout");
     assert.equal(calls[0]!.init.method, "POST");
-    assert.equal(calls[0]!.init.body, JSON.stringify({ expectedStatuses: ["todo"] }));
+    assert.equal(
+      calls[0]!.init.body,
+      JSON.stringify({ agentId: "agent-1", expectedStatuses: ["todo"] })
+    );
     assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+  });
+
+  it("always includes agentId in POST body even without expectedStatuses", async () => {
+    const updated = { id: "issue-1", status: "in_progress" };
+    const { fn, calls } = mockFetch(200, updated);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await checkoutIssue.handler({ issueId: "issue-1" }, client);
+    const sentBody = JSON.parse(calls[0]!.init.body as string);
+    assert.equal(sentBody.agentId, "agent-1");
+    assert.equal(sentBody.expectedStatuses, undefined);
   });
 
   it("throws McpError when issueId is missing (validation failure, fetch not called)", async () => {
@@ -334,5 +347,34 @@ describe("paperclip_create_issue", () => {
     const result = await createIssue.handler({ title: "Valid title" }, client);
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("400"));
+  });
+
+  it("forwards labelIds in POST body (PAP-99)", async () => {
+    const created = { id: "issue-new", title: "Tagged issue", labelIds: ["label-1", "label-2"] };
+    const { fn, calls } = mockFetch(200, created);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await createIssue.handler({ title: "Tagged issue", labelIds: ["label-1", "label-2"] }, client);
+    const sentBody = JSON.parse(calls[0]!.init.body as string);
+    assert.deepEqual(sentBody.labelIds, ["label-1", "label-2"]);
+  });
+});
+
+describe("paperclip_update_issue (labelIds)", () => {
+  it("forwards labelIds in PATCH body (PAP-99)", async () => {
+    const updated = { id: "issue-1", labelIds: ["label-1"] };
+    const { fn, calls } = mockFetch(200, updated);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await updateIssue.handler({ issueId: "issue-1", labelIds: ["label-1"] }, client);
+    const sentBody = JSON.parse(calls[0]!.init.body as string);
+    assert.deepEqual(sentBody.labelIds, ["label-1"]);
+  });
+
+  it("forwards empty labelIds array to clear all labels (PAP-99)", async () => {
+    const updated = { id: "issue-1", labelIds: [] };
+    const { fn, calls } = mockFetch(200, updated);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await updateIssue.handler({ issueId: "issue-1", labelIds: [] }, client);
+    const sentBody = JSON.parse(calls[0]!.init.body as string);
+    assert.deepEqual(sentBody.labelIds, []);
   });
 });

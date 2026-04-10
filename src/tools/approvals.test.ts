@@ -76,6 +76,14 @@ describe("paperclip_get_approval", () => {
     assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(approval) }] });
   });
 
+  it("makes exactly one HTTP call (linked issues are not fetched)", async () => {
+    const approval = { id: "appr-1", status: "pending" };
+    const { fn, calls } = mockFetch(200, approval);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await getApproval.handler({ approvalId: "appr-1" }, client);
+    assert.equal(calls.length, 1, "expected exactly one API call — no linked-issues endpoint");
+  });
+
   it("throws McpError when approvalId is empty string (validation failure, fetch not called)", async () => {
     const { fn, calls } = mockFetch(200, {});
     const client = new PaperclipClient(TEST_AUTH, fn);
@@ -99,28 +107,44 @@ describe("paperclip_get_approval", () => {
 });
 
 describe("paperclip_create_approval", () => {
-  it("calls POST /api/companies/{id}/approvals with required and optional fields", async () => {
-    const created = { id: "appr-new", title: "Deploy to prod", status: "pending" };
-    const { fn, calls } = mockFetch(200, created);
+  it("calls POST /api/companies/{id}/approvals with type and payload", async () => {
+    const created = { id: "appr-new", type: "hire_agent", status: "pending" };
+    const { fn, calls } = mockFetch(201, created);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await createApproval.handler(
-      { title: "Deploy to prod", description: "Ready for release", linkedIssueIds: ["issue-1"] },
+      { type: "hire_agent", payload: { name: "Alice", role: "engineer" } },
       client
     );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/approvals");
     assert.equal(calls[0]!.init.method, "POST");
     const body = JSON.parse(calls[0]!.init.body as string);
-    assert.equal(body.title, "Deploy to prod");
-    assert.equal(body.description, "Ready for release");
-    assert.deepEqual(body.linkedIssueIds, ["issue-1"]);
+    assert.equal(body.type, "hire_agent");
+    assert.deepEqual(body.payload, { name: "Alice", role: "engineer" });
+    assert.equal(body.title, undefined);
     assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(created) }] });
   });
 
-  it("throws McpError when title is empty string (validation failure, fetch not called)", async () => {
+  it("includes requestedByAgentId when provided", async () => {
+    const created = { id: "appr-new", type: "budget_override_required", status: "pending" };
+    const { fn, calls } = mockFetch(201, created);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await createApproval.handler(
+      {
+        type: "budget_override_required",
+        payload: { amount: 500 },
+        requestedByAgentId: "agent-99",
+      },
+      client
+    );
+    const body = JSON.parse(calls[0]!.init.body as string);
+    assert.equal(body.requestedByAgentId, "agent-99");
+  });
+
+  it("throws McpError when type is missing (validation failure, fetch not called)", async () => {
     const { fn, calls } = mockFetch(200, {});
     const client = new PaperclipClient(TEST_AUTH, fn);
     await assert.rejects(
-      () => createApproval.handler({ title: "" }, client),
+      () => createApproval.handler({ payload: {} }, client),
       (err: unknown) => {
         assert.ok(err instanceof McpError);
         return true;
@@ -129,12 +153,31 @@ describe("paperclip_create_approval", () => {
     assert.equal(calls.length, 0);
   });
 
-  it("returns isError response on 400 API error", async () => {
-    const { fn } = mockFetch(400, { message: "Bad request" });
+  it("throws McpError when type is invalid enum value (validation failure, fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, {});
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await createApproval.handler({ title: "Valid Title" }, client);
+    await assert.rejects(
+      () => createApproval.handler({ type: "invalid_type", payload: {} }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("returns isError response on 422 API error", async () => {
+    const { fn } = mockFetch(422, {
+      error: "Validation error",
+      details: [{ path: ["type"], message: "Required" }],
+    });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await createApproval.handler(
+      { type: "approve_ceo_strategy", payload: { strategy: "grow" } },
+      client
+    );
     assert.equal(result.isError, true);
-    assert.ok(result.content[0]!.text.includes("400"));
+    assert.ok(result.content[0]!.text.includes("422"));
   });
 });
 

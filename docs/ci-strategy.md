@@ -23,6 +23,10 @@ Runs locally on every `git commit` against staged files only.
 
 Setup is automatic: `npm install` runs `prepare`, which installs husky. No manual step required.
 
+The `prepare` script skips husky gracefully when `node_modules/.bin/husky` is not present (e.g. `npm publish --dry-run`, `npm pack`, or environments where devDependencies are not installed). This prevents a `command not found` error in those contexts while preserving normal hook installation for local development.
+
+**HEAD-drift guard (PAP-107):** `.husky/pre-commit` passes `--no-stash` to lint-staged and explicitly restores `HEAD` to the original symbolic ref after the hook exits. This prevents lint-staged's stash backup/restore cycle from drifting `HEAD` to the base branch when a feature branch and its base share the same commit SHA.
+
 To skip the hook in an emergency (not recommended):
 
 ```sh
@@ -40,10 +44,10 @@ Does **not** run on pushes to `develop` — those are covered by pre-commit and 
 
 **Jobs:**
 
-| Job         | Steps                                          |
-| ----------- | ---------------------------------------------- |
-| `build`     | typecheck → lint → format:check → test → build |
-| `docs-lint` | markdown-link-check on `docs/**/*.md`          |
+| Job                     | Steps                                                       |
+| ----------------------- | ----------------------------------------------------------- |
+| `quality-gate`          | typecheck → lint → format:check → test → build → docs-check |
+| `pre-commit-regression` | `scripts/test-precommit-head.sh` (PAP-107 HEAD-drift guard) |
 
 All steps must pass for a PR to be mergeable to `main`.
 
@@ -70,14 +74,14 @@ If semantic-release finds no `fix:`, `feat:`, or `BREAKING CHANGE:` commits sinc
 
 ## Workflow Trigger Matrix
 
-| Event                  | Pre-commit | Quality gate | Release |
-| ---------------------- | :--------: | :----------: | :-----: |
-| `git commit` (local)   |     ✓      |              |         |
-| Push to feature branch |            |              |         |
-| PR → `develop`         |            |      ✓       |         |
-| PR → `main`            |            |      ✓       |         |
-| Push to `main`         |            |      ✓       |    ✓    |
-| `[skip ci]` back-push  |            |              |         |
+| Event                  | Pre-commit | Quality gate | Pre-commit regression | Release |
+| ---------------------- | :--------: | :----------: | :-------------------: | :-----: |
+| `git commit` (local)   |     ✓      |              |                       |         |
+| Push to feature branch |            |              |                       |         |
+| PR → `develop`         |            |      ✓       |           ✓           |         |
+| PR → `main`            |            |      ✓       |           ✓           |         |
+| Push to `main`         |            |      ✓       |           ✓           |    ✓    |
+| `[skip ci]` back-push  |            |              |                       |         |
 
 ## Commit Convention (semantic-release)
 
@@ -105,7 +109,7 @@ To confirm hooks are installed after a fresh clone:
 
 ```sh
 ls .husky/pre-commit   # should exist
-cat .husky/pre-commit  # should contain: npx lint-staged
+cat .husky/pre-commit  # should contain: npx lint-staged --no-stash
 ```
 
 If missing, run `npm install` to trigger the `prepare` script.

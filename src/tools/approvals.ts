@@ -11,9 +11,16 @@ const ListApprovalsInput = z.object({
 });
 
 const CreateApprovalInput = z.object({
-  title: z.string().min(1).describe("Approval request title"),
-  description: z.string().optional().describe("Description / justification (markdown)"),
-  linkedIssueIds: z.array(z.string()).optional().describe("Issue UUIDs to link to this approval"),
+  type: z
+    .enum(["hire_agent", "approve_ceo_strategy", "budget_override_required"])
+    .describe("Approval type: hire_agent | approve_ceo_strategy | budget_override_required"),
+  payload: z
+    .record(z.string(), z.unknown())
+    .describe("Type-specific payload object (required by the API)"),
+  requestedByAgentId: z
+    .string()
+    .optional()
+    .describe("Agent UUID of the requester (defaults to caller)"),
 });
 
 const ApprovalCommentInput = z.object({
@@ -77,7 +84,8 @@ export const approvalTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_get_approval",
-    description: "Get a single approval request by ID, including its status and linked issues.",
+    description:
+      "Get a single approval request by ID. Returns the approval object only (status, type, payload, etc.). Linked issues are not included in this response.",
     inputSchema: {
       type: "object",
       properties: {
@@ -98,27 +106,34 @@ export const approvalTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_create_approval",
-    description: "Create a new approval request. Run ID header is injected automatically.",
+    description:
+      "Create a new approval request. Requires `type` (hire_agent | approve_ceo_strategy | budget_override_required) and a type-specific `payload` object. Run ID header is injected automatically.",
     inputSchema: {
       type: "object",
       properties: {
-        title: { type: "string", description: "Approval request title" },
-        description: { type: "string", description: "Description / justification (markdown)" },
-        linkedIssueIds: {
-          type: "array",
-          items: { type: "string" },
-          description: "Issue UUIDs to link to this approval",
+        type: {
+          type: "string",
+          enum: ["hire_agent", "approve_ceo_strategy", "budget_override_required"],
+          description: "Approval type",
+        },
+        payload: {
+          type: "object",
+          description: "Type-specific payload object (required by the API)",
+        },
+        requestedByAgentId: {
+          type: "string",
+          description: "Agent UUID of the requester (defaults to caller)",
         },
       },
-      required: ["title"],
+      required: ["type", "payload"],
     },
     annotations: { destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
       try {
         const input = validate(CreateApprovalInput, args);
-        const body: Record<string, unknown> = { title: input.title };
-        if (input.description !== undefined) body.description = input.description;
-        if (input.linkedIssueIds !== undefined) body.linkedIssueIds = input.linkedIssueIds;
+        const body: Record<string, unknown> = { type: input.type, payload: input.payload };
+        if (input.requestedByAgentId !== undefined)
+          body.requestedByAgentId = input.requestedByAgentId;
         const data = await client.post<unknown>(
           `/api/companies/${client.companyId}/approvals`,
           body

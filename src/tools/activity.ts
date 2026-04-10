@@ -2,6 +2,16 @@ import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
 import { validate, NoInput, handleApiError } from "./validation.js";
 
+const ReportCostEventInput = z.object({
+  agentId: z.string().describe("ID of the agent that incurred the cost"),
+  provider: z.string().describe("LLM provider name (e.g. anthropic, openai)"),
+  model: z.string().describe("Model name (e.g. claude-sonnet-4-6)"),
+  inputTokens: z.number().int().nonnegative().describe("Number of input tokens consumed"),
+  outputTokens: z.number().int().nonnegative().describe("Number of output tokens generated"),
+  costCents: z.number().nonnegative().describe("Total cost in cents"),
+  occurredAt: z.string().describe("ISO 8601 timestamp of when the cost was incurred"),
+});
+
 const GetActivityInput = z.object({
   agentId: z.string().optional().describe("Filter by agent ID"),
   entityType: z.string().optional().describe("Filter by entity type (e.g. issue, approval)"),
@@ -94,6 +104,54 @@ export const activityTools: ToolDefinition[] = [
         validate(NoInput, args);
         const data = await client.get<unknown>(
           `/api/companies/${client.companyId}/costs/by-project`
+        );
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      } catch (err) {
+        return handleApiError(err);
+      }
+    },
+  },
+  {
+    name: "paperclip_report_cost_event",
+    description:
+      "Report an agent's token usage and cost to Paperclip for budget tracking and spend analytics. Calls POST /api/companies/{companyId}/cost-events.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        agentId: { type: "string", description: "ID of the agent that incurred the cost" },
+        provider: { type: "string", description: "LLM provider name (e.g. anthropic, openai)" },
+        model: { type: "string", description: "Model name (e.g. claude-sonnet-4-6)" },
+        inputTokens: {
+          type: "number",
+          description: "Number of input tokens consumed",
+        },
+        outputTokens: {
+          type: "number",
+          description: "Number of output tokens generated",
+        },
+        costCents: { type: "number", description: "Total cost in cents" },
+        occurredAt: {
+          type: "string",
+          description: "ISO 8601 timestamp of when the cost was incurred",
+        },
+      },
+      required: [
+        "agentId",
+        "provider",
+        "model",
+        "inputTokens",
+        "outputTokens",
+        "costCents",
+        "occurredAt",
+      ],
+    },
+    annotations: { readOnlyHint: false, openWorldHint: false },
+    async handler(args, client) {
+      try {
+        const input = validate(ReportCostEventInput, args);
+        const data = await client.post<unknown>(
+          `/api/companies/${client.companyId}/cost-events`,
+          input
         );
         return { content: [{ type: "text", text: JSON.stringify(data) }] };
       } catch (err) {

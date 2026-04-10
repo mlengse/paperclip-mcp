@@ -16,6 +16,10 @@ export class PaperclipClient {
     return this.auth.companyId;
   }
 
+  get agentId(): string {
+    return this.auth.agentId;
+  }
+
   buildHeaders(runId?: string): Record<string, string> {
     const headers: Record<string, string> = {
       Authorization: `Bearer ${this.auth.apiKey}`,

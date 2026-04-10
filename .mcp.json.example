@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "env": {
+        "MEMORY_FILE_PATH": ".claude/memory.json"
+      }
+    },
+    "paperclip": {
+      "command": "node",
+      "args": ["dist/index.js"],
+      "env": {
+        "PAPERCLIP_API_URL": "http://127.0.0.1:3100",
+        "PAPERCLIP_API_KEY": "",
+        "PAPERCLIP_AGENT_ID": "",
+        "PAPERCLIP_COMPANY_ID": ""
+      }
+    }
+  }
+}

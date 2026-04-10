@@ -28,6 +28,7 @@ const getActivity = activityTools.find((t) => t.name === "paperclip_get_activity
 const getCostSummary = activityTools.find((t) => t.name === "paperclip_get_cost_summary")!;
 const getCostsByAgent = activityTools.find((t) => t.name === "paperclip_get_costs_by_agent")!;
 const getCostsByProject = activityTools.find((t) => t.name === "paperclip_get_costs_by_project")!;
+const reportCostEvent = activityTools.find((t) => t.name === "paperclip_report_cost_event")!;
 
 describe("paperclip_get_activity", () => {
   it("calls GET /api/companies/{id}/activity with no filters", async () => {
@@ -160,5 +161,49 @@ describe("paperclip_get_costs_by_project", () => {
     const result = await getCostsByProject.handler({}, client);
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("500"));
+  });
+});
+
+describe("paperclip_report_cost_event", () => {
+  const validInput = {
+    agentId: "agent-1",
+    provider: "anthropic",
+    model: "claude-sonnet-4-6",
+    inputTokens: 1000,
+    outputTokens: 500,
+    costCents: 12,
+    occurredAt: "2026-04-10T02:00:00Z",
+  };
+
+  it("calls POST /api/companies/{id}/cost-events with correct body", async () => {
+    const event = { id: "evt-1", ...validInput };
+    const { fn, calls } = mockFetch(201, event);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await reportCostEvent.handler(validInput, client);
+    assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/cost-events");
+    assert.equal(calls[0]!.init.method, "POST");
+    assert.deepEqual(JSON.parse(calls[0]!.init.body as string), validInput);
+    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(event) }] });
+  });
+
+  it("returns isError response on 422 validation error", async () => {
+    const { fn } = mockFetch(422, { error: "Validation error" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await reportCostEvent.handler(validInput, client);
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("422"));
+  });
+
+  it("throws McpError when required fields are missing", async () => {
+    const { fn, calls } = mockFetch(201, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => reportCostEvent.handler({ agentId: "agent-1" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
   });
 });
