@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/bruhsb/paperclip-mcp/compare/v1.2.0...v1.2.1) (2026-04-10)
+
+
+### Bug Fixes
+
+* **errors:** include response body in PaperclipApiError message (PAP-116) ([bd6a3b3](https://github.com/bruhsb/paperclip-mcp/commit/bd6a3b3a303da04d88e22c348d48d07a94ed2c44))
+
 # [1.2.0](https://github.com/bruhsb/paperclip-mcp/compare/v1.1.0...v1.2.0) (2026-04-10)
 
 
