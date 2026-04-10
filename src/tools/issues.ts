@@ -57,6 +57,16 @@ const UpdateIssueInput = z.object({
   parentId: z.string().nullable().optional(),
   billingCode: z.string().nullable().optional(),
   labelIds: z.preprocess(jsonArrayPreprocess, z.array(z.string())).optional(),
+  executionRunId: z
+    .string()
+    .nullable()
+    .optional()
+    .describe("Execution run ID holding the checkout lock; pass null to clear a stale lock"),
+  executionLockedAt: z
+    .string()
+    .nullable()
+    .optional()
+    .describe("ISO timestamp of when the execution lock was acquired; pass null to clear"),
 });
 
 const CreateIssueInput = z.object({
@@ -283,7 +293,7 @@ export const issueTools: ToolDefinition[] = [
   {
     name: "paperclip_update_issue",
     description:
-      "Update an issue's status, priority, title, description, assignee, goal, project, parent, billing code, or add a comment. Run ID header is injected automatically.",
+      "Update an issue's status, priority, title, description, assignee, goal, project, parent, billing code, execution lock fields, or add a comment. Run ID header is injected automatically.",
     inputSchema: {
       type: "object",
       properties: {
@@ -321,6 +331,15 @@ export const issueTools: ToolDefinition[] = [
           type: "array",
           items: { type: "string" },
           description: "Label IDs to apply to the issue (replaces existing labels)",
+        },
+        executionRunId: {
+          type: ["string", "null"],
+          description:
+            "Execution run ID holding the checkout lock; pass null to clear a stale lock",
+        },
+        executionLockedAt: {
+          type: ["string", "null"],
+          description: "ISO timestamp of when the execution lock was acquired; pass null to clear",
         },
       },
       required: ["issueId"],
