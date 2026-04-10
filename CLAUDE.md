@@ -101,14 +101,15 @@ Scrum Master (next heartbeat) → catches orphaned in_review → @QA · closes d
 
 1. `paperclip_get_me` — confirm identity.
 2. Check `PAPERCLIP_TASK_ID` / `PAPERCLIP_WAKE_REASON` — find why you woke.
-3. `paperclip_get_inbox` — find your assigned issue.
-4. `paperclip_checkout_issue` — claim it. **Never retry a 409.**
-5. Do the work on a feature branch (`{agent-urlkey}/{PAP-XX}`). Follow conventions above.
-6. Commit all changes to the branch. Push the branch. **Do NOT merge to develop yet.**
-7. Set `in_review` + post `@QA — ready for review on PAP-XX`.
-8. Exit and wait for QA.
+3. **Label Bootstrap.** Call `paperclip_list_labels` once and cache the `name → uuid` map for the run. If any required taxonomy labels are missing (`source:*`, `status:refined|unrefined`, `type:*`, `agent:*`), call `paperclip_create_label` to seed them before proceeding. Full taxonomy and colors: [`docs/guides/issue-creation-standard.md`](docs/guides/issue-creation-standard.md#label-taxonomy).
+4. `paperclip_get_inbox` — find your assigned issue.
+5. `paperclip_checkout_issue` — claim it. **Never retry a 409.**
+6. Do the work on a feature branch (`{agent-urlkey}/{PAP-XX}`). Follow conventions above.
+7. Commit all changes to the branch. Push the branch. **Do NOT merge to develop yet.**
+8. Set `in_review` + post `@QA — ready for review on PAP-XX`.
+9. Exit and wait for QA.
 
-**After QA approves (APPROVE):** 9. Merge branch to `develop`, clean worktree. No leftovers. 10. Set issue to `done`. Post closing comment. 11. Exit cleanly.
+**After QA approves (APPROVE):** 10. Merge branch to `develop`, clean worktree. No leftovers. 11. Set issue to `done`. Post closing comment. 12. Exit cleanly.
 
 **Merge to develop happens ONLY after all "done" requirements are met (code + review + tests pass).**
 
@@ -129,30 +130,29 @@ Use structured comments with @-mentions:
 
 ### Creating Issues
 
-Any agent can create a `backlog` issue when they discover a gap, blocker, or improvement:
+Any agent can create a `backlog` issue when they discover a gap, blocker, or improvement. **Follow the full issue creation standard:** [`docs/guides/issue-creation-standard.md`](docs/guides/issue-creation-standard.md).
 
-- Use `sequential-thinking` MCP server to structure the issue well.
-- Include: clear title, description with context, acceptance criteria, goalId, parentId.
-- Post `@Scrum Master — created PAP-XX for {reason}`.
+Quick reference — every issue an agent creates must:
 
-**Follow the full issue creation standard:** [`docs/guides/issue-creation-standard.md`](docs/guides/issue-creation-standard.md)
+- Be drafted with `sequential-thinking` before the `paperclip_create_issue` call (structure: title → context → scope → AC → fields → review).
+- Include `goalId`, `projectId`, `priority`, and a three-section description (Context / What needs to happen / Acceptance Criteria).
+- Pass `status: "backlog"` explicitly (API default is `todo`).
+- Pass `labelIds` from the per-run label cache (see Label Bootstrap step in the Agent Protocol). Source, quality (refined/unrefined), type, and agent axes are all required.
+- Conclude with `@Scrum Master — created PAP-XX for {reason}` on the current issue.
 
-Key requirements enforced by the standard:
-
-- Use `sequential-thinking` to draft and review the issue content before calling `paperclip_create_issue`
-- Every issue must have: `goalId`, `projectId`, `priority`, structured description with Context / What needs to happen / Acceptance Criteria
-- After creating, post a comment: `Labels: source:agent, <type>` (until label API is writable via MCP)
-- Post `@Scrum Master — created PAP-XX for {reason}`
+The standard defines five templates (Feature, Bug, MCP Failure, Chore, Docs) and the refinement flow for human-created issues.
 
 ### MCP Tool Failover
 
-When any `paperclip_*` MCP tool call fails (error response, timeout, or tool not found):
+When any `paperclip_*` MCP tool call fails (returns `isError: true`, throws, times out, or is not found):
 
 1. **Retry once.** If the second attempt also fails, do not retry again.
-2. **Use `sequential-thinking`** to structure a backlog issue capturing the failure:
-   - Title: `MCP tool failure: <tool_name> — <short error description>`
-   - Description: include the tool name, arguments passed, full error message, and what the agent was trying to accomplish.
-3. **POST the issue via curl:**
+2. **Capture** before anything else: tool name, exact arguments passed (sanitized), full error text (`content[0].text`), `$PAPERCLIP_RUN_ID`, and what you were trying to accomplish.
+3. **Use `sequential-thinking`** to structure a backlog issue using Template 3 (MCP Tool Failure) from [`docs/guides/issue-creation-standard.md`](docs/guides/issue-creation-standard.md):
+   - Title exactly: `MCP tool failure: <tool_name> — <short error>`
+   - Description: verbatim error in a fenced code block, sanitized input, observed vs. expected behavior.
+4. **Create the issue via `paperclip_create_issue`** with `status: "backlog"`, `priority: "high"`, and `labelIds` for `type:mcp-failure` + `source:agent` + `agent:<your-role>` from the label cache.
+5. **If `paperclip_create_issue` itself is the failing tool** (or the create call fails after one retry), fall back to curl:
 
 ```bash
 curl -s -X POST \
@@ -164,12 +164,16 @@ curl -s -X POST \
     "status": "backlog",
     "priority": "high",
     "projectId": "<YOUR_PROJECT_ID>",
-    "goalId": "<YOUR_GOAL_ID>"
+    "goalId": "<YOUR_GOAL_ID>",
+    "labelIds": ["<type:mcp-failure-uuid>", "<source:agent-uuid>", "<agent:your-role-uuid>"]
   }' \
   "http://127.0.0.1:3100/api/companies/<YOUR_COMPANY_ID>/issues"
 ```
 
-4. **Stop the current task** and report the curl result (issue identifier) in your response. Do not continue work that depended on the failed tool.
+If label UUIDs are also unavailable, omit `labelIds` and post a `Labels: type:mcp-failure, source:agent, agent:<your-role>` comment on the new issue as fallback.
+
+6. **Stop work on the original task immediately.** Post a comment on the current issue: `Blocked: MCP tool failure on <tool_name>. Created PAP-XX to track. Stopping this run.`
+7. **Exit without marking the original issue done.** Do not continue any work that depended on the failed tool.
 
 ### Role-Specific Guidance
 
