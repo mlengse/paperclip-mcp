@@ -1,3 +1,23 @@
+# [1.2.0](https://github.com/bruhsb/paperclip-mcp/compare/v1.1.0...v1.2.0) (2026-04-10)
+
+
+### Bug Fixes
+
+* **activity:** add required occurredAt field to paperclip_report_cost_event (PAP-95) ([0fdb994](https://github.com/bruhsb/paperclip-mcp/commit/0fdb994cb8569e6c8567cf20018d19bd9259fadf))
+* **approvals:** correct paperclip_get_approval description to remove false linked-issues claim (PAP-85) ([758f0f5](https://github.com/bruhsb/paperclip-mcp/commit/758f0f58e8205c6828607131c5c2dd7fe62a9c40))
+* **approvals:** send type+payload instead of title+description to POST /approvals (PAP-84) ([7888350](https://github.com/bruhsb/paperclip-mcp/commit/788835084921445758ce84583b310ba4f3e3338f))
+* **comments:** implement client-side after-cursor workaround for broken server param (PAP-88) ([fed09fa](https://github.com/bruhsb/paperclip-mcp/commit/fed09fad8f0ec220155bfbf6a3e34d28e1bc6f98))
+* **documents:** mark paperclip_delete_document as boardOnlyHint (PAP-96) ([2a531ce](https://github.com/bruhsb/paperclip-mcp/commit/2a531ce0e7cfc576ffce9b32d6e515ab3dcdf78a))
+* **issues:** inject agentId in paperclip_checkout_issue POST body (PAP-101) ([2a13441](https://github.com/bruhsb/paperclip-mcp/commit/2a13441c18b384c54ebcd934ebba304ab75f45fb))
+* **pre-commit:** stage README.md in regression test so lint-staged actually runs (PAP-107) ([15e6fb8](https://github.com/bruhsb/paperclip-mcp/commit/15e6fb8a15ecb7071556f248063c4b309437e50a))
+
+
+### Features
+
+* **activity:** add paperclip_report_cost_event tool (PAP-87) ([ba0f10c](https://github.com/bruhsb/paperclip-mcp/commit/ba0f10cea45f3f3f231b76491e6b0266a857e015))
+* **comments:** add paperclip_get_comment tool for GET /api/issues/{id}/comments/{commentId} (PAP-86) ([295bfeb](https://github.com/bruhsb/paperclip-mcp/commit/295bfeb543ec84c7dbe9199620c240015c7aeb98))
+* **labels:** add paperclip_list_labels, paperclip_create_label, and labelIds support on issues (PAP-99) ([77c8a74](https://github.com/bruhsb/paperclip-mcp/commit/77c8a74df66253a03807f969a49686a5b3adc9ad))
+
 # [1.1.0](https://github.com/bruhsb/paperclip-mcp/compare/v1.0.0...v1.1.0) (2026-04-10)
 
 
