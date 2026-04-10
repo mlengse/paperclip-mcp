@@ -28,7 +28,7 @@ export const identityTools: ToolDefinition[] = [
   {
     name: "paperclip_get_inbox",
     description:
-      "Return the current agent's compact inbox assignment list (id, identifier, title, status, priority, projectId, goalId, parentId, updatedAt).",
+      "Return the current agent's compact inbox assignment list (id, identifier, title, status, priority, projectId, goalId, parentId, updatedAt, activeRun). Returns only active assignments (todo, in_progress, blocked).",
     inputSchema: {
       type: "object",
       properties: {},
@@ -38,11 +38,7 @@ export const identityTools: ToolDefinition[] = [
     async handler(args, client) {
       try {
         validate(NoInput, args);
-        // Use the company-issues endpoint filtered by assignee. /api/agents/me/inbox-lite
-        // resolves by API key principal (CEO with a company-level key), so skip it entirely.
-        const data = await client.get<unknown>(
-          `/api/companies/${client.companyId}/issues?assigneeAgentId=${client.agentId}`
-        );
+        const data = await client.get<unknown>(`/api/agents/me/inbox-lite`);
         return { content: [{ type: "text", text: JSON.stringify(data) }] };
       } catch (err) {
         return handleApiError(err);
