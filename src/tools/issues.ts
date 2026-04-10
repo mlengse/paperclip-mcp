@@ -31,6 +31,7 @@ const UpdateIssueInput = z.object({
   projectId: z.string().nullable().optional(),
   parentId: z.string().nullable().optional(),
   billingCode: z.string().nullable().optional(),
+  labelIds: z.array(z.string()).optional(),
 });
 
 const CreateIssueInput = z.object({
@@ -43,6 +44,7 @@ const CreateIssueInput = z.object({
   projectId: z.string().optional(),
   assigneeAgentId: z.string().optional(),
   billingCode: z.string().optional(),
+  labelIds: z.array(z.string()).optional(),
   inheritExecutionWorkspaceFromIssueId: z
     .string()
     .optional()
@@ -219,6 +221,11 @@ export const issueTools: ToolDefinition[] = [
           type: ["string", "null"],
           description: "Cross-team billing attribution, or null to clear",
         },
+        labelIds: {
+          type: "array",
+          items: { type: "string" },
+          description: "Label IDs to apply to the issue (replaces existing labels)",
+        },
       },
       required: ["issueId"],
     },
@@ -253,6 +260,11 @@ export const issueTools: ToolDefinition[] = [
         projectId: { type: "string", description: "Project ID to assign to" },
         assigneeAgentId: { type: "string", description: "Agent ID to assign to" },
         billingCode: { type: "string", description: "Cross-team billing attribution code" },
+        labelIds: {
+          type: "array",
+          items: { type: "string" },
+          description: "Label IDs to apply to the new issue",
+        },
         inheritExecutionWorkspaceFromIssueId: {
           type: "string",
           description:
@@ -274,6 +286,7 @@ export const issueTools: ToolDefinition[] = [
         if (input.projectId !== undefined) body["projectId"] = input.projectId;
         if (input.assigneeAgentId !== undefined) body["assigneeAgentId"] = input.assigneeAgentId;
         if (input.billingCode !== undefined) body["billingCode"] = input.billingCode;
+        if (input.labelIds !== undefined) body["labelIds"] = input.labelIds;
         if (input.inheritExecutionWorkspaceFromIssueId !== undefined)
           body["inheritExecutionWorkspaceFromIssueId"] = input.inheritExecutionWorkspaceFromIssueId;
         const data = await client.post<unknown>(`/api/companies/${client.companyId}/issues`, body);
