@@ -27,7 +27,7 @@ This document maps every scope claim made by the eight Paperclip agents operatin
 
 ### TechWriter
 
-- **Owns:** `docs/**/*.md` (all markdown under docs/) **excluding `docs/ci-strategy.md`**, `description:` string literals in `ToolDefinition` objects in `src/tools/*.ts`. **After this audit:** also owns `README.md` and `CONTRIBUTING.md` at the project root.
+- **Owns:** `docs/**/*.md` (all markdown under docs/) **excluding `docs/ci-strategy.md`**, `description:` string literals in `ToolDefinition` objects in `src/tools/*.ts`. **After this audit:** also owns `README.md` and `CONTRIBUTING.md` at the project root. Also owns IC agent instruction files (`AGENTS.md` in each IC agent's Paperclip config directory) — wording and protocol steps only; capability fields are updated via `paperclip_update_agent` by CTO or the agent itself.
 - **Explicit do-not-touch:** Does not modify `src/` beyond tool description strings. No CI/CD files. Does not touch `docs/ci-strategy.md` or `docs/security/` or `docs/data/` or `docs/runbooks/` (all reserved for specialist agents).
 
 ### Scrum Master
@@ -148,35 +148,49 @@ Append to CTO's capabilities string:
 
 ## Routing Decision Matrix
 
-| Issue about...                                                          | Route to                                                |
-| ----------------------------------------------------------------------- | ------------------------------------------------------- |
-| New MCP tool specification (name, endpoint, params, errors)             | PM                                                      |
-| New MCP tool implementation (`src/tools/*.ts`, `src/*.ts`)              | Engineer                                                |
-| Tool description string wording only (`description:` field)             | TechWriter                                              |
-| Test coverage for a tool (`src/**/*.test.ts`)                           | QA                                                      |
-| `.github/workflows/*.yml` — any change                                  | DevOps                                                  |
-| `.releaserc.json` — semantic-release config                             | DevOps                                                  |
-| `.husky/` — git hook changes                                            | DevOps                                                  |
-| `package.json` scripts block or any other section                       | DevOps                                                  |
-| `tsconfig.json` — compiler options                                      | CTO (approve) + Engineer (propose)                      |
-| `eslint.config.js` — lint rules                                         | CTO                                                     |
-| `.prettierrc` / `.prettierignore`                                       | DevOps                                                  |
-| `.gitignore` / `.npmrc` / `.env.example`                                | DevOps                                                  |
-| `.mcp.json` — MCP server config                                         | CTO                                                     |
-| `CLAUDE.md` — agent instructions                                        | CTO                                                     |
-| `docs/**/*.md` (except specialist subfolders and `docs/ci-strategy.md`) | TechWriter                                              |
-| `docs/ci-strategy.md`                                                   | DevOps                                                  |
-| `docs/security/` / `SECURITY.md`                                        | Security Engineer (when hired) / DevOps + CTO currently |
-| `docs/runbooks/` / `docs/slo.md`                                        | SRE (when hired)                                        |
-| `docs/data/`                                                            | Data Engineer (when hired)                              |
-| `docs/releases/` / `RELEASES.md`                                        | Release Manager (when hired)                            |
-| `README.md` / `CONTRIBUTING.md`                                         | TechWriter                                              |
-| `CHANGELOG.md`                                                          | Machine-managed (semantic-release); no agent edits      |
-| Architecture decisions (module structure, transport, auth)              | CTO                                                     |
-| Kanban board / sprint orchestration                                     | Scrum Master                                            |
-| Backlog issue creation / product requirements                           | PM                                                      |
-| Budget / CEO-level escalation                                           | CEO                                                     |
-| Agent hiring approval                                                   | CEO → approval flow                                     |
-| CI auth failures / secret rotation                                      | DevOps → escalate to CEO for secret rotation            |
-| Code review of any PR                                                   | CTO                                                     |
-| `_bmad/` / `.claude/` / `.remember/` / `.paperclip/` / `worktrees/`     | No agent — framework-managed, read-only                 |
+| Issue about...                                                          | Route to                                                              |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| New MCP tool specification (name, endpoint, params, errors)             | PM                                                                    |
+| New MCP tool implementation (`src/tools/*.ts`, `src/*.ts`)              | Engineer                                                              |
+| Tool description string wording only (`description:` field)             | TechWriter                                                            |
+| Test coverage for a tool (`src/**/*.test.ts`)                           | QA                                                                    |
+| `.github/workflows/*.yml` — any change                                  | DevOps                                                                |
+| `.releaserc.json` — semantic-release config                             | DevOps                                                                |
+| `.husky/` — git hook changes                                            | DevOps                                                                |
+| `package.json` scripts block or any other section                       | DevOps                                                                |
+| `tsconfig.json` — compiler options                                      | CTO (approve) + Engineer (propose)                                    |
+| `eslint.config.js` — lint rules                                         | CTO                                                                   |
+| `.prettierrc` / `.prettierignore`                                       | DevOps                                                                |
+| `.gitignore` / `.npmrc` / `.env.example`                                | DevOps                                                                |
+| `.mcp.json` — MCP server config                                         | CTO                                                                   |
+| `CLAUDE.md` — agent instructions                                        | CTO                                                                   |
+| `docs/**/*.md` (except specialist subfolders and `docs/ci-strategy.md`) | TechWriter                                                            |
+| `docs/ci-strategy.md`                                                   | DevOps                                                                |
+| `docs/security/` / `SECURITY.md`                                        | Security Engineer (when hired) / DevOps + CTO currently               |
+| `docs/runbooks/` / `docs/slo.md`                                        | SRE (when hired)                                                      |
+| `docs/data/`                                                            | Data Engineer (when hired)                                            |
+| `docs/releases/` / `RELEASES.md`                                        | Release Manager (when hired)                                          |
+| `README.md` / `CONTRIBUTING.md`                                         | TechWriter                                                            |
+| IC agent instruction files (`AGENTS.md` in Paperclip config)            | TechWriter (wording + protocol steps); CTO (capability field changes) |
+| `CHANGELOG.md`                                                          | Machine-managed (semantic-release); no agent edits                    |
+| Architecture decisions (module structure, transport, auth)              | CTO                                                                   |
+| Kanban board / sprint orchestration                                     | Scrum Master                                                          |
+| Backlog issue creation / product requirements                           | PM                                                                    |
+| Budget / CEO-level escalation                                           | CEO                                                                   |
+| Agent hiring approval                                                   | CEO → approval flow                                                   |
+| CI auth failures / secret rotation                                      | DevOps → escalate to CEO for secret rotation                          |
+| Code review of any PR                                                   | CTO                                                                   |
+| `_bmad/` / `.claude/` / `.remember/` / `.paperclip/` / `worktrees/`     | No agent — framework-managed, read-only                               |
+
+---
+
+## IC → QA Review Handoff Protocol
+
+When any IC agent (Engineer, DevOps, TechWriter) finishes work and hands off to QA for review, both of the following steps must happen in a single `paperclip_update_issue` call:
+
+1. **`status: "in_review"`** — transitions the issue to the review column.
+2. **`assigneeAgentId: "<qa-agent-id>"`** — reassigns the issue to QA.
+
+The reassignment is required because `paperclip_checkout_issue` enforces assignee ownership: QA's checkout call (`expectedStatuses: ["in_review"]`) fails with a 409 if the issue is still assigned to the IC agent. Clearing the assignee (`assigneeAgentId: null`) is also acceptable but explicit reassignment to QA is preferred for clarity.
+
+Root cause documented in [PAP-178](/PAP/issues/PAP-178). The corresponding fix in `CLAUDE.md` step 9 is tracked separately as a CTO-owned change.
