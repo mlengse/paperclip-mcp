@@ -500,6 +500,76 @@ describe("paperclip_create_issue", () => {
   });
 });
 
+describe("paperclip_update_issue (PAP-139: executionRunId and executionLockedAt)", () => {
+  it("forwards executionRunId as string in PATCH body", async () => {
+    const updated = { id: "issue-1", executionRunId: "run-abc" };
+    const { fn, calls } = mockFetch(200, updated);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await updateIssue.handler({ issueId: "issue-1", executionRunId: "run-abc" }, client);
+    const sentBody = JSON.parse(calls[0]!.init.body as string);
+    assert.equal(sentBody.executionRunId, "run-abc");
+  });
+
+  it("forwards executionLockedAt as string in PATCH body", async () => {
+    const updated = { id: "issue-1", executionLockedAt: "2026-04-10T21:00:00.000Z" };
+    const { fn, calls } = mockFetch(200, updated);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await updateIssue.handler(
+      { issueId: "issue-1", executionLockedAt: "2026-04-10T21:00:00.000Z" },
+      client
+    );
+    const sentBody = JSON.parse(calls[0]!.init.body as string);
+    assert.equal(sentBody.executionLockedAt, "2026-04-10T21:00:00.000Z");
+  });
+
+  it("forwards null executionRunId to clear a stale lock", async () => {
+    const updated = { id: "issue-1", executionRunId: null };
+    const { fn, calls } = mockFetch(200, updated);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await updateIssue.handler({ issueId: "issue-1", executionRunId: null }, client);
+    const sentBody = JSON.parse(calls[0]!.init.body as string);
+    assert.equal(
+      sentBody.executionRunId,
+      null,
+      "null executionRunId must be forwarded to clear lock"
+    );
+  });
+
+  it("forwards null executionLockedAt to clear a stale lock", async () => {
+    const updated = { id: "issue-1", executionLockedAt: null };
+    const { fn, calls } = mockFetch(200, updated);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await updateIssue.handler({ issueId: "issue-1", executionLockedAt: null }, client);
+    const sentBody = JSON.parse(calls[0]!.init.body as string);
+    assert.equal(
+      sentBody.executionLockedAt,
+      null,
+      "null executionLockedAt must be forwarded to clear lock"
+    );
+  });
+
+  it("clears both fields simultaneously when both are passed as null", async () => {
+    const updated = { id: "issue-1", executionRunId: null, executionLockedAt: null };
+    const { fn, calls } = mockFetch(200, updated);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await updateIssue.handler(
+      { issueId: "issue-1", executionRunId: null, executionLockedAt: null },
+      client
+    );
+    const sentBody = JSON.parse(calls[0]!.init.body as string);
+    assert.equal(sentBody.executionRunId, null);
+    assert.equal(sentBody.executionLockedAt, null);
+  });
+
+  it("returns isError on 422 when clearing lock fields", async () => {
+    const { fn } = mockFetch(422, { message: "Validation error" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await updateIssue.handler({ issueId: "issue-1", executionRunId: null }, client);
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("422"));
+  });
+});
+
 describe("paperclip_update_issue (labelIds)", () => {
   it("forwards labelIds in PATCH body (PAP-99)", async () => {
     const updated = { id: "issue-1", labelIds: ["label-1"] };
