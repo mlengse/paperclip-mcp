@@ -19,12 +19,12 @@
   "mcpName": "paperclip",
   "repository": {
     "type": "git",
-    "url": "https://github.com/paperclip-ai/paperclip-mcp.git"
+    "url": "git+https://github.com/bruhsb/paperclip-mcp.git"
   },
   "bugs": {
-    "url": "https://github.com/paperclip-ai/paperclip-mcp/issues"
+    "url": "https://github.com/bruhsb/paperclip-mcp/issues"
   },
-  "homepage": "https://github.com/paperclip-ai/paperclip-mcp#readme",
+  "homepage": "https://github.com/bruhsb/paperclip-mcp#readme",
   "scripts": {
     "build": "tsc && shx chmod +x dist/*.js",
     "prepare": "npm run build && husky",
