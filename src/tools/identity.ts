@@ -1,5 +1,6 @@
 import type { ToolDefinition } from "./index.js";
 import { validate, NoInput, handleApiError } from "./validation.js";
+import { PaperclipApiError } from "../errors.js";
 
 export const identityTools: ToolDefinition[] = [
   {
@@ -15,8 +16,18 @@ export const identityTools: ToolDefinition[] = [
     async handler(args, client) {
       try {
         validate(NoInput, args);
-        const data = await client.get<unknown>("/api/agents/me");
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        try {
+          const data = await client.get<unknown>("/api/agents/me");
+          return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        } catch (primaryErr) {
+          if (primaryErr instanceof PaperclipApiError && primaryErr.status === 401) {
+            // /api/agents/me requires a JWT with agent sub claim; fall back to the
+            // agent-scoped endpoint which works with any company-level API key.
+            const data = await client.get<unknown>(`/api/agents/${client.agentId}`);
+            return { content: [{ type: "text", text: JSON.stringify(data) }] };
+          }
+          throw primaryErr;
+        }
       } catch (err) {
         return handleApiError(err);
       }
@@ -35,8 +46,20 @@ export const identityTools: ToolDefinition[] = [
     async handler(args, client) {
       try {
         validate(NoInput, args);
-        const data = await client.get<unknown>("/api/agents/me/inbox-lite");
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        try {
+          const data = await client.get<unknown>("/api/agents/me/inbox-lite");
+          return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        } catch (primaryErr) {
+          if (primaryErr instanceof PaperclipApiError && primaryErr.status === 401) {
+            // /api/agents/me/inbox-lite requires a JWT with agent sub claim; fall back
+            // to filtering company issues by assignee, which works with any API key.
+            const data = await client.get<unknown>(
+              `/api/companies/${client.companyId}/issues?assigneeAgentId=${client.agentId}`
+            );
+            return { content: [{ type: "text", text: JSON.stringify(data) }] };
+          }
+          throw primaryErr;
+        }
       } catch (err) {
         return handleApiError(err);
       }
