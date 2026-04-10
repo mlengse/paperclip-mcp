@@ -73,7 +73,9 @@ export const agentTools: ToolDefinition[] = [
     async handler(args, client) {
       try {
         const { agentId } = validate(AgentIdInput, args);
-        const data = await client.get<unknown>(`/api/agents/${agentId}`);
+        const data = await client.get<unknown>(
+          `/api/agents/${agentId}?companyId=${client.companyId}`
+        );
         return { content: [{ type: "text", text: JSON.stringify(data) }] };
       } catch (err) {
         return handleApiError(err);

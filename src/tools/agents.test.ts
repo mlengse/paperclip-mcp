@@ -86,7 +86,7 @@ describe("paperclip_get_agent", () => {
     const { fn, calls } = mockFetch(200, agent);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await getAgent.handler({ agentId: "agent-1" }, client);
-    assert.equal(calls[0]!.url, "http://localhost:3100/api/agents/agent-1");
+    assert.equal(calls[0]!.url, "http://localhost:3100/api/agents/agent-1?companyId=company-1");
     assert.equal(calls[0]!.init.method, "GET");
     assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(agent) }] });
   });
