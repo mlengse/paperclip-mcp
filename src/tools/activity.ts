@@ -135,7 +135,15 @@ export const activityTools: ToolDefinition[] = [
           description: "ISO 8601 timestamp of when the cost was incurred",
         },
       },
-      required: ["agentId", "provider", "model", "inputTokens", "outputTokens", "costCents", "occurredAt"],
+      required: [
+        "agentId",
+        "provider",
+        "model",
+        "inputTokens",
+        "outputTokens",
+        "costCents",
+        "occurredAt",
+      ],
     },
     annotations: { readOnlyHint: false, openWorldHint: false },
     async handler(args, client) {
