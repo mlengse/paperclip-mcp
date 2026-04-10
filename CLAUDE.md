@@ -103,7 +103,7 @@ Scrum Master (next heartbeat) → catches orphaned in_review → @QA · closes d
 2. Check `PAPERCLIP_TASK_ID` / `PAPERCLIP_WAKE_REASON` — find why you woke.
 3. **Label Bootstrap.** Call `paperclip_list_labels` once and cache the `name → uuid` map for the run. If any required taxonomy labels are missing (`source:*`, `status:refined|unrefined`, `type:*`, `agent:*`), call `paperclip_create_label` to seed them before proceeding. Full taxonomy and colors: [`docs/guides/issue-creation-standard.md`](docs/guides/issue-creation-standard.md#label-taxonomy).
 4. `paperclip_get_inbox` — find your assigned issue.
-5. `paperclip_checkout_issue` — claim it. **Never retry a 409.**
+5. `paperclip_checkout_issue` — claim it, **passing `expectedStatuses` for your role** so the server atomically validates the kanban column before flipping status. Engineer / DevOps / TechWriter pass `["todo"]`; QA passes `["in_review"]` for code review or `["todo"]` for test-writing tasks. **Never retry a 409 and never retry a status-mismatch rejection.** If the checkout fails for either reason, post `Wake mismatch: PAP-XX is in status <X>, expected [<expected>]. Not claiming. @Scrum Master — please verify assignment.` on the issue, then exit cleanly. Do not mutate any other state.
 6. Do the work on a feature branch (`{agent-urlkey}/{PAP-XX}`). Follow conventions above.
 7. Commit all changes to the branch. Push the branch. **Do NOT merge to develop yet.**
 8. Set `in_review` + post `@QA — ready for review on PAP-XX`.
