@@ -76,6 +76,14 @@ describe("paperclip_get_approval", () => {
     assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(approval) }] });
   });
 
+  it("makes exactly one HTTP call (linked issues are not fetched)", async () => {
+    const approval = { id: "appr-1", status: "pending" };
+    const { fn, calls } = mockFetch(200, approval);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await getApproval.handler({ approvalId: "appr-1" }, client);
+    assert.equal(calls.length, 1, "expected exactly one API call — no linked-issues endpoint");
+  });
+
   it("throws McpError when approvalId is empty string (validation failure, fetch not called)", async () => {
     const { fn, calls } = mockFetch(200, {});
     const client = new PaperclipClient(TEST_AUTH, fn);
@@ -159,7 +167,10 @@ describe("paperclip_create_approval", () => {
   });
 
   it("returns isError response on 422 API error", async () => {
-    const { fn } = mockFetch(422, { error: "Validation error", details: [{ path: ["type"], message: "Required" }] });
+    const { fn } = mockFetch(422, {
+      error: "Validation error",
+      details: [{ path: ["type"], message: "Required" }],
+    });
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await createApproval.handler(
       { type: "approve_ceo_strategy", payload: { strategy: "grow" } },
