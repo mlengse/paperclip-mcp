@@ -111,6 +111,33 @@ describe("paperclip_get_agent", () => {
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("404"));
   });
+
+  it("returns isError on 404 for non-UUID-format agentId (malformed string)", async () => {
+    const { fn, calls } = mockFetch(404, { error: "Agent not found" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getAgent.handler({ agentId: "not-a-valid-uuid" }, client);
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("404"));
+    assert.ok(
+      calls[0]!.url.includes("companyId=company-1"),
+      "companyId must be passed to avoid server 422 fallback"
+    );
+  });
+
+  it("returns isError on 404 for UUID-format agentId that does not exist", async () => {
+    const { fn, calls } = mockFetch(404, { error: "Agent not found" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getAgent.handler(
+      { agentId: "00000000-0000-0000-0000-000000000000" },
+      client
+    );
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("404"));
+    assert.ok(
+      calls[0]!.url.includes("companyId=company-1"),
+      "companyId must be passed to avoid server 422 fallback"
+    );
+  });
 });
 
 describe("paperclip_update_agent", () => {
