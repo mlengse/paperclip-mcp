@@ -27,6 +27,9 @@ function mockFetch(status: number, body: unknown) {
 const listAgents = agentTools.find((t) => t.name === "paperclip_list_agents")!;
 const getAgent = agentTools.find((t) => t.name === "paperclip_get_agent")!;
 const updateAgent = agentTools.find((t) => t.name === "paperclip_update_agent")!;
+const updateAgentPermissions = agentTools.find(
+  (t) => t.name === "paperclip_update_agent_permissions"
+)!;
 const pauseAgent = agentTools.find((t) => t.name === "paperclip_pause_agent")!;
 const resumeAgent = agentTools.find((t) => t.name === "paperclip_resume_agent")!;
 const invokeHeartbeat = agentTools.find((t) => t.name === "paperclip_invoke_heartbeat")!;
@@ -616,5 +619,134 @@ describe("paperclip_list_company_skills", () => {
       }
     );
     assert.equal(calls.length, 0);
+  });
+});
+
+describe("paperclip_update_agent_permissions", () => {
+  it("calls PATCH /api/agents/{id}/permissions with both fields set to true", async () => {
+    const resp = { id: "agent-1", permissions: { canAssignTasks: true, canCreateAgents: true } };
+    const { fn, calls } = mockFetch(200, resp);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await updateAgentPermissions.handler(
+      { agentId: "agent-1", canAssignTasks: true, canCreateAgents: true },
+      client
+    );
+    assert.equal(calls[0]!.url, "http://localhost:3100/api/agents/agent-1/permissions");
+    assert.equal(calls[0]!.init.method, "PATCH");
+    const body = JSON.parse(calls[0]!.init.body as string);
+    assert.equal(body.canAssignTasks, true);
+    assert.equal(body.canCreateAgents, true);
+    assert.ok(!("agentId" in body), "agentId must not be in PATCH body");
+    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(resp) }] });
+  });
+
+  it("calls PATCH with canCreateAgents set to false (revoke CEO-only permission)", async () => {
+    const resp = { id: "agent-1", permissions: { canAssignTasks: true, canCreateAgents: false } };
+    const { fn, calls } = mockFetch(200, resp);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await updateAgentPermissions.handler(
+      { agentId: "agent-1", canAssignTasks: true, canCreateAgents: false },
+      client
+    );
+    const body = JSON.parse(calls[0]!.init.body as string);
+    assert.equal(body.canAssignTasks, true);
+    assert.equal(body.canCreateAgents, false);
+    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(resp) }] });
+  });
+
+  it("throws McpError when canAssignTasks is missing (validation failure, fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        updateAgentPermissions.handler(
+          { agentId: "agent-1", canCreateAgents: false } as unknown as Record<string, unknown>,
+          client
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("throws McpError when canCreateAgents is missing (validation failure, fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        updateAgentPermissions.handler(
+          { agentId: "agent-1", canAssignTasks: true } as unknown as Record<string, unknown>,
+          client
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("returns isError response on 422 API error", async () => {
+    const { fn } = mockFetch(422, { message: "Unprocessable Entity" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await updateAgentPermissions.handler(
+      { agentId: "agent-1", canAssignTasks: true, canCreateAgents: true },
+      client
+    );
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("422"));
+  });
+});
+
+describe("paperclip_update_agent (extended fields)", () => {
+  it("sends runtimeConfig.heartbeat.enabled in PATCH body", async () => {
+    const updated = { id: "agent-1", runtimeConfig: { heartbeat: { enabled: false } } };
+    const { fn, calls } = mockFetch(200, updated);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await updateAgent.handler(
+      { agentId: "agent-1", runtimeConfig: { heartbeat: { enabled: false } } },
+      client
+    );
+    const body = JSON.parse(calls[0]!.init.body as string);
+    assert.deepEqual(body.runtimeConfig, { heartbeat: { enabled: false } });
+    assert.ok(!("agentId" in body), "agentId must not be in PATCH body");
+    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+  });
+
+  it("sends adapterConfig.model in PATCH body", async () => {
+    const updated = { id: "agent-1", adapterConfig: { model: "claude-opus-4-6" } };
+    const { fn, calls } = mockFetch(200, updated);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await updateAgent.handler(
+      { agentId: "agent-1", adapterConfig: { model: "claude-opus-4-6" } },
+      client
+    );
+    const body = JSON.parse(calls[0]!.init.body as string);
+    assert.deepEqual(body.adapterConfig, { model: "claude-opus-4-6" });
+    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+  });
+
+  it("sends adapterConfig.paperclipSkillSync.desiredSkills in PATCH body", async () => {
+    const updated = {
+      id: "agent-1",
+      adapterConfig: { paperclipSkillSync: { desiredSkills: ["paperclip", "commit-commands"] } },
+    };
+    const { fn, calls } = mockFetch(200, updated);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await updateAgent.handler(
+      {
+        agentId: "agent-1",
+        adapterConfig: { paperclipSkillSync: { desiredSkills: ["paperclip", "commit-commands"] } },
+      },
+      client
+    );
+    const body = JSON.parse(calls[0]!.init.body as string);
+    assert.deepEqual(body.adapterConfig.paperclipSkillSync.desiredSkills, [
+      "paperclip",
+      "commit-commands",
+    ]);
+    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
   });
 });

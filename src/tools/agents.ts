@@ -12,6 +12,97 @@ const UpdateAgentInput = z.object({
   title: z.string().optional().describe("New job title"),
   capabilities: z.string().optional().describe("Updated capability description"),
   status: z.string().optional().describe("New status (e.g. active, paused)"),
+  runtimeConfig: z
+    .object({
+      heartbeat: z
+        .object({
+          enabled: z.boolean().optional().describe("Enable or disable scheduled heartbeats"),
+          intervalSec: z
+            .number()
+            .int()
+            .positive()
+            .optional()
+            .describe("Heartbeat interval in seconds"),
+          cooldownSec: z
+            .number()
+            .int()
+            .nonnegative()
+            .optional()
+            .describe("Minimum seconds between heartbeat runs"),
+          maxConcurrentRuns: z
+            .number()
+            .int()
+            .positive()
+            .optional()
+            .describe("Maximum concurrent heartbeat runs allowed"),
+          wakeOnDemand: z
+            .boolean()
+            .optional()
+            .describe("Allow on-demand heartbeat invocation via the invoke endpoint"),
+        })
+        .optional()
+        .describe("Heartbeat scheduling settings"),
+    })
+    .optional()
+    .describe("Agent runtime configuration"),
+  adapterConfig: z
+    .object({
+      model: z.string().optional().describe("LLM model identifier (e.g. claude-sonnet-4-6)"),
+      cwd: z.string().optional().describe("Working directory for the agent process"),
+      maxTurnsPerRun: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Maximum LLM turns per heartbeat run"),
+      timeoutSec: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Hard timeout in seconds for a heartbeat run"),
+      graceSec: z
+        .number()
+        .int()
+        .nonnegative()
+        .optional()
+        .describe("Grace period in seconds before hard termination after timeout"),
+      instructionsFilePath: z
+        .string()
+        .optional()
+        .describe("Path to the AGENTS.md instructions file"),
+      instructionsRootPath: z
+        .string()
+        .optional()
+        .describe("Root path used for resolving relative instruction paths"),
+      instructionsBundleMode: z
+        .string()
+        .optional()
+        .describe("Instruction bundling mode (e.g. concat, merge)"),
+      dangerouslySkipPermissions: z
+        .boolean()
+        .optional()
+        .describe("Skip permission checks — dangerous, use only in trusted sandboxes"),
+      paperclipSkillSync: z
+        .object({
+          desiredSkills: z
+            .array(z.string())
+            .optional()
+            .describe("Skill names the agent should have installed"),
+        })
+        .optional()
+        .describe("Paperclip skill auto-sync configuration"),
+    })
+    .optional()
+    .describe("Adapter configuration for the agent process"),
+});
+
+const UpdateAgentPermissionsInput = z.object({
+  agentId: z.string().min(1).describe("Agent UUID"),
+  canAssignTasks: z.boolean().describe("Allow this agent to assign tasks to other agents"),
+  canCreateAgents: z
+    .boolean()
+    .describe("Allow this agent to create new agents (reserved for CEO by governance policy)"),
 });
 
 const CreateAgentKeyInput = z.object({
@@ -89,7 +180,7 @@ export const agentTools: ToolDefinition[] = [
   {
     name: "paperclip_update_agent",
     description:
-      "Update an agent's name, title, capabilities, or status. Run ID header is injected automatically.",
+      "Update an agent's name, title, capabilities, status, heartbeat/runtime config, or adapter config. Run ID header is injected automatically. For permissions, use paperclip_update_agent_permissions.",
     inputSchema: {
       type: "object",
       properties: {
@@ -98,6 +189,91 @@ export const agentTools: ToolDefinition[] = [
         title: { type: "string", description: "New job title" },
         capabilities: { type: "string", description: "Updated capability description" },
         status: { type: "string", description: "New status (e.g. active, paused)" },
+        runtimeConfig: {
+          type: "object",
+          description: "Agent runtime configuration",
+          properties: {
+            heartbeat: {
+              type: "object",
+              description: "Heartbeat scheduling settings",
+              properties: {
+                enabled: {
+                  type: "boolean",
+                  description: "Enable or disable scheduled heartbeats",
+                },
+                intervalSec: {
+                  type: "number",
+                  description: "Heartbeat interval in seconds",
+                },
+                cooldownSec: {
+                  type: "number",
+                  description: "Minimum seconds between heartbeat runs",
+                },
+                maxConcurrentRuns: {
+                  type: "number",
+                  description: "Maximum concurrent heartbeat runs allowed",
+                },
+                wakeOnDemand: {
+                  type: "boolean",
+                  description: "Allow on-demand heartbeat invocation via the invoke endpoint",
+                },
+              },
+            },
+          },
+        },
+        adapterConfig: {
+          type: "object",
+          description: "Adapter configuration for the agent process",
+          properties: {
+            model: {
+              type: "string",
+              description: "LLM model identifier (e.g. claude-sonnet-4-6)",
+            },
+            cwd: {
+              type: "string",
+              description: "Working directory for the agent process",
+            },
+            maxTurnsPerRun: {
+              type: "number",
+              description: "Maximum LLM turns per heartbeat run",
+            },
+            timeoutSec: {
+              type: "number",
+              description: "Hard timeout in seconds for a heartbeat run",
+            },
+            graceSec: {
+              type: "number",
+              description: "Grace period in seconds before hard termination after timeout",
+            },
+            instructionsFilePath: {
+              type: "string",
+              description: "Path to the AGENTS.md instructions file",
+            },
+            instructionsRootPath: {
+              type: "string",
+              description: "Root path used for resolving relative instruction paths",
+            },
+            instructionsBundleMode: {
+              type: "string",
+              description: "Instruction bundling mode (e.g. concat, merge)",
+            },
+            dangerouslySkipPermissions: {
+              type: "boolean",
+              description: "Skip permission checks — dangerous, use only in trusted sandboxes",
+            },
+            paperclipSkillSync: {
+              type: "object",
+              description: "Paperclip skill auto-sync configuration",
+              properties: {
+                desiredSkills: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "Skill names the agent should have installed",
+                },
+              },
+            },
+          },
+        },
       },
       required: ["agentId"],
     },
@@ -110,6 +286,43 @@ export const agentTools: ToolDefinition[] = [
           if (v !== undefined) body[k] = v;
         }
         const data = await client.patch<unknown>(`/api/agents/${agentId}`, body);
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      } catch (err) {
+        return handleApiError(err);
+      }
+    },
+  },
+  {
+    name: "paperclip_update_agent_permissions",
+    description:
+      "Update an agent's permissions (canAssignTasks, canCreateAgents). Both fields are required — the API enforces this. Run ID header is injected automatically.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        agentId: { type: "string", description: "Agent UUID" },
+        canAssignTasks: {
+          type: "boolean",
+          description: "Allow this agent to assign tasks to other agents",
+        },
+        canCreateAgents: {
+          type: "boolean",
+          description:
+            "Allow this agent to create new agents (reserved for CEO by governance policy)",
+        },
+      },
+      required: ["agentId", "canAssignTasks", "canCreateAgents"],
+    },
+    annotations: { destructiveHint: true, openWorldHint: false },
+    async handler(args, client) {
+      try {
+        const { agentId, canAssignTasks, canCreateAgents } = validate(
+          UpdateAgentPermissionsInput,
+          args
+        );
+        const data = await client.patch<unknown>(`/api/agents/${agentId}/permissions`, {
+          canAssignTasks,
+          canCreateAgents,
+        });
         return { content: [{ type: "text", text: JSON.stringify(data) }] };
       } catch (err) {
         return handleApiError(err);
