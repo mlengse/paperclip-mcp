@@ -32,26 +32,60 @@ const UpdateRoutineInput = z.object({
   catchUpPolicy: z.string().optional().describe("New catch-up policy"),
 });
 
+const TriggerConfigSchema = z
+  .object({
+    // schedule fields
+    cron: z
+      .string()
+      .optional()
+      .describe("Cron expression for schedule triggers (e.g. '0 9 * * 1'; 5-field standard cron)"),
+    timezone: z
+      .string()
+      .optional()
+      .describe(
+        "IANA timezone string for schedule triggers (e.g. 'UTC', 'America/New_York'); defaults to UTC"
+      ),
+    // webhook fields
+    signingMode: z
+      .enum(["bearer", "hmac_sha256"])
+      .optional()
+      .describe(
+        "Webhook signing mode: 'bearer' (default, Authorization header) or 'hmac_sha256' (X-Paperclip-Signature + X-Paperclip-Timestamp headers)"
+      ),
+    replayWindowSec: z
+      .number()
+      .int()
+      .min(30)
+      .max(86400)
+      .optional()
+      .describe(
+        "Webhook replay window in seconds to reject replayed requests (30–86400, default 300; webhook type only)"
+      ),
+  })
+  .optional()
+  .describe(
+    "Trigger configuration. schedule: provide cron + optional timezone. webhook: provide optional signingMode and replayWindowSec. api: no config needed."
+  );
+
 const AddTriggerInput = z.object({
   routineId: z.string().min(1).describe("Routine UUID"),
-  type: z.enum(["schedule", "webhook", "api"]).describe("Trigger type"),
-  config: z
-    .object({
-      cron: z.string().optional().describe("Cron expression for schedule triggers"),
-    })
-    .optional()
-    .describe("Trigger configuration"),
+  type: z
+    .enum(["schedule", "webhook", "api"])
+    .describe(
+      "Trigger type: 'schedule' (cron-based), 'webhook' (HTTP callback), or 'api' (manual via API)"
+    ),
+  config: TriggerConfigSchema,
 });
 
 const UpdateTriggerInput = z.object({
   triggerId: z.string().min(1).describe("Routine trigger UUID"),
-  type: z.enum(["schedule", "webhook", "api"]).optional().describe("New trigger type"),
-  config: z
-    .object({
-      cron: z.string().optional().describe("New cron expression for schedule triggers"),
-    })
+  type: z
+    .enum(["schedule", "webhook", "api"])
     .optional()
-    .describe("New trigger configuration"),
+    .describe(
+      "New trigger type: 'schedule' (cron-based), 'webhook' (HTTP callback), or 'api' (manual via API)"
+    ),
+  config: TriggerConfigSchema,
 });
 
 export const routineTools: ToolDefinition[] = [
@@ -167,7 +201,7 @@ export const routineTools: ToolDefinition[] = [
   {
     name: "paperclip_add_routine_trigger",
     description:
-      "Add a trigger to a routine (schedule, webhook, or api). Run ID header is injected automatically.",
+      "Add a trigger to a routine. Supported types: 'schedule' (provide config.cron + optional config.timezone), 'webhook' (provide optional config.signingMode and config.replayWindowSec), 'api' (no config needed). Run ID header is injected automatically.",
     inputSchema: {
       type: "object",
       properties: {
@@ -175,13 +209,34 @@ export const routineTools: ToolDefinition[] = [
         type: {
           type: "string",
           enum: ["schedule", "webhook", "api"],
-          description: "Trigger type",
+          description:
+            "Trigger type: 'schedule' (cron-based), 'webhook' (HTTP callback), or 'api' (manual via API)",
         },
         config: {
           type: "object",
-          description: "Trigger configuration",
+          description:
+            "Trigger configuration. schedule: provide cron + optional timezone. webhook: provide optional signingMode and replayWindowSec. api: no config needed.",
           properties: {
-            cron: { type: "string", description: "Cron expression for schedule triggers" },
+            cron: {
+              type: "string",
+              description: "Cron expression for schedule triggers (e.g. '0 9 * * 1')",
+            },
+            timezone: {
+              type: "string",
+              description:
+                "IANA timezone string for schedule triggers (e.g. 'UTC', 'America/New_York')",
+            },
+            signingMode: {
+              type: "string",
+              enum: ["bearer", "hmac_sha256"],
+              description: "Webhook signing mode: 'bearer' (default) or 'hmac_sha256'",
+            },
+            replayWindowSec: {
+              type: "number",
+              minimum: 30,
+              maximum: 86400,
+              description: "Webhook replay window in seconds (30–86400, default 300)",
+            },
           },
         },
       },
@@ -203,7 +258,7 @@ export const routineTools: ToolDefinition[] = [
   {
     name: "paperclip_update_routine_trigger",
     description:
-      "Update an existing routine trigger's type or config. Run ID header is injected automatically.",
+      "Update an existing routine trigger's type or config. Supported types: 'schedule' (config.cron + optional config.timezone), 'webhook' (optional config.signingMode and config.replayWindowSec), 'api' (no config). Run ID header is injected automatically.",
     inputSchema: {
       type: "object",
       properties: {
@@ -211,13 +266,34 @@ export const routineTools: ToolDefinition[] = [
         type: {
           type: "string",
           enum: ["schedule", "webhook", "api"],
-          description: "New trigger type",
+          description:
+            "New trigger type: 'schedule' (cron-based), 'webhook' (HTTP callback), or 'api' (manual via API)",
         },
         config: {
           type: "object",
-          description: "New trigger configuration",
+          description:
+            "New trigger configuration. schedule: provide cron + optional timezone. webhook: provide optional signingMode and replayWindowSec. api: no config needed.",
           properties: {
-            cron: { type: "string", description: "New cron expression for schedule triggers" },
+            cron: {
+              type: "string",
+              description: "Cron expression for schedule triggers (e.g. '0 9 * * 1')",
+            },
+            timezone: {
+              type: "string",
+              description:
+                "IANA timezone string for schedule triggers (e.g. 'UTC', 'America/New_York')",
+            },
+            signingMode: {
+              type: "string",
+              enum: ["bearer", "hmac_sha256"],
+              description: "Webhook signing mode: 'bearer' (default) or 'hmac_sha256'",
+            },
+            replayWindowSec: {
+              type: "number",
+              minimum: 30,
+              maximum: 86400,
+              description: "Webhook replay window in seconds (30–86400, default 300)",
+            },
           },
         },
       },
