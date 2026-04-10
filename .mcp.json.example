@@ -15,8 +15,7 @@
       "command": "node",
       "args": ["dist/index.js"],
       "env": {
-        "PAPERCLIP_API_URL": "http://127.0.0.1:3100",
-        "PAPERCLIP_COMPANY_ID": ""
+        "PAPERCLIP_API_URL": "http://127.0.0.1:3100"
       }
     }
   }
