@@ -39,8 +39,8 @@ git -C "$REPO_ROOT" worktree add "$WORKTREE" "$BRANCH"
 # Stage a benign markdown change — matches the *.{js,json,md} lint-staged
 # glob so the hook actually runs prettier on it.
 cd "$WORKTREE"
-printf '\n<!-- precommit-head regression test -->\n' >> .gitignore
-git add .gitignore
+printf '\n<!-- precommit-head regression test -->\n' >> README.md
+git add README.md
 
 # Run the full commit flow: fires .husky/pre-commit → lint-staged.
 git commit -m "test: pre-commit HEAD stability regression (PAP-107)"
