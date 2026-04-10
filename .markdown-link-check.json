@@ -1,5 +1,5 @@
 {
-  "ignorePatterns": [{ "pattern": "^https?://" }],
+  "ignorePatterns": [{ "pattern": "^https?://" }, { "pattern": "^/[A-Z]" }],
   "replacementPatterns": [],
   "httpHeaders": [],
   "timeout": "20s",
