@@ -13,9 +13,13 @@ const ListIssuesInput = z.object({
 
 const IssueIdInput = IssueIdSchema;
 
+// Some MCP clients serialize array parameters as a JSON-encoded string.
+// This preprocess normalizes both forms before Zod validates the array.
+const jsonArrayPreprocess = (v: unknown) => (typeof v === "string" ? JSON.parse(v) : v);
+
 const CheckoutIssueInput = z.object({
   issueId: z.string().min(1),
-  expectedStatuses: z.array(z.string()).optional(),
+  expectedStatuses: z.preprocess(jsonArrayPreprocess, z.array(z.string())).optional(),
 });
 
 const UpdateIssueInput = z.object({
@@ -31,7 +35,7 @@ const UpdateIssueInput = z.object({
   projectId: z.string().nullable().optional(),
   parentId: z.string().nullable().optional(),
   billingCode: z.string().nullable().optional(),
-  labelIds: z.array(z.string()).optional(),
+  labelIds: z.preprocess(jsonArrayPreprocess, z.array(z.string())).optional(),
 });
 
 const CreateIssueInput = z.object({
@@ -44,7 +48,7 @@ const CreateIssueInput = z.object({
   projectId: z.string().optional(),
   assigneeAgentId: z.string().optional(),
   billingCode: z.string().optional(),
-  labelIds: z.array(z.string()).optional(),
+  labelIds: z.preprocess(jsonArrayPreprocess, z.array(z.string())).optional(),
   inheritExecutionWorkspaceFromIssueId: z
     .string()
     .optional()

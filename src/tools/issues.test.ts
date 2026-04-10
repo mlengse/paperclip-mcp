@@ -445,4 +445,53 @@ describe("paperclip_update_issue (labelIds)", () => {
     const sentBody = JSON.parse(calls[0]!.init.body as string);
     assert.deepEqual(sentBody.labelIds, []);
   });
+
+  // PAP-120: regression — client sends labelIds as a JSON-encoded string instead of an array
+  it("PAP-120: accepts labelIds as JSON-encoded string and forwards parsed array (update)", async () => {
+    const updated = { id: "issue-1", labelIds: ["label-1", "label-2"] };
+    const { fn, calls } = mockFetch(200, updated);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await updateIssue.handler(
+      {
+        issueId: "issue-1",
+        labelIds: JSON.stringify(["label-1", "label-2"]) as unknown as string[],
+      },
+      client
+    );
+    const sentBody = JSON.parse(calls[0]!.init.body as string);
+    assert.deepEqual(sentBody.labelIds, ["label-1", "label-2"]);
+  });
+});
+
+describe("paperclip_create_issue (labelIds JSON-string, PAP-120)", () => {
+  // PAP-120: regression — client sends labelIds as a JSON-encoded string instead of an array
+  it("accepts labelIds as JSON-encoded string and forwards parsed array (create)", async () => {
+    const created = { id: "issue-new", title: "Tagged", labelIds: ["label-1", "label-2"] };
+    const { fn, calls } = mockFetch(200, created);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await createIssue.handler(
+      { title: "Tagged", labelIds: JSON.stringify(["label-1", "label-2"]) as unknown as string[] },
+      client
+    );
+    const sentBody = JSON.parse(calls[0]!.init.body as string);
+    assert.deepEqual(sentBody.labelIds, ["label-1", "label-2"]);
+  });
+});
+
+describe("paperclip_checkout_issue (expectedStatuses JSON-string, PAP-120)", () => {
+  // PAP-120: regression — client sends expectedStatuses as a JSON-encoded string instead of an array
+  it("accepts expectedStatuses as JSON-encoded string and forwards parsed array (checkout)", async () => {
+    const updated = { id: "issue-1", status: "in_progress" };
+    const { fn, calls } = mockFetch(200, updated);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await checkoutIssue.handler(
+      {
+        issueId: "issue-1",
+        expectedStatuses: JSON.stringify(["todo"]) as unknown as string[],
+      },
+      client
+    );
+    const sentBody = JSON.parse(calls[0]!.init.body as string);
+    assert.deepEqual(sentBody.expectedStatuses, ["todo"]);
+  });
 });
