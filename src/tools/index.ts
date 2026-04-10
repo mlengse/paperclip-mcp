@@ -44,7 +44,7 @@ export interface ToolDefinition {
   handler: (args: unknown, client: PaperclipClient) => Promise<ToolResult>;
 }
 
-const ALL_TOOLS: ToolDefinition[] = [
+export const ALL_TOOLS: ToolDefinition[] = [
   ...identityTools,
   ...issueTools,
   ...commentTools,
@@ -63,6 +63,16 @@ const ALL_TOOLS: ToolDefinition[] = [
 export function registerAllTools(server: Server): void {
   const client = new PaperclipClient();
   const toolMap = new Map(ALL_TOOLS.map((t) => [t.name, t]));
+
+  if (toolMap.size !== ALL_TOOLS.length) {
+    const seen = new Set<string>();
+    const duplicates: string[] = [];
+    for (const tool of ALL_TOOLS) {
+      if (seen.has(tool.name)) duplicates.push(tool.name);
+      else seen.add(tool.name);
+    }
+    throw new Error(`Duplicate tool names detected at registration: ${duplicates.join(", ")}`);
+  }
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: ALL_TOOLS.map(({ name, description, inputSchema, annotations }) => ({
