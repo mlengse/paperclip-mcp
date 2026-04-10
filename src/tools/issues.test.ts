@@ -621,6 +621,101 @@ describe("paperclip_create_issue (labelIds JSON-string, PAP-120)", () => {
   });
 });
 
+// PAP-181: regression — release must clear checkoutRunId as well as executionRunId.
+// A recurrence of PAP-125 was observed where executionRunId stayed non-null across
+// successive release calls, causing false 409 conflicts on subsequent checkouts.
+describe("paperclip_release_issue (PAP-181: regression — release must clear all lock fields)", () => {
+  it("PAP-181: release response has checkoutRunId null", async () => {
+    const released = {
+      id: "issue-1",
+      status: "todo",
+      checkoutRunId: null,
+      executionRunId: null,
+      executionLockedAt: null,
+    };
+    const { fn } = mockFetch(200, released);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await releaseIssue.handler({ issueId: "issue-1" }, client);
+    const body = JSON.parse(result.content[0]!.text);
+    assert.equal(body.checkoutRunId, null, "checkoutRunId must be null after release");
+  });
+
+  it("PAP-181: repeated releases each return executionRunId null (idempotent)", async () => {
+    // Verifies that calling release multiple times does not leave a stale executionRunId.
+    // The PAP-125/PAP-181 bug manifested as repeated calls returning non-null executionRunId.
+    const released = {
+      id: "issue-1",
+      status: "todo",
+      checkoutRunId: null,
+      executionRunId: null,
+      executionLockedAt: null,
+    };
+    const { fn } = mockFetch(200, released);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+
+    for (let i = 0; i < 3; i++) {
+      const result = await releaseIssue.handler({ issueId: "issue-1" }, client);
+      const body = JSON.parse(result.content[0]!.text);
+      assert.equal(
+        body.executionRunId,
+        null,
+        `executionRunId must be null on release call #${i + 1}`
+      );
+      assert.equal(
+        body.checkoutRunId,
+        null,
+        `checkoutRunId must be null on release call #${i + 1}`
+      );
+    }
+  });
+
+  it("PAP-181: auto-release guard triggers isError on successive release that still leaves executionRunId set", async () => {
+    // Simulates the PAP-181 recurrence: successive release calls both return 200 but
+    // executionRunId remains non-null. The MCP guard must catch this and surface an error.
+    let checkoutCallCount = 0;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const statefulFetch = async (url: string, _: RequestInit): Promise<Response> => {
+      if (url.endsWith("/checkout")) {
+        checkoutCallCount++;
+        return new Response(
+          JSON.stringify({
+            error: "Issue checkout conflict",
+            details: { issueId: "issue-1", checkoutRunId: null, executionRunId: "run-stale" },
+          }),
+          {
+            status: 409,
+            statusText: "Conflict",
+            headers: new Headers({ "Content-Type": "application/json" }),
+          }
+        );
+      }
+      // Both release attempts return 200 but fail to clear executionRunId (PAP-181 scenario)
+      return new Response(
+        JSON.stringify({ id: "issue-1", status: "in_review", executionRunId: "run-stale" }),
+        { status: 200, headers: new Headers({ "Content-Type": "application/json" }) }
+      );
+    };
+
+    const client = new PaperclipClient(TEST_AUTH, statefulFetch);
+    const result = await checkoutIssue.handler({ issueId: "issue-1" }, client);
+
+    assert.equal(
+      result.isError,
+      true,
+      "must return isError when repeated release does not clear executionRunId"
+    );
+    assert.ok(
+      result.content[0]!.text.includes("Auto-release returned 200 but executionRunId is still set"),
+      "error must reference the uncleared executionRunId"
+    );
+    assert.equal(
+      checkoutCallCount,
+      1,
+      "must not retry checkout after release failed to clear lock (no infinite loop)"
+    );
+  });
+});
+
 describe("paperclip_checkout_issue (expectedStatuses JSON-string, PAP-120)", () => {
   // PAP-120: regression — client sends expectedStatuses as a JSON-encoded string instead of an array
   it("accepts expectedStatuses as JSON-encoded string and forwards parsed array (checkout)", async () => {
