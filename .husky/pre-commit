@@ -1,1 +1,7 @@
-npx lint-staged
+# PAP-107: capture HEAD before lint-staged so branch drift is impossible
+# even if the stash/restore cycle is re-enabled in future.
+_HEAD="$(git symbolic-ref HEAD 2>/dev/null)"
+npx lint-staged --no-stash
+_exit=$?
+[ -n "$_HEAD" ] && git symbolic-ref HEAD "$_HEAD" 2>/dev/null || true
+exit $_exit
