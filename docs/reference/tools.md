@@ -19,21 +19,21 @@ Results are returned as `content[0].text` containing JSON-serialised API respons
 
 ## Tool groups
 
-| Group                            | Tools                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [Identity](#identity-tools)      | `paperclip_get_me`, `paperclip_get_inbox`                                                                                                                                                                                                                                                                                                                                                                                            |
-| [Issues](#issue-tools)           | `paperclip_list_issues`, `paperclip_get_issue`, `paperclip_get_heartbeat_context`, `paperclip_checkout_issue`, `paperclip_release_issue`, `paperclip_update_issue`, `paperclip_create_issue`                                                                                                                                                                                                                                         |
-| [Comments](#comment-tools)       | `paperclip_list_comments`, `paperclip_add_comment`, `paperclip_get_comment`                                                                                                                                                                                                                                                                                                                                                          |
-| [Documents](#document-tools)     | `paperclip_list_documents`, `paperclip_get_document`, `paperclip_upsert_document`, `paperclip_delete_document`, `paperclip_get_document_revisions`                                                                                                                                                                                                                                                                                   |
-| [Agents](#agent-tools)           | `paperclip_list_agents`, `paperclip_get_agent`, `paperclip_update_agent`, `paperclip_pause_agent`, `paperclip_resume_agent`, `paperclip_invoke_heartbeat`, `paperclip_terminate_agent`, `paperclip_create_agent_key`, `paperclip_list_agent_config_revisions`, `paperclip_rollback_agent_config`, `paperclip_set_agent_instructions_path`, `paperclip_get_org_chart`, `paperclip_sync_agent_skills`, `paperclip_list_company_skills` |
-| [Dashboard](#dashboard-tools)    | `paperclip_get_dashboard`                                                                                                                                                                                                                                                                                                                                                                                                            |
-| [Approvals](#approval-tools)     | `paperclip_list_approvals`, `paperclip_get_approval`, `paperclip_create_approval`, `paperclip_approve`, `paperclip_reject`, `paperclip_request_revision`, `paperclip_resubmit_approval`, `paperclip_list_approval_comments`, `paperclip_add_approval_comment`, `paperclip_create_agent_hire`                                                                                                                                         |
-| [Goals](#goal-tools)             | `paperclip_list_goals`, `paperclip_get_goal`, `paperclip_create_goal`, `paperclip_update_goal`                                                                                                                                                                                                                                                                                                                                       |
-| [Projects](#project-tools)       | `paperclip_list_projects`, `paperclip_get_project`, `paperclip_create_project`, `paperclip_update_project`, `paperclip_list_workspaces`, `paperclip_create_workspace`, `paperclip_update_workspace`                                                                                                                                                                                                                                  |
-| [Activity](#activity-tools)      | `paperclip_get_activity`, `paperclip_get_cost_summary`, `paperclip_get_costs_by_agent`, `paperclip_get_costs_by_project`, `paperclip_report_cost_event`                                                                                                                                                                                                                                                                              |
-| [Routines](#routine-tools)       | `paperclip_list_routines`, `paperclip_get_routine`, `paperclip_create_routine`, `paperclip_update_routine`, `paperclip_add_routine_trigger`, `paperclip_update_routine_trigger`, `paperclip_delete_routine_trigger`, `paperclip_run_routine`, `paperclip_list_routine_runs`                                                                                                                                                          |
-| [Attachments](#attachment-tools) | `paperclip_list_attachments`, `paperclip_upload_attachment`, `paperclip_download_attachment`, `paperclip_delete_attachment`                                                                                                                                                                                                                                                                                                          |
-| [Labels](#label-tools)           | `paperclip_list_labels`, `paperclip_create_label`                                                                                                                                                                                                                                                                                                                                                                                    |
+| Group                            | Tools                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Identity](#identity-tools)      | `paperclip_get_me`, `paperclip_get_inbox`                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| [Issues](#issue-tools)           | `paperclip_list_issues`, `paperclip_get_issue`, `paperclip_get_heartbeat_context`, `paperclip_checkout_issue`, `paperclip_release_issue`, `paperclip_update_issue`, `paperclip_create_issue`                                                                                                                                                                                                                                                                               |
+| [Comments](#comment-tools)       | `paperclip_list_comments`, `paperclip_add_comment`, `paperclip_get_comment`                                                                                                                                                                                                                                                                                                                                                                                                |
+| [Documents](#document-tools)     | `paperclip_list_documents`, `paperclip_get_document`, `paperclip_upsert_document`, `paperclip_delete_document`, `paperclip_get_document_revisions`                                                                                                                                                                                                                                                                                                                         |
+| [Agents](#agent-tools)           | `paperclip_list_agents`, `paperclip_get_agent`, `paperclip_update_agent`, `paperclip_update_agent_permissions`, `paperclip_pause_agent`, `paperclip_resume_agent`, `paperclip_invoke_heartbeat`, `paperclip_terminate_agent`, `paperclip_create_agent_key`, `paperclip_list_agent_config_revisions`, `paperclip_rollback_agent_config`, `paperclip_set_agent_instructions_path`, `paperclip_get_org_chart`, `paperclip_sync_agent_skills`, `paperclip_list_company_skills` |
+| [Dashboard](#dashboard-tools)    | `paperclip_get_dashboard`                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| [Approvals](#approval-tools)     | `paperclip_list_approvals`, `paperclip_get_approval`, `paperclip_create_approval`, `paperclip_approve`, `paperclip_reject`, `paperclip_request_revision`, `paperclip_resubmit_approval`, `paperclip_list_approval_comments`, `paperclip_add_approval_comment`, `paperclip_create_agent_hire`                                                                                                                                                                               |
+| [Goals](#goal-tools)             | `paperclip_list_goals`, `paperclip_get_goal`, `paperclip_create_goal`, `paperclip_update_goal`                                                                                                                                                                                                                                                                                                                                                                             |
+| [Projects](#project-tools)       | `paperclip_list_projects`, `paperclip_get_project`, `paperclip_create_project`, `paperclip_update_project`, `paperclip_list_workspaces`, `paperclip_create_workspace`, `paperclip_update_workspace`                                                                                                                                                                                                                                                                        |
+| [Activity](#activity-tools)      | `paperclip_get_activity`, `paperclip_get_cost_summary`, `paperclip_get_costs_by_agent`, `paperclip_get_costs_by_project`, `paperclip_report_cost_event`                                                                                                                                                                                                                                                                                                                    |
+| [Routines](#routine-tools)       | `paperclip_list_routines`, `paperclip_get_routine`, `paperclip_create_routine`, `paperclip_update_routine`, `paperclip_add_routine_trigger`, `paperclip_update_routine_trigger`, `paperclip_delete_routine_trigger`, `paperclip_run_routine`, `paperclip_list_routine_runs`                                                                                                                                                                                                |
+| [Attachments](#attachment-tools) | `paperclip_list_attachments`, `paperclip_upload_attachment`, `paperclip_download_attachment`, `paperclip_delete_attachment`                                                                                                                                                                                                                                                                                                                                                |
+| [Labels](#label-tools)           | `paperclip_list_labels`, `paperclip_create_label`                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 ---
 
@@ -825,17 +825,32 @@ Result:
 
 ### `paperclip_update_agent`
 
-Update an agent's name, title, capabilities, or status. Run ID header is injected automatically.
+Update an agent's name, title, capabilities, status, heartbeat/runtime config, or adapter config. For permissions, use `paperclip_update_agent_permissions`. Run ID header is injected automatically.
 
 **Input:**
 
-| Parameter      | Type   | Required | Description                          |
-| -------------- | ------ | -------- | ------------------------------------ |
-| `agentId`      | string | Yes      | Agent UUID                           |
-| `name`         | string | No       | New display name                     |
-| `title`        | string | No       | New job title                        |
-| `capabilities` | string | No       | Updated capability description       |
-| `status`       | string | No       | New status (e.g. `active`, `paused`) |
+| Parameter                                        | Type     | Required | Description                                                       |
+| ------------------------------------------------ | -------- | -------- | ----------------------------------------------------------------- |
+| `agentId`                                        | string   | Yes      | Agent UUID                                                        |
+| `name`                                           | string   | No       | New display name                                                  |
+| `title`                                          | string   | No       | New job title                                                     |
+| `capabilities`                                   | string   | No       | Updated capability description                                    |
+| `status`                                         | string   | No       | New status (e.g. `active`, `paused`)                              |
+| `runtimeConfig.heartbeat.enabled`                | boolean  | No       | Enable or disable scheduled heartbeats                            |
+| `runtimeConfig.heartbeat.intervalSec`            | number   | No       | Heartbeat interval in seconds                                     |
+| `runtimeConfig.heartbeat.cooldownSec`            | number   | No       | Minimum seconds between heartbeat runs                            |
+| `runtimeConfig.heartbeat.maxConcurrentRuns`      | number   | No       | Maximum concurrent heartbeat runs allowed                         |
+| `runtimeConfig.heartbeat.wakeOnDemand`           | boolean  | No       | Allow on-demand heartbeat invocation via the invoke endpoint      |
+| `adapterConfig.model`                            | string   | No       | LLM model identifier (e.g. `claude-sonnet-4-6`)                   |
+| `adapterConfig.cwd`                              | string   | No       | Working directory for the agent process                           |
+| `adapterConfig.maxTurnsPerRun`                   | number   | No       | Maximum LLM turns per heartbeat run                               |
+| `adapterConfig.timeoutSec`                       | number   | No       | Hard timeout in seconds for a heartbeat run                       |
+| `adapterConfig.graceSec`                         | number   | No       | Grace period in seconds before hard termination after timeout     |
+| `adapterConfig.instructionsFilePath`             | string   | No       | Path to the AGENTS.md instructions file                           |
+| `adapterConfig.instructionsRootPath`             | string   | No       | Root path used for resolving relative instruction paths           |
+| `adapterConfig.instructionsBundleMode`           | string   | No       | Instruction bundling mode (e.g. `concat`, `merge`)                |
+| `adapterConfig.dangerouslySkipPermissions`       | boolean  | No       | Skip permission checks — dangerous, use only in trusted sandboxes |
+| `adapterConfig.paperclipSkillSync.desiredSkills` | string[] | No       | Skill names the agent should have installed                       |
 
 At least one optional field must be provided.
 
@@ -855,7 +870,52 @@ Result:
 { "id": "4cb0474f-...", "name": "TechWriter", "title": "Senior Technical Writer", ... }
 ```
 
-**Errors:** 404 if not found; 401 on auth failure.
+```
+Prompt: "Disable the Scrum Master heartbeat."
+
+Tool call: paperclip_update_agent {
+  "agentId": "sm-agent-uuid",
+  "runtimeConfig": { "heartbeat": { "enabled": false } }
+}
+
+Result:
+{ "id": "sm-agent-uuid", "runtimeConfig": { "heartbeat": { "enabled": false, ... } }, ... }
+```
+
+**Errors:** 404 if not found; 422 if the Paperclip API rejects the field (e.g. permissions fields must use `paperclip_update_agent_permissions`); 401 on auth failure.
+
+---
+
+### `paperclip_update_agent_permissions`
+
+Update an agent's permissions. Both `canAssignTasks` and `canCreateAgents` are required — the API enforces this. Run ID header is injected automatically.
+
+**Input:**
+
+| Parameter         | Type    | Required | Description                                                        |
+| ----------------- | ------- | -------- | ------------------------------------------------------------------ |
+| `agentId`         | string  | Yes      | Agent UUID                                                         |
+| `canAssignTasks`  | boolean | Yes      | Allow this agent to assign tasks to other agents                   |
+| `canCreateAgents` | boolean | Yes      | Allow this agent to create new agents (reserved for CEO by policy) |
+
+**Output:** Updated agent permissions object.
+
+**Example:**
+
+```
+Prompt: "Revoke canCreateAgents from the CTO agent."
+
+Tool call: paperclip_update_agent_permissions {
+  "agentId": "cto-agent-uuid",
+  "canAssignTasks": true,
+  "canCreateAgents": false
+}
+
+Result:
+{ "agentId": "cto-agent-uuid", "canAssignTasks": true, "canCreateAgents": false }
+```
+
+**Errors:** 400/422 if either field is missing; 404 if not found; 401 on auth failure.
 
 ---
 
