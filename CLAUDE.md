@@ -8,18 +8,20 @@ paperclip-mcp is a Model Context Protocol (MCP) stdio server that exposes the Pa
 
 ## Commands
 
-| Task             | Command                                            |
-| ---------------- | -------------------------------------------------- |
-| Build            | `npm run build`                                    |
-| Dev (live TS)    | `npm run dev`                                      |
-| Start (compiled) | `npm run start`                                    |
-| Type-check only  | `npm run typecheck`                                |
-| Lint             | `npm run lint`                                     |
-| Format           | `npm run format`                                   |
-| Format check     | `npm run format:check`                             |
-| Run all tests    | `npm run test`                                     |
-| Run single test  | `node --import tsx/esm --test src/path/to.test.ts` |
-| Check doc links  | `npm run docs:check`                               |
+| Task                    | Command                                            |
+| ----------------------- | -------------------------------------------------- |
+| Build                   | `npm run build`                                    |
+| Dev (live TS)           | `npm run dev`                                      |
+| Start (compiled)        | `npm run start`                                    |
+| Type-check only         | `npm run typecheck`                                |
+| Lint                    | `npm run lint`                                     |
+| Format                  | `npm run format`                                   |
+| Format check (manual)   | `npm run format:check`                             |
+| Run all tests           | `npm run test`                                     |
+| Run single test         | `node --import tsx/esm --test src/path/to.test.ts` |
+| Check doc links         | `npm run docs:check`                               |
+
+> **Pre-commit automation:** `npm run lint` and `npm run format` run automatically on staged files at commit time via husky + lint-staged. You do not need to run `format:check` manually before committing.
 
 ## Architecture
 
@@ -57,10 +59,21 @@ paperclip-mcp is a Model Context Protocol (MCP) stdio server that exposes the Pa
 
 - **Formatting:** Prettier — double quotes, semicolons, 2-space indent, trailing commas in ES5 positions, 100-char print width.
 - **Linting:** ESLint v9 flat config with `@eslint/js` + `typescript-eslint` recommended presets.
+- **Pre-commit hooks:** husky + lint-staged auto-format and lint staged files on every commit. No manual format step needed before committing.
 - **Testing:** Node.js built-in `node:test` (`describe`/`it`) with `assert/strict`. Tests run via `tsx` ESM loader. No external test framework.
 - **TypeScript:** Strict mode, ES2022 target, Node16 module resolution. Test files excluded from compilation.
 - **Tool naming:** `paperclip_<verb>_<noun>` (snake_case).
-- **Branch strategy:** feature branches → `develop` → `main`. CI runs on push/PR to `main` and `develop`. Default working branch is `develop`. `main` is for releases only.
+- **Branch strategy:** feature branches → `develop` → `main`. CI quality gate runs on PRs and pushes to `main` only — not on `develop` pushes. Default working branch is `develop`. `main` is for releases only.
+
+## CI/CD
+
+| Layer        | Tooling                  | Triggers                              | What it does                                     |
+| ------------ | ------------------------ | ------------------------------------- | ------------------------------------------------ |
+| Pre-commit   | husky + lint-staged      | Every `git commit`                    | ESLint fix + Prettier write on staged files      |
+| Quality gate | `quality-gate.yml`       | PR to `main` or `develop`; push to `main` | typecheck, lint, format:check, test, build, docs |
+| Release      | `release.yml`            | Push to `main` (conventional commits) | semantic-release → npm publish + GitHub release  |
+
+See [`docs/ci-strategy.md`](docs/ci-strategy.md) for rationale, trigger matrix, and how to extend CI steps.
 
 ## Paperclip Agent Workflow
 
