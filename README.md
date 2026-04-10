@@ -698,6 +698,17 @@ npm test             # run tests
 
 Branch strategy: `feature/*` → `develop` → `main`
 
+## Releases
+
+Releases are automated. Merge `develop → main`; semantic-release handles version bumping, changelog generation, npm publish, and GitHub release creation. No manual publish step is needed.
+
+To trigger a release, open a PR from `develop` to `main`. Once merged, the `release.yml` workflow runs `npx semantic-release` automatically. The version bump is determined by the commit types since the last release:
+
+- `fix:` commits → patch release
+- `feat:` commits → minor release
+- `BREAKING CHANGE:` commits → major release
+- `chore:`, `docs:`, `test:` commits → no release
+
 ## License
 
 MIT

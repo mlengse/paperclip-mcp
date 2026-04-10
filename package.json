@@ -19,15 +19,15 @@
   "mcpName": "paperclip",
   "repository": {
     "type": "git",
-    "url": "https://github.com/paperclip-ai/paperclip-mcp.git"
+    "url": "git+https://github.com/bruhsb/paperclip-mcp.git"
   },
   "bugs": {
-    "url": "https://github.com/paperclip-ai/paperclip-mcp/issues"
+    "url": "https://github.com/bruhsb/paperclip-mcp/issues"
   },
-  "homepage": "https://github.com/paperclip-ai/paperclip-mcp#readme",
+  "homepage": "https://github.com/bruhsb/paperclip-mcp#readme",
   "scripts": {
     "build": "tsc && shx chmod +x dist/*.js",
-    "prepare": "npm run build",
+    "prepare": "npm run build && husky",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "lint": "eslint src",
@@ -43,10 +43,19 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^12.0.6",
+    "@semantic-release/npm": "^13.1.5",
+    "@semantic-release/release-notes-generator": "^14.1.0",
     "@types/node": "^22.0.0",
     "eslint": "^9.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "markdown-link-check": "^3.12.0",
     "prettier": "^3.0.0",
+    "semantic-release": "^25.0.3",
     "shx": "^0.3.4",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0",
@@ -57,5 +66,14 @@
   },
   "engines": {
     "node": ">=22"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{js,json,md}": [
+      "prettier --write"
+    ]
   }
 }
