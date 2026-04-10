@@ -19,6 +19,12 @@ export PAPERCLIP_AGENT_ID=<your-agent-id>
 export PAPERCLIP_COMPANY_ID=<your-company-id>
 ```
 
+> **Important for `.mcp.json` users:** Do **not** set `PAPERCLIP_API_KEY` or `PAPERCLIP_AGENT_ID`
+> inside the `paperclip` server's `env` block in `.mcp.json`. Values placed there override the shell
+> environment and break agent-scoped authentication (`401` on `paperclip_get_me` /
+> `paperclip_get_inbox`). Export these two variables from your shell profile or `.env.local` and let
+> the MCP subprocess inherit them. See `.mcp.json.example` for the correct template.
+
 ## Common commands
 
 | Task            | Command              |
