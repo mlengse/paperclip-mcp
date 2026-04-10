@@ -30,7 +30,7 @@ Results are returned as `content[0].text` containing JSON-serialised API respons
 | [Approvals](#approval-tools)     | `paperclip_list_approvals`, `paperclip_get_approval`, `paperclip_create_approval`, `paperclip_approve`, `paperclip_reject`, `paperclip_request_revision`, `paperclip_resubmit_approval`, `paperclip_list_approval_comments`, `paperclip_add_approval_comment`, `paperclip_create_agent_hire`                                                                                                                                         |
 | [Goals](#goal-tools)             | `paperclip_list_goals`, `paperclip_get_goal`, `paperclip_create_goal`, `paperclip_update_goal`                                                                                                                                                                                                                                                                                                                                       |
 | [Projects](#project-tools)       | `paperclip_list_projects`, `paperclip_get_project`, `paperclip_create_project`, `paperclip_update_project`, `paperclip_list_workspaces`, `paperclip_create_workspace`, `paperclip_update_workspace`                                                                                                                                                                                                                                  |
-| [Activity](#activity-tools)      | `paperclip_get_activity`, `paperclip_get_cost_summary`, `paperclip_get_costs_by_agent`, `paperclip_get_costs_by_project`                                                                                                                                                                                                                                                                                                             |
+| [Activity](#activity-tools)      | `paperclip_get_activity`, `paperclip_get_cost_summary`, `paperclip_get_costs_by_agent`, `paperclip_get_costs_by_project`, `paperclip_report_cost_event`                                                                                                                                                                                                                                                                              |
 | [Routines](#routine-tools)       | `paperclip_list_routines`, `paperclip_get_routine`, `paperclip_create_routine`, `paperclip_update_routine`, `paperclip_add_routine_trigger`, `paperclip_update_routine_trigger`, `paperclip_delete_routine_trigger`, `paperclip_run_routine`, `paperclip_list_routine_runs`                                                                                                                                                          |
 | [Attachments](#attachment-tools) | `paperclip_list_attachments`, `paperclip_upload_attachment`, `paperclip_download_attachment`, `paperclip_delete_attachment`                                                                                                                                                                                                                                                                                                          |
 
@@ -1899,6 +1899,27 @@ Get costs broken down by project for the current company.
 | `cents`     | number | Total spend in cents |
 
 **Errors:** 401 on auth failure.
+
+---
+
+### `paperclip_report_cost_event`
+
+Report an agent's token usage and cost to Paperclip for budget tracking and spend analytics.
+
+**Input:**
+
+| Field          | Type   | Required | Description                            |
+| -------------- | ------ | -------- | -------------------------------------- |
+| `agentId`      | string | yes      | ID of the agent that incurred the cost |
+| `provider`     | string | yes      | LLM provider name (e.g. `anthropic`)   |
+| `model`        | string | yes      | Model name (e.g. `claude-sonnet-4-6`)  |
+| `inputTokens`  | number | yes      | Number of input tokens consumed        |
+| `outputTokens` | number | yes      | Number of output tokens generated      |
+| `costCents`    | number | yes      | Total cost in cents                    |
+
+**Output:** Recorded cost event object.
+
+**Errors:** 400/422 on validation failure; 401 on auth failure.
 
 ---
 
