@@ -179,10 +179,38 @@ export const issueTools: ToolDefinition[] = [
         // Active holder — propagate 409 immediately without attempting release.
         if (checkoutRunId !== null) throw conflictErr;
 
-        // Stale executionRunId with no active holder: release the lock and retry once.
-        // If release or retry fails, surface the original 409 unchanged.
+        // Stale executionRunId with no active holder: release the lock, verify it was
+        // actually cleared, then retry checkout once. If release fails, surface original 409.
+        let releaseBody: Record<string, unknown>;
         try {
-          await client.post<unknown>(`/api/issues/${issueId}/release`);
+          releaseBody = await client.post<Record<string, unknown>>(
+            `/api/issues/${issueId}/release`
+          );
+        } catch {
+          throw conflictErr;
+        }
+
+        // Verify the release actually cleared executionRunId before retrying checkout.
+        // The platform release endpoint may return 200 without clearing the lock in the
+        // database (PAP-125). Detect this by inspecting the release response body.
+        const runIdAfterRelease = releaseBody["executionRunId"];
+        if (runIdAfterRelease !== null && runIdAfterRelease !== undefined) {
+          return {
+            isError: true,
+            content: [
+              {
+                type: "text",
+                text:
+                  `Auto-release returned 200 but executionRunId is still set (${runIdAfterRelease}). ` +
+                  `The server-side release endpoint did not clear the lock. ` +
+                  `Manual board intervention required.`,
+              },
+            ],
+          };
+        }
+
+        // Lock is confirmed cleared — retry checkout once.
+        try {
           const data = await client.post<unknown>(`/api/issues/${issueId}/checkout`, body);
           return { content: [{ type: "text", text: JSON.stringify(data) }] };
         } catch {

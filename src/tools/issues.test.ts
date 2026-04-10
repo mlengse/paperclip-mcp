@@ -597,4 +597,51 @@ describe("paperclip_checkout_issue (PAP-123: auto-release stale executionRunId)"
       "error text must contain original 409 status"
     );
   });
+
+  // PAP-125: platform release endpoint returns 200 but does not clear executionRunId in the DB.
+  // The MCP layer must detect this via the release response body and return a descriptive error
+  // instead of silently retrying checkout (which would hit the same 409 again).
+  it("PAP-125: returns descriptive isError when release returns 200 but executionRunId is still set", async () => {
+    const urls: string[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const statefulFetch = async (url: string, _: RequestInit): Promise<Response> => {
+      urls.push(url);
+      if (url.endsWith("/checkout")) {
+        return new Response(
+          JSON.stringify({
+            error: "Issue checkout conflict",
+            details: { issueId: "issue-1", checkoutRunId: null, executionRunId: "run-stale" },
+          }),
+          {
+            status: 409,
+            statusText: "Conflict",
+            headers: new Headers({ "Content-Type": "application/json" }),
+          }
+        );
+      }
+      // Release returns 200 but executionRunId is still set (platform bug, PAP-125)
+      return new Response(
+        JSON.stringify({ id: "issue-1", status: "in_review", executionRunId: "run-stale" }),
+        { status: 200, headers: new Headers({ "Content-Type": "application/json" }) }
+      );
+    };
+
+    const client = new PaperclipClient(TEST_AUTH, statefulFetch);
+    const result = await checkoutIssue.handler({ issueId: "issue-1" }, client);
+
+    assert.equal(result.isError, true, "should return isError when release does not clear lock");
+    assert.ok(
+      result.content[0]!.text.includes("Auto-release returned 200 but executionRunId is still set"),
+      "error must describe the platform-side silent failure"
+    );
+    assert.ok(
+      result.content[0]!.text.includes("run-stale"),
+      "error must include the uncleared executionRunId value"
+    );
+    assert.equal(
+      urls.filter((u) => u.endsWith("/checkout")).length,
+      1,
+      "must not retry checkout when release did not clear the lock"
+    );
+  });
 });
