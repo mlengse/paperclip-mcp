@@ -79,7 +79,8 @@ export const companyTools: ToolDefinition[] = [
   {
     name: "paperclip_list_companies",
     description: composeDescription({
-      summary: "⚠ Board-only: List all companies accessible to the authenticated board user.",
+      boardOnly: true,
+      summary: "List all companies accessible to the authenticated board user.",
       args: [
         "- limit: number (optional) — Max companies per page (1–100, default 50)",
         "- offset: number (optional) — Number of companies to skip (default 0)",
@@ -117,7 +118,8 @@ export const companyTools: ToolDefinition[] = [
   {
     name: "paperclip_get_company",
     description: composeDescription({
-      summary: "⚠ Board-only: Get a single company by UUID.",
+      boardOnly: true,
+      summary: "Get a single company by UUID.",
       args: [
         '- companyId: string — Company UUID (example: "00000000-0000-0000-0000-000000000000")',
         "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
@@ -154,8 +156,8 @@ export const companyTools: ToolDefinition[] = [
   {
     name: "paperclip_create_company",
     description: composeDescription({
-      summary:
-        "⚠ Board-only: Create a new company. The issuePrefix is auto-generated from the name.",
+      boardOnly: true,
+      summary: "Create a new company. The issuePrefix is auto-generated from the name.",
       args: [
         "- name: string — Company name (required, non-empty)",
         "- description: string | null (optional) — Company description",
@@ -195,8 +197,9 @@ export const companyTools: ToolDefinition[] = [
   {
     name: "paperclip_update_company",
     description: composeDescription({
+      boardOnly: true,
       summary:
-        "⚠ Board-only: Update a company's name, description, or monthly budget. Requires board-level authentication (agent keys are rejected — even CEO agents receive 403).",
+        "Update a company's name, description, or monthly budget. Requires board-level authentication (agent keys are rejected — even CEO agents receive 403).",
       args: [
         '- companyId: string — Company UUID (example: "00000000-0000-0000-0000-000000000000")',
         "- name: string (optional) — New company name",
@@ -242,8 +245,9 @@ export const companyTools: ToolDefinition[] = [
   {
     name: "paperclip_archive_company",
     description: composeDescription({
+      boardOnly: true,
       summary:
-        "⚠ Board-only: Archive a company, setting its status to 'archived'. Uses a dedicated POST endpoint — not a PATCH. This action is irreversible through the API.",
+        "Archive a company, setting its status to 'archived'. Uses a dedicated POST endpoint — not a PATCH. This action is irreversible through the API.",
       args: [
         '- companyId: string — Company UUID to archive (example: "00000000-0000-0000-0000-000000000000")',
       ],
