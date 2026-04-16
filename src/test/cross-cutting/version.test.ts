@@ -25,7 +25,7 @@ describe("server version sync", () => {
     );
   });
 
-  it("package.json version is 1.0.0 (Stage 9 will bump to 2.0.0)", () => {
-    assert.equal(pkg.version, "1.0.0", "package.json must stay at 1.0.0 until Stage 9");
+  it("package.json version is 2.0.0 (bumped in Stage 9)", () => {
+    assert.equal(pkg.version, "2.0.0", "package.json version must be 2.0.0 for v2.0 release");
   });
 });
