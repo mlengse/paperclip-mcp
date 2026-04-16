@@ -24,7 +24,7 @@ npx paperclip-mcp
 npm install -g paperclip-mcp
 ```
 
-**Docker:** see [`docs/guides/docker.md`](docs/guides/docker.md) _(coming soon — being added by the docker-builder agent)_.
+**Docker / Podman:** see [`docs/guides/docker.md`](docs/guides/docker.md) for the production image (`paperclip-mcp:2.0.0`), `.mcp.json` snippet, and security notes.
 
 ---
 
