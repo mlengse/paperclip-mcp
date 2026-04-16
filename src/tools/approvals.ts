@@ -108,6 +108,17 @@ const CreateAgentHireInput = z
   })
   .strict();
 
+const ListApprovalIssuesInput = z
+  .object({
+    approvalId: z.string().min(1).describe("Approval UUID"),
+    limit: PaginationLimitSchema.describe("Max issues per page (1–100, default 50)"),
+    offset: PaginationOffsetSchema.describe("Number of issues to skip (default 0)"),
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
+  })
+  .strict();
+
 export const approvalTools: ToolDefinition[] = [
   {
     name: "paperclip_list_approvals",
@@ -528,6 +539,60 @@ export const approvalTools: ToolDefinition[] = [
         };
       } catch (err) {
         return handleApiError(err, { tool: "paperclip_create_agent_hire", resource: "approval" });
+      }
+    },
+  },
+  {
+    name: "paperclip_list_approval_issues",
+    description: composeDescription({
+      summary: "List issues linked to a specific approval request.",
+      args: [
+        '- approvalId: string — Approval UUID (example: "appr_abc123")',
+        "- limit: integer (optional) — Max issues per page (1–100, default 50)",
+        "- offset: integer (optional) — Number of issues to skip (default 0)",
+        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
+      ],
+      returns:
+        "Pagination envelope { items: Issue[], total, count, offset, limit, has_more, next_offset }. Each item: id, identifier, title, status, priority, projectId.",
+      examples: {
+        useWhen:
+          "inspecting which issues are gated on a pending approval before deciding to approve or reject",
+        dontUseWhen:
+          "you need approval metadata — use paperclip_get_approval for status, type, and payload",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: approval not found → verify ID with paperclip_list_approvals",
+      ],
+    }),
+    inputSchema: toJsonSchema(ListApprovalIssuesInput),
+    annotations: {
+      title: "List issues linked to approval",
+      readOnlyHint: true,
+      openWorldHint: false,
+    },
+    async handler(args, client) {
+      try {
+        const {
+          approvalId,
+          limit,
+          offset,
+          response_format: fmt,
+        } = validate(ListApprovalIssuesInput, args);
+        const all = await client.get<unknown[]>(`/api/approvals/${approvalId}/issues`);
+        const envelope = paginate(all, { limit, offset });
+        const text =
+          (fmt ?? "markdown") === "json"
+            ? formatJson(envelope)
+            : formatGenericList(envelope.items, "Approval Issues", envelope);
+        const hint =
+          "Response too large. Use limit/offset to page. This approval may have many linked issues.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
+      } catch (err) {
+        return handleApiError(err, {
+          tool: "paperclip_list_approval_issues",
+          resource: "approval",
+        });
       }
     },
   },
