@@ -9,7 +9,13 @@ import {
   handleApiError,
   composeDescription,
 } from "./validation.js";
-import { ResponseFormatSchema, formatJson, formatGenericList, applyCharLimit } from "./format.js";
+import {
+  ResponseFormatSchema,
+  formatJson,
+  formatGenericList,
+  formatResult,
+  applyCharLimit,
+} from "./format.js";
 
 const ListAttachmentsInput = IssueIdSchema.extend({
   response_format: ResponseFormatSchema.optional()
@@ -188,7 +194,7 @@ export const attachmentTools: ToolDefinition[] = [
         const { attachmentId } = validate(AttachmentIdInput, args);
         const data = await client.delete<unknown>(`/api/attachments/${attachmentId}`);
         const hint = `Attachment "${attachmentId}" has been deleted.`;
-        return { content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }] };
+        return { content: [{ type: "text", text: applyCharLimit(formatResult(data), hint) }] };
       } catch (err) {
         return handleApiError(err);
       }

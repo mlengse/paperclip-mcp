@@ -65,7 +65,8 @@ export const goalTools: ToolDefinition[] = [
         const data = await client.get<unknown>(`/api/companies/${client.companyId}/goals`);
         const text =
           (fmt ?? "markdown") === "json" ? formatJson(data) : formatGenericList(data, "Goals");
-        const hint = "Response too large. Try filtering by project or status.";
+        const hint =
+          "Response too large; the number of goals is unusually large. Consider archiving completed goals or contact the board.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
@@ -100,7 +101,7 @@ export const goalTools: ToolDefinition[] = [
         const data = await client.get<unknown>(`/api/goals/${goalId}`);
         const text =
           (fmt ?? "markdown") === "json" ? formatJson(data) : formatGenericList([data], "Goal");
-        const hint = "Response too large.";
+        const hint = "Entity response too large. This goal may have oversized description fields.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);

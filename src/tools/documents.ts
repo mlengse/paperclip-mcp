@@ -7,7 +7,13 @@ import {
   handleApiError,
   composeDescription,
 } from "./validation.js";
-import { ResponseFormatSchema, formatJson, formatGenericList, applyCharLimit } from "./format.js";
+import {
+  ResponseFormatSchema,
+  formatJson,
+  formatGenericList,
+  formatResult,
+  applyCharLimit,
+} from "./format.js";
 
 const ListDocumentsInput = IssueIdSchema.extend({
   response_format: ResponseFormatSchema.optional()
@@ -202,7 +208,7 @@ export const documentTools: ToolDefinition[] = [
         const { issueId, key } = validate(DocumentKeyInput, args);
         const data = await client.delete<unknown>(`/api/issues/${issueId}/documents/${key}`);
         const hint = `Document "${key}" on issue "${issueId}" has been deleted.`;
-        return { content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }] };
+        return { content: [{ type: "text", text: applyCharLimit(formatResult(data), hint) }] };
       } catch (err) {
         return handleApiError(err);
       }

@@ -33,6 +33,15 @@ const GetApprovalInput = z
   })
   .strict();
 
+const ListApprovalCommentsInput = z
+  .object({
+    approvalId: z.string().min(1).describe("Approval UUID"),
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
+  })
+  .strict();
+
 const CreateApprovalInput = z
   .object({
     type: ApprovalTypeSchema.describe(
@@ -379,7 +388,7 @@ export const approvalTools: ToolDefinition[] = [
         "- 404: approval not found → verify ID with paperclip_list_approvals",
       ],
     }),
-    inputSchema: toJsonSchema(ApprovalIdInput),
+    inputSchema: toJsonSchema(ListApprovalCommentsInput),
     annotations: {
       title: "List approval comments",
       readOnlyHint: true,
@@ -387,12 +396,15 @@ export const approvalTools: ToolDefinition[] = [
     },
     async handler(args, client) {
       try {
-        const { approvalId } = validate(ApprovalIdInput, args);
+        const { approvalId, response_format: fmt } = validate(ListApprovalCommentsInput, args);
         const data = await client.get<unknown>(`/api/approvals/${approvalId}/comments`);
-        const hint = "Server response too large; the operation likely succeeded.";
-        return {
-          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
-        };
+        const text =
+          (fmt ?? "markdown") === "json"
+            ? formatJson(data)
+            : formatGenericList(data, "Approval Comments");
+        const hint =
+          "Response too large. This approval may have an unusually high number of comments.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }

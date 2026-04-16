@@ -257,6 +257,19 @@ export function formatSingleIssue(data: unknown): string {
 }
 
 // ---------------------------------------------------------------------------
+// formatResult — for write tools that may receive a 204/undefined response
+// ---------------------------------------------------------------------------
+
+/**
+ * Formats a write-tool API response that may be `undefined` (HTTP 204 No Content).
+ * Returns pretty-printed JSON for non-undefined values, or a human-readable
+ * "Operation completed successfully." message for empty/void responses.
+ */
+export function formatResult(data: unknown): string {
+  return data !== undefined ? formatJson(data) : "Operation completed successfully.";
+}
+
+// ---------------------------------------------------------------------------
 // Generic list fallback — for tools without a dedicated formatter
 // ---------------------------------------------------------------------------
 export function formatGenericList(data: unknown, label = "Items"): string {

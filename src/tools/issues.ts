@@ -15,6 +15,8 @@ import {
   formatJson,
   formatIssueList,
   formatSingleIssue,
+  formatGenericList,
+  formatResult,
   applyCharLimit,
 } from "./format.js";
 
@@ -56,6 +58,15 @@ const ListIssuesInput = z
   .strict();
 
 const IssueIdInput = IssueIdSchema.strict();
+
+const GetHeartbeatContextInput = z
+  .object({
+    issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-42)"),
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
+  })
+  .strict();
 
 const GetIssueInput = z
   .object({
@@ -254,13 +265,16 @@ export const issueTools: ToolDefinition[] = [
         "- 404: issue not found → verify ID with paperclip_list_issues",
       ],
     }),
-    inputSchema: toJsonSchema(IssueIdInput),
+    inputSchema: toJsonSchema(GetHeartbeatContextInput),
     annotations: { title: "Get issue heartbeat context", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { issueId } = validate(IssueIdInput, args);
+        const { issueId, response_format: fmt } = validate(GetHeartbeatContextInput, args);
         const data = await client.get<unknown>(`/api/issues/${issueId}/heartbeat-context`);
-        const text = JSON.stringify(data);
+        const text =
+          (fmt ?? "markdown") === "json"
+            ? formatJson(data)
+            : formatGenericList(data, "Heartbeat Context");
         const hint = "Entity response too large. This entity may have oversized fields.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
@@ -391,11 +405,8 @@ export const issueTools: ToolDefinition[] = [
       try {
         const { issueId } = validate(IssueIdInput, args);
         const data = await client.post<unknown>(`/api/issues/${issueId}/release`);
-        const text = applyCharLimit(
-          JSON.stringify(data),
-          "Server response too large; the operation likely succeeded."
-        );
-        return { content: [{ type: "text", text }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return { content: [{ type: "text", text: applyCharLimit(formatResult(data), hint) }] };
       } catch (err) {
         return handleApiError(err);
       }

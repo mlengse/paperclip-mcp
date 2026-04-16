@@ -113,7 +113,8 @@ export const activityTools: ToolDefinition[] = [
           (fmt ?? "markdown") === "json"
             ? formatJson(data)
             : formatGenericList([data], "Cost Summary");
-        const hint = "Response too large.";
+        const hint =
+          "Cost summary response too large; this is unusual. The company may have an exceptional number of cost entries.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
@@ -147,7 +148,8 @@ export const activityTools: ToolDefinition[] = [
           (fmt ?? "markdown") === "json"
             ? formatJson(data)
             : formatGenericList(data, "Costs by Agent");
-        const hint = "Response too large.";
+        const hint =
+          "Cost-by-agent response too large; this is unusual. The company may have an exceptional number of agents or cost entries.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
@@ -184,7 +186,8 @@ export const activityTools: ToolDefinition[] = [
           (fmt ?? "markdown") === "json"
             ? formatJson(data)
             : formatGenericList(data, "Costs by Project");
-        const hint = "Response too large.";
+        const hint =
+          "Cost-by-project response too large; this is unusual. The company may have an exceptional number of projects or cost entries.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);

@@ -1,17 +1,12 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import {
-  validate,
-  toJsonSchema,
-  NoInput,
-  handleApiError,
-  composeDescription,
-} from "./validation.js";
+import { validate, toJsonSchema, handleApiError, composeDescription } from "./validation.js";
 import {
   ResponseFormatSchema,
   formatJson,
   formatAgentList,
   formatOrgChart,
+  formatGenericList,
   applyCharLimit,
 } from "./format.js";
 
@@ -171,6 +166,23 @@ const ConfigRevisionInput = z
   .object({
     agentId: z.string().min(1).describe("Agent UUID"),
     revisionId: z.string().min(1).describe("Config revision UUID"),
+  })
+  .strict();
+
+const ListAgentConfigRevisionsInput = z
+  .object({
+    agentId: z.string().min(1).describe("Agent UUID"),
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
+  })
+  .strict();
+
+const ListCompanySkillsInput = z
+  .object({
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
   })
   .strict();
 
@@ -608,7 +620,7 @@ export const agentTools: ToolDefinition[] = [
         "- 404: agent not found → verify ID with paperclip_list_agents",
       ],
     }),
-    inputSchema: toJsonSchema(AgentIdInput),
+    inputSchema: toJsonSchema(ListAgentConfigRevisionsInput),
     annotations: {
       title: "List agent config revisions",
       readOnlyHint: true,
@@ -616,19 +628,15 @@ export const agentTools: ToolDefinition[] = [
     },
     async handler(args, client) {
       try {
-        const { agentId } = validate(AgentIdInput, args);
+        const { agentId, response_format: fmt } = validate(ListAgentConfigRevisionsInput, args);
         const data = await client.get<unknown>(`/api/agents/${agentId}/config-revisions`);
-        return {
-          content: [
-            {
-              type: "text",
-              text: applyCharLimit(
-                JSON.stringify(data),
-                "Server response too large; the operation likely succeeded."
-              ),
-            },
-          ],
-        };
+        const text =
+          (fmt ?? "markdown") === "json"
+            ? formatJson(data)
+            : formatGenericList(data, "Config Revisions");
+        const hint =
+          "Response too large. There may be an unusually high number of config revisions for this agent.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -822,23 +830,19 @@ export const agentTools: ToolDefinition[] = [
         "- 403: permission denied → verify PAPERCLIP_COMPANY_ID is correct",
       ],
     }),
-    inputSchema: toJsonSchema(NoInput),
+    inputSchema: toJsonSchema(ListCompanySkillsInput),
     annotations: { title: "List company skills", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        validate(NoInput, args);
+        const { response_format: fmt } = validate(ListCompanySkillsInput, args);
         const data = await client.get<unknown>(`/api/companies/${client.companyId}/skills`);
-        return {
-          content: [
-            {
-              type: "text",
-              text: applyCharLimit(
-                JSON.stringify(data),
-                "Server response too large; the operation likely succeeded."
-              ),
-            },
-          ],
-        };
+        const text =
+          (fmt ?? "markdown") === "json"
+            ? formatJson(data)
+            : formatGenericList(data, "Company Skills");
+        const hint =
+          "Response too large. There may be an unusually high number of skills installed at the company level.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }

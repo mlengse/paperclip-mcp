@@ -7,7 +7,13 @@ import {
   RoutineTriggerTypeSchema,
   composeDescription,
 } from "./validation.js";
-import { ResponseFormatSchema, formatJson, formatGenericList, applyCharLimit } from "./format.js";
+import {
+  ResponseFormatSchema,
+  formatJson,
+  formatGenericList,
+  formatResult,
+  applyCharLimit,
+} from "./format.js";
 
 // Basic 5-field cron regex: five whitespace-separated tokens
 const CRON_REGEX = /^(\S+\s+){4}\S+$/;
@@ -128,7 +134,8 @@ export const routineTools: ToolDefinition[] = [
         const data = await client.get<unknown>(`/api/companies/${client.companyId}/routines`);
         const text =
           (fmt ?? "markdown") === "json" ? formatJson(data) : formatGenericList(data, "Routines");
-        const hint = "Response too large.";
+        const hint =
+          "Response too large; the number of routines is unusually large. Consider deleting unused routines or contact the board.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
@@ -162,7 +169,8 @@ export const routineTools: ToolDefinition[] = [
         const data = await client.get<unknown>(`/api/routines/${routineId}`);
         const text =
           (fmt ?? "markdown") === "json" ? formatJson(data) : formatGenericList([data], "Routine");
-        const hint = "Response too large.";
+        const hint =
+          "Entity response too large. This routine may have an unusually long run history or oversized fields.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
@@ -370,7 +378,7 @@ export const routineTools: ToolDefinition[] = [
         const data = await client.delete<unknown>(`/api/routine-triggers/${triggerId}`);
         const hint = "Server response too large; the operation likely succeeded.";
         return {
-          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+          content: [{ type: "text", text: applyCharLimit(formatResult(data), hint) }],
         };
       } catch (err) {
         return handleApiError(err);
