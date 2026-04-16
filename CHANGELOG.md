@@ -1,168 +1,197 @@
-## [1.2.5](https://github.com/bruhsb/paperclip-mcp/compare/v1.2.4...v1.2.5) (2026-04-10)
-
-
-### Bug Fixes
-
-* **identity:** call agent-scoped endpoints directly, drop /api/agents/me priority (PAP-128) ([8028de8](https://github.com/bruhsb/paperclip-mcp/commit/8028de8147c6bf8310dfba12416d65e3fa21ef67))
-
-## [1.2.4](https://github.com/bruhsb/paperclip-mcp/compare/v1.2.3...v1.2.4) (2026-04-10)
-
-
-### Bug Fixes
-
-* **checkout:** detect stale executionRunId post-release and surface descriptive error (PAP-125) ([cfcaaa4](https://github.com/bruhsb/paperclip-mcp/commit/cfcaaa456dfc05e24cb4454ce2528146a07be8b5))
-
-## [1.2.3](https://github.com/bruhsb/paperclip-mcp/compare/v1.2.2...v1.2.3) (2026-04-10)
-
-
-### Bug Fixes
-
-* **agents:** add regression tests for non-existent UUID in paperclip_get_agent (PAP-119) ([10344bc](https://github.com/bruhsb/paperclip-mcp/commit/10344bc5710883c813bc433efb89da8d8d91b43d))
-* **agents:** pass companyId query param on paperclip_get_agent to avoid 422 (PAP-119) ([4ebf258](https://github.com/bruhsb/paperclip-mcp/commit/4ebf258c52551fcf12edbb733bc23da28f838ab5))
-* **issues:** accept labelIds and expectedStatuses as JSON-string (PAP-120) ([2fc34f3](https://github.com/bruhsb/paperclip-mcp/commit/2fc34f337f2b82b50c0b16cdb2f5e71a4bf42ad1))
-* **issues:** auto-release stale executionRunId before retrying 409 in paperclip_checkout_issue (PAP-123) ([ce537e5](https://github.com/bruhsb/paperclip-mcp/commit/ce537e56b97def65ffcf63b634d6692ac8f53a5f))
-* **issues:** restore preprocess fix lost in lint-staged race (PAP-120) ([f3a86a0](https://github.com/bruhsb/paperclip-mcp/commit/f3a86a0cf9861c781ba22a3da25b661c29c15d68))
-
-## [1.2.2](https://github.com/bruhsb/paperclip-mcp/compare/v1.2.1...v1.2.2) (2026-04-10)
-
-
-### Bug Fixes
-
-* **identity:** fall back to agent-id endpoint when /api/agents/me returns 401 (PAP-117) ([3c095bb](https://github.com/bruhsb/paperclip-mcp/commit/3c095bb260007185b6d248c7ef2726b53c966500))
-
-## [1.2.1](https://github.com/bruhsb/paperclip-mcp/compare/v1.2.0...v1.2.1) (2026-04-10)
-
-
-### Bug Fixes
-
-* **errors:** include response body in PaperclipApiError message (PAP-116) ([bd6a3b3](https://github.com/bruhsb/paperclip-mcp/commit/bd6a3b3a303da04d88e22c348d48d07a94ed2c44))
-
-# [1.2.0](https://github.com/bruhsb/paperclip-mcp/compare/v1.1.0...v1.2.0) (2026-04-10)
-
-
-### Bug Fixes
-
-* **activity:** add required occurredAt field to paperclip_report_cost_event (PAP-95) ([0fdb994](https://github.com/bruhsb/paperclip-mcp/commit/0fdb994cb8569e6c8567cf20018d19bd9259fadf))
-* **approvals:** correct paperclip_get_approval description to remove false linked-issues claim (PAP-85) ([758f0f5](https://github.com/bruhsb/paperclip-mcp/commit/758f0f58e8205c6828607131c5c2dd7fe62a9c40))
-* **approvals:** send type+payload instead of title+description to POST /approvals (PAP-84) ([7888350](https://github.com/bruhsb/paperclip-mcp/commit/788835084921445758ce84583b310ba4f3e3338f))
-* **comments:** implement client-side after-cursor workaround for broken server param (PAP-88) ([fed09fa](https://github.com/bruhsb/paperclip-mcp/commit/fed09fad8f0ec220155bfbf6a3e34d28e1bc6f98))
-* **documents:** mark paperclip_delete_document as boardOnlyHint (PAP-96) ([2a531ce](https://github.com/bruhsb/paperclip-mcp/commit/2a531ce0e7cfc576ffce9b32d6e515ab3dcdf78a))
-* **issues:** inject agentId in paperclip_checkout_issue POST body (PAP-101) ([2a13441](https://github.com/bruhsb/paperclip-mcp/commit/2a13441c18b384c54ebcd934ebba304ab75f45fb))
-* **pre-commit:** stage README.md in regression test so lint-staged actually runs (PAP-107) ([15e6fb8](https://github.com/bruhsb/paperclip-mcp/commit/15e6fb8a15ecb7071556f248063c4b309437e50a))
-
-
-### Features
-
-* **activity:** add paperclip_report_cost_event tool (PAP-87) ([ba0f10c](https://github.com/bruhsb/paperclip-mcp/commit/ba0f10cea45f3f3f231b76491e6b0266a857e015))
-* **comments:** add paperclip_get_comment tool for GET /api/issues/{id}/comments/{commentId} (PAP-86) ([295bfeb](https://github.com/bruhsb/paperclip-mcp/commit/295bfeb543ec84c7dbe9199620c240015c7aeb98))
-* **labels:** add paperclip_list_labels, paperclip_create_label, and labelIds support on issues (PAP-99) ([77c8a74](https://github.com/bruhsb/paperclip-mcp/commit/77c8a74df66253a03807f969a49686a5b3adc9ad))
-
-# [1.1.0](https://github.com/bruhsb/paperclip-mcp/compare/v1.0.0...v1.1.0) (2026-04-10)
-
-
-### Features
-
-* **documents:** add .describe() to Zod schema fields (PAP-72) ([947800d](https://github.com/bruhsb/paperclip-mcp/commit/947800da7b5b3f724eb953c0d74b61588b31d99e))
-* **release:** implement semantic-release for automated versioning (PAP-76) ([4093f34](https://github.com/bruhsb/paperclip-mcp/commit/4093f3457389998fb78f2a71c4a188616b84ceba))
-* **tooling:** add husky + lint-staged pre-commit hooks (PAP-74) ([56ff366](https://github.com/bruhsb/paperclip-mcp/commit/56ff366a373e4a9a554ebec665e25fc7c7781b1d))
-
 # Changelog
 
-All notable changes to this project will be documented in this file. This file is auto-generated by [semantic-release](https://github.com/semantic-release/semantic-release).
+All notable changes to this project will be documented in this file.
+
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions after v2.0.0 are auto-generated by [semantic-release](https://github.com/semantic-release/semantic-release).
+
+---
 
 ## [2.0.0] — 2026-04-16
 
-### Breaking changes
+> **BREAKING CHANGE — Pagination envelope shape**
+>
+> All `list_*` tools now return `{ items, total, count, offset, limit, has_more, next_offset? }` instead of a bare array. Any caller that previously iterated the root response array must update to iterate `result.items`. This affects all 19 list tools.
 
-- **Pagination envelope shape** — All `list_*` tools now return `{ items, total, count, offset, limit, has_more, next_offset? }` instead of a bare array. Callers must read `result.items` rather than the root array. This affects all 19 list tools.
+See [Migrating from v1.x](#migrating-from-v1x) below for the full migration guide.
 
-### New tools (30 total across Stages 8a–8h)
+### Added
+
+**30 new tools across Stages 8a–8h:**
 
 **Stage 8a — Workflow completeness (4 tools)**
-- `paperclip_list_approval_issues` — list issues linked to an approval.
-- `paperclip_wakeup_agent` — on-demand agent wakeup with source/reason/payload.
-- `paperclip_get_current_user` — board-only: resolve the authenticated user from the CLI session.
-- `paperclip_revoke_current_session` — board-only: invalidate the current board token.
+- `paperclip_list_approval_issues` — list issues linked to an approval
+- `paperclip_wakeup_agent` — on-demand agent wakeup with source, reason, and payload
+- `paperclip_get_current_user` — `⚠ Board-only:` resolve the authenticated user from the CLI session
+- `paperclip_revoke_current_session` — `⚠ Board-only:` invalidate the current board token
 
 **Stage 8b — Company + workspace management (6 tools)**
-- `paperclip_list_companies`, `paperclip_get_company`, `paperclip_create_company`, `paperclip_update_company`, `paperclip_archive_company` — board-only company CRUD.
-- `paperclip_delete_workspace` — board-only workspace deletion; returns deleted object (live-verified shape).
+- `paperclip_list_companies`, `paperclip_get_company`, `paperclip_create_company`, `paperclip_update_company`, `paperclip_archive_company` — `⚠ Board-only:` company CRUD
+- `paperclip_delete_workspace` — `⚠ Board-only:` workspace deletion; live-verified response shape
 
 **Stage 8c — Direct agent creation (1 tool)**
-- `paperclip_create_agent` — board-only direct agent creation with full schema (role, adapter, permissions, budget).
+- `paperclip_create_agent` — `⚠ Board-only:` direct agent creation with full schema (role, adapter, permissions, budget)
 
 **Stage 8d — Plugins (6 tools)**
-- `paperclip_list_plugins`, `paperclip_get_plugin`, `paperclip_install_plugin`, `paperclip_list_plugin_examples`, `paperclip_enable_plugin`, `paperclip_disable_plugin` — all board-only.
+- `paperclip_list_plugins`, `paperclip_get_plugin`, `paperclip_install_plugin`, `paperclip_list_plugin_examples`, `paperclip_enable_plugin`, `paperclip_disable_plugin` — all `⚠ Board-only:`
 
 **Stage 8e — Secrets (4 tools)**
-- `paperclip_list_secrets`, `paperclip_create_secret`, `paperclip_update_secret`, `paperclip_rotate_secret` — all board-only.
-- `paperclip_rotate_secret` is separate from `paperclip_update_secret` (live-verified: PATCH does not rotate value; `POST /rotate` does).
+- `paperclip_list_secrets`, `paperclip_create_secret`, `paperclip_update_secret`, `paperclip_rotate_secret` — all `⚠ Board-only:`
+- Note: `paperclip_rotate_secret` uses `POST /rotate` (live-verified: PATCH does not rotate secret value)
 
 **Stage 8f — Run observability (3 tools)**
-- `paperclip_list_heartbeat_runs`, `paperclip_list_run_events`, `paperclip_get_run_log` — board-only run and event streaming.
+- `paperclip_list_heartbeat_runs`, `paperclip_list_run_events`, `paperclip_get_run_log` — `⚠ Board-only:` run and event streaming
 
 **Stage 8g — Feedback traces (3 tools)**
-- `paperclip_list_feedback_traces`, `paperclip_list_issue_feedback_traces`, `paperclip_get_feedback_trace_bundle` — all board-only (live-verified: 403 on agent keys for all three).
+- `paperclip_list_feedback_traces`, `paperclip_list_issue_feedback_traces`, `paperclip_get_feedback_trace_bundle` — `⚠ Board-only:` (live-verified: 403 on agent keys)
 
 **Stage 8h — Company import/export (3 tools)**
-- `paperclip_export_company`, `paperclip_preview_company_import`, `paperclip_apply_company_import` — board-only bulk company snapshot and restore.
+- `paperclip_export_company`, `paperclip_preview_company_import`, `paperclip_apply_company_import` — `⚠ Board-only:` bulk company snapshot and restore
 
-### Schema unification (Stage 1)
+**New documentation:**
+- `docs/guides/mcp-tool-conventions.md` — canonical reference for adding tools post-v2.0
+- `docs/guides/api-coverage.md` — full endpoint × tool matrix for all 104 tools across 19 domains
 
-- Replaced all 13 hand-written `inputSchema` JSON objects with `toJsonSchema(ZodSchema)` — Zod is now the single source of truth for runtime validation and client-facing schema.
-- `ToolDefinition.inputSchema` is now a pre-computed JSON Schema derived from Zod; no conversion at request time.
-- Removed the non-spec `boardOnlyHint` annotation key; board-only intent now lives in the `⚠ Board-only:` description prefix.
-- All 74 tools gained `annotations.title` (human-readable, ≤ 60 chars).
-- Unhandled tool errors now return `{ isError: true }` instead of propagating as uncaught exceptions.
+### Changed
 
-### Schema constraints (Stage 2)
+**Schema unification (Stage 1):**
+- Replaced all 13 hand-written `inputSchema` JSON objects with `toJsonSchema(ZodSchema)` — Zod is now the single source of truth for runtime validation and client-facing schema
+- `ToolDefinition.inputSchema` is now a pre-computed JSON Schema derived from Zod
+- Removed the non-spec `boardOnlyHint` annotation key; board-only intent lives in the `⚠ Board-only:` description prefix
+- All 74 existing tools gained `annotations.title` (human-readable, ≤ 60 chars)
 
-- Applied `StatusSchema` / `PrioritySchema` (shared Zod enums) to all `status` / `priority` fields.
-- Added `ApprovalTypeSchema` and `RoutineTriggerTypeSchema` to `validation.ts`.
-- All input schemas use `.strict()` — unknown fields are rejected at parse time.
-- Format validators: `.datetime()` on ISO 8601 fields, hex color regex, 5-field cron regex.
-- `.describe()` on every field across all tool modules.
+**Schema constraints (Stage 2):**
+- Applied `StatusSchema` / `PrioritySchema` (shared Zod enums) to all `status` / `priority` fields across all tool modules
+- Added `ApprovalTypeSchema` and `RoutineTriggerTypeSchema` to `validation.ts`
+- All input schemas use `.strict()` — unknown fields are now rejected at parse time
+- Format validators: `.datetime()` on ISO 8601 fields, hex color regex, 5-field cron regex
+- `.describe()` on every field across all tool modules
 
-### Annotations polish (Stage 3)
+**Annotations polish (Stage 3):**
+- Corrected `readOnlyHint` / `destructiveHint` / `idempotentHint` across all tools
+- Added `idempotentHint: true` to all `update_*`, `upsert_*`, `pause_*`, `resume_*` tools
+- Server version synced from `package.json` at startup via `createRequire`
 
-- Corrected `readOnlyHint` / `destructiveHint` / `idempotentHint` across all tools.
-- Added `idempotentHint: true` to all `update_*`, `upsert_*`, `pause_*`, `resume_*` tools.
-- Applied `⚠ Board-only:` description prefix to all board-restricted tools.
-- Server version synced from `package.json` at startup via `createRequire`.
+**Description standardization (Stage 4):**
+- `composeDescription({ summary, boardOnly?, args?, returns, examples, errors })` helper in `validation.ts`
+- All 75 tool descriptions rewritten with Args / Returns / Examples / Error Handling sections
+- Registry tests enforce `Returns:`, `Use when:`, `Error Handling:` presence and 100–1500 char bounds
 
-### Description standardization (Stage 4)
+**Response formatting (Stage 5):**
+- `src/constants.ts` — `CHARACTER_LIMIT = 25_000`
+- `src/tools/format.ts` — `formatJson`, per-kind markdown formatters, `applyCharLimit`
+- Read-heavy tools default to `response_format: "markdown"` with opt-in `"json"`
+- Truncated responses include an actionable hint referencing the narrowing tool
 
-- `composeDescription({ summary, boardOnly?, args?, returns, examples, errors })` helper in `validation.ts`.
-- All 75 tool descriptions rewritten with Args / Returns / Examples / Error Handling sections.
-- Registry tests enforce `Returns:`, `Use when:`, `Error Handling:` presence and 100–1500 char bounds.
+**Error handling (Stage 7):**
+- `handleApiError(err, { tool, resource, hint? })` in `validation.ts` — LLM-actionable status-coded messages
+- Per-status recovery text: 404 → verify with list/get tool; 409 → do not retry; 5xx → transient, retry
+- `AbortSignal.timeout(30_000)` in `PaperclipClient`; override via `PAPERCLIP_REQUEST_TIMEOUT_MS`
+- Network errors wrapped as `PaperclipApiError(0, ...)` instead of propagating as uncaught exceptions
 
-### Response formatting (Stage 5)
+### Fixed
 
-- `src/constants.ts` — `CHARACTER_LIMIT = 25_000`.
-- `src/tools/format.ts` — `formatJson`, per-kind markdown formatters, `applyCharLimit`.
-- Read-heavy tools default to `response_format: "markdown"` with opt-in `"json"`.
-- `applyCharLimit` applied at every return site; truncated responses include an actionable hint.
-
-### Pagination envelope (Stage 6)
-
-- `paginate<T>(items, { limit, offset })` helper in `format.ts`.
-- All `list_*` tools gained `limit` (default 50, max 100) and `offset` (default 0) parameters.
-- Consistent `PaginationEnvelope<T>` shape across all 19 list tools.
-
-### Error handling (Stage 7)
-
-- `handleApiError(err, { tool, resource, hint? })` in `validation.ts` — LLM-actionable status-coded messages.
-- Per-status recovery text: 404 → verify with list/get tool; 409 → do not retry, refresh state; 5xx → transient, retry.
-- `AbortSignal.timeout(30_000)` in `PaperclipClient`; override via `PAPERCLIP_REQUEST_TIMEOUT_MS`.
-- Network errors (TypeError "fetch failed") wrapped as `PaperclipApiError(0, ...)`.
-
-### New documentation
-
-- `docs/guides/mcp-tool-conventions.md` — canonical reference for adding tools post-v2.0.
-- `docs/guides/api-coverage.md` — full endpoint × tool matrix for all 104 tools across 19 domains.
+- Unhandled tool errors now return `{ isError: true }` instead of crashing the MCP transport
 
 ### Infrastructure
 
-- `scripts/check-no-raw-inputschema.sh` — grep guard banning hand-written `inputSchema: {` literals.
-- `test:coverage` npm script — Node 22 native coverage with 80% line / 70% branch thresholds.
-- 906 tests across 238 suites (up from 297 at v1.0.0).
+- `scripts/check-no-raw-inputschema.sh` — grep guard banning hand-written `inputSchema: {` literals
+- `test:coverage` npm script — Node 22 native coverage with 80% line / 70% branch thresholds
+- 906 tests across 238 suites (up from 297 at v1.0.0)
+
+---
+
+## Migrating from v1.x
+
+The only breaking change is the **pagination envelope**. Everything else is additive or fixes.
+
+1. **Update list tool consumers.** All 19 `list_*` tools now return an envelope object instead of a bare array. Change `result` → `result.items` wherever you iterate a list response:
+
+   ```js
+   // v1.x
+   const issues = await callTool("paperclip_list_issues", { status: "todo" });
+   for (const issue of issues) { ... }
+
+   // v2.0.0
+   const { items, total, has_more } = await callTool("paperclip_list_issues", { status: "todo" });
+   for (const issue of items) { ... }
+   ```
+
+2. **Add pagination parameters if needed.** All list tools now accept `limit` (default 50, max 100) and `offset` (default 0). Existing callers without these params continue to work — they receive the first 50 items.
+
+3. **Check `has_more` for full result sets.** If you need all items, paginate by incrementing `offset` by `limit` until `has_more` is `false`.
+
+4. **Remove `boardOnlyHint` annotation references.** If you parsed or filtered on `annotations.boardOnlyHint`, switch to checking for `⚠ Board-only:` in the tool description.
+
+5. **Unknown input fields are now rejected.** All schemas use `.strict()`. Remove any extra fields you were passing to tool handlers.
+
+6. **Status and priority now use strict enums.** Valid `status` values: `backlog`, `todo`, `in_progress`, `in_review`, `done`, `blocked`, `cancelled`. Valid `priority` values: `critical`, `high`, `medium`, `low`. Arbitrary strings are now rejected at parse time.
+
+7. **ISO 8601 datetime fields validated.** Fields like `occurredAt` now require a valid ISO 8601 datetime string (e.g. `2026-04-16T12:00:00.000Z`).
+
+8. **`PAPERCLIP_REQUEST_TIMEOUT_MS` env var available.** Default timeout is 30 seconds. Override if your API is hosted on a slow network.
+
+9. **Tool descriptions are now structured prose.** If you were parsing description text for programmatic routing, update to use `annotations.title` (≤ 60 chars, stable) instead.
+
+10. **30 new board-only tools are available** (company CRUD, plugins, secrets, run observability, feedback traces, import/export). Agent-key callers will receive `403` — this is expected and not a regression.
+
+---
+
+## [1.2.5] — 2026-04-10
+
+### Fixed
+
+- **identity:** call agent-scoped endpoints directly, drop /api/agents/me priority ([8028de8](https://github.com/bruhsb/paperclip-mcp/commit/8028de8147c6bf8310dfba12416d65e3fa21ef67))
+
+## [1.2.4] — 2026-04-10
+
+### Fixed
+
+- **checkout:** detect stale executionRunId post-release and surface descriptive error ([cfcaaa4](https://github.com/bruhsb/paperclip-mcp/commit/cfcaaa456dfc05e24cb4454ce2528146a07be8b5))
+
+## [1.2.3] — 2026-04-10
+
+### Fixed
+
+- **agents:** add regression tests for non-existent UUID in paperclip_get_agent ([10344bc](https://github.com/bruhsb/paperclip-mcp/commit/10344bc5710883c813bc433efb89da8d8d91b43d))
+- **agents:** pass companyId query param on paperclip_get_agent to avoid 422 ([4ebf258](https://github.com/bruhsb/paperclip-mcp/commit/4ebf258c52551fcf12edbb733bc23da28f838ab5))
+- **issues:** accept labelIds and expectedStatuses as JSON-string ([2fc34f3](https://github.com/bruhsb/paperclip-mcp/commit/2fc34f337f2b82b50c0b16cdb2f5e71a4bf42ad1))
+- **issues:** auto-release stale executionRunId before retrying 409 in paperclip_checkout_issue ([ce537e5](https://github.com/bruhsb/paperclip-mcp/commit/ce537e56b97def65ffcf63b634d6692ac8f53a5f))
+- **issues:** restore preprocess fix lost in lint-staged race ([f3a86a0](https://github.com/bruhsb/paperclip-mcp/commit/f3a86a0cf9861c781ba22a3da25b661c29c15d68))
+
+## [1.2.2] — 2026-04-10
+
+### Fixed
+
+- **identity:** fall back to agent-id endpoint when /api/agents/me returns 401 ([3c095bb](https://github.com/bruhsb/paperclip-mcp/commit/3c095bb260007185b6d248c7ef2726b53c966500))
+
+## [1.2.1] — 2026-04-10
+
+### Fixed
+
+- **errors:** include response body in PaperclipApiError message ([bd6a3b3](https://github.com/bruhsb/paperclip-mcp/commit/bd6a3b3a303da04d88e22c348d48d07a94ed2c44))
+
+## [1.2.0] — 2026-04-10
+
+### Added
+
+- **activity:** add paperclip_report_cost_event tool ([ba0f10c](https://github.com/bruhsb/paperclip-mcp/commit/ba0f10cea45f3f3f231b76491e6b0266a857e015))
+- **comments:** add paperclip_get_comment tool ([295bfeb](https://github.com/bruhsb/paperclip-mcp/commit/295bfeb543ec84c7dbe9199620c240015c7aeb98))
+- **labels:** add paperclip_list_labels, paperclip_create_label, and labelIds support on issues ([77c8a74](https://github.com/bruhsb/paperclip-mcp/commit/77c8a74df66253a03807f969a49686a5b3adc9ad))
+
+### Fixed
+
+- **activity:** add required occurredAt field to paperclip_report_cost_event ([0fdb994](https://github.com/bruhsb/paperclip-mcp/commit/0fdb994cb8569e6c8567cf20018d19bd9259fadf))
+- **approvals:** correct paperclip_get_approval description to remove false linked-issues claim ([758f0f5](https://github.com/bruhsb/paperclip-mcp/commit/758f0f58e8205c6828607131c5c2dd7fe62a9c40))
+- **approvals:** send type+payload instead of title+description to POST /approvals ([7888350](https://github.com/bruhsb/paperclip-mcp/commit/788835084921445758ce84583b310ba4f3e3338f))
+- **comments:** implement client-side after-cursor workaround for broken server param ([fed09fa](https://github.com/bruhsb/paperclip-mcp/commit/fed09fad8f0ec220155bfbf6a3e34d28e1bc6f98))
+- **documents:** mark paperclip_delete_document as boardOnlyHint ([2a531ce](https://github.com/bruhsb/paperclip-mcp/commit/2a531ce0e7cfc576ffce9b32d6e515ab3dcdf78a))
+- **issues:** inject agentId in paperclip_checkout_issue POST body ([2a13441](https://github.com/bruhsb/paperclip-mcp/commit/2a13441c18b384c54ebcd934ebba304ab75f45fb))
+- **pre-commit:** stage README.md in regression test so lint-staged actually runs ([15e6fb8](https://github.com/bruhsb/paperclip-mcp/commit/15e6fb8a15ecb7071556f248063c4b309437e50a))
+
+## [1.1.0] — 2026-04-10
+
+### Added
+
+- **documents:** add .describe() to Zod schema fields ([947800d](https://github.com/bruhsb/paperclip-mcp/commit/947800da7b5b3f724eb953c0d74b61588b31d99e))
+- **release:** implement semantic-release for automated versioning ([4093f34](https://github.com/bruhsb/paperclip-mcp/commit/4093f3457389998fb78f2a71c4a188616b84ceba))
+- **tooling:** add husky + lint-staged pre-commit hooks ([56ff366](https://github.com/bruhsb/paperclip-mcp/commit/56ff366a373e4a9a554ebec665e25fc7c7781b1d))
