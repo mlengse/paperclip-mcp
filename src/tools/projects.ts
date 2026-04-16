@@ -87,6 +87,13 @@ const UpdateWorkspaceInput = z
   })
   .strict();
 
+const DeleteWorkspaceInput = z
+  .object({
+    projectId: z.string().min(1).describe("Project UUID"),
+    workspaceId: z.string().min(1).describe("Workspace UUID to permanently delete"),
+  })
+  .strict();
+
 export const projectTools: ToolDefinition[] = [
   {
     name: "paperclip_list_projects",
@@ -385,6 +392,50 @@ export const projectTools: ToolDefinition[] = [
         };
       } catch (err) {
         return handleApiError(err, { tool: "paperclip_update_workspace", resource: "workspace" });
+      }
+    },
+  },
+  {
+    name: "paperclip_delete_workspace",
+    description: composeDescription({
+      summary:
+        "⚠ Board-only: Permanently delete a workspace from a project. Returns the deleted workspace object.",
+      args: [
+        '- projectId: string — Project UUID (example: "prj_abc123")',
+        '- workspaceId: string — Workspace UUID to delete (example: "wsp_abc123")',
+      ],
+      returns:
+        "The deleted workspace object: id, companyId, projectId, name, sourceType, cwd, repoUrl, isPrimary, createdAt, updatedAt.",
+      examples: {
+        useWhen:
+          "removing a workspace that is no longer needed (e.g. a closed branch or decommissioned path)",
+        dontUseWhen:
+          "you want to update workspace settings — use paperclip_update_workspace instead",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 403: board key required → this endpoint requires board-level authentication",
+        "- 404: project or workspace not found → verify IDs with paperclip_list_workspaces",
+      ],
+    }),
+    inputSchema: toJsonSchema(DeleteWorkspaceInput),
+    annotations: {
+      title: "Delete project workspace",
+      destructiveHint: true,
+      openWorldHint: false,
+    },
+    async handler(args, client) {
+      try {
+        const { projectId, workspaceId } = validate(DeleteWorkspaceInput, args);
+        const data = await client.delete<unknown>(
+          `/api/projects/${projectId}/workspaces/${workspaceId}`
+        );
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
+      } catch (err) {
+        return handleApiError(err, { tool: "paperclip_delete_workspace", resource: "workspace" });
       }
     },
   },
