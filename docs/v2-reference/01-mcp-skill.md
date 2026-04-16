@@ -38,7 +38,7 @@ Source: https://github.com/ComposioHQ/awesome-claude-skills/blob/master/mcp-buil
 
 ## Tool naming and structure
 
-- `{service}_{action}_{resource}` snake_case → `paperclip_<verb>_<noun>`.
+- `{service}_{action}_{resource}` snake*case → `paperclip*<verb>\_<noun>`.
 - Tool registration MUST include: `title`, `description`, `inputSchema` (Zod), `annotations`.
 - Annotations are the fixed set: `title`, `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`. No custom keys (clients silently ignore).
 - Board-only intent goes in description text (prefix `⚠ Board-only:`), not a custom annotation.
@@ -69,8 +69,8 @@ Error Handling:
   - `400` → "Bad request: <details>. Check <params>."
   - `401` → "Authentication failed. Check PAPERCLIP_API_KEY."
   - `403` → "Permission denied. <resource> may require a board (human) key."
-  - `404` → "Not found. Verify <id> with paperclip_list_<resource>."
-  - `409` → "Conflict: <details>. Do not retry — refresh with paperclip_get_<resource>."
+  - `404` → "Not found. Verify <id> with paperclip*list*<resource>."
+  - `409` → "Conflict: <details>. Do not retry — refresh with paperclip*get*<resource>."
   - `429` → "Rate limited. Wait a few seconds before retrying."
   - `5xx` → "Paperclip API server error (<status>). Usually transient; retry in a few seconds."
 - Network errors and timeouts flow through the same formatter.

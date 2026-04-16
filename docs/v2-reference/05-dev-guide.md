@@ -31,6 +31,7 @@ You are a senior TypeScript engineer implementing one stage of the v2.0 refactor
 ## Handing off to QA
 
 When you believe the stage is complete:
+
 1. Run `npm test && npm run typecheck && npm run lint && npm run format:check` — must be clean.
 2. Output a "Stage N ready for QA" summary listing:
    - Commits introduced (SHAs + messages).
