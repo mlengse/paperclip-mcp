@@ -152,8 +152,6 @@ export const attachmentTools: ToolDefinition[] = [
       }
     },
   },
-  // TODO: tighten Returns description after live-API confirmation in Stage 8
-  //       (currently hedged because upstream contract isn't documented).
   {
     name: "paperclip_download_attachment",
     description: composeDescription({
@@ -163,9 +161,9 @@ export const attachmentTools: ToolDefinition[] = [
         "- response_format: 'markdown' | 'json' — Output format (default 'markdown')",
       ],
       returns:
-        "Returns either a markdown attachment summary (when response_format is 'markdown') or pretty-printed structured JSON from the upstream response body (when response_format is 'json'). Structure varies by attachment type and may include fields such as url, content, mimeType, or other upstream fields.",
+        "Returns a fixed envelope with fields: attachmentId, contentType, size (bytes), contentBase64 (base64-encoded file content). When response_format is 'markdown', produces a compact summary (id, contentType, size, base64 snippet). When response_format is 'json', returns the full envelope as structured JSON.",
       examples: {
-        useWhen: "reading a previously uploaded attachment to extract its content or download URL",
+        useWhen: "reading a previously uploaded attachment to extract its content",
         dontUseWhen:
           "you need the attachment metadata only — use paperclip_list_attachments for id, filename, size",
       },
@@ -179,12 +177,27 @@ export const attachmentTools: ToolDefinition[] = [
     async handler(args, client) {
       try {
         const { attachmentId, response_format: fmt } = validate(DownloadAttachmentInput, args);
-        const data = await client.get<unknown>(`/api/attachments/${attachmentId}/content`);
-        const hint = `Use paperclip_download_attachment with attachmentId "${attachmentId}" to retrieve the full content.`;
-        const text =
-          fmt === "json"
-            ? applyCharLimit(formatJson(data), hint)
-            : applyCharLimit(formatGenericList([data], "Attachment"), hint);
+        const raw = await client.getRaw(`/api/attachments/${attachmentId}/content`);
+        const contentBase64 = Buffer.from(raw.bytes).toString("base64");
+        const data = {
+          attachmentId,
+          contentType: raw.contentType,
+          size: raw.bytes.byteLength,
+          contentBase64,
+        };
+        const hint = `Use paperclip_list_attachments to retrieve attachment metadata. Decode contentBase64 to read the file content.`;
+        let text: string;
+        if (fmt === "json") {
+          text = applyCharLimit(formatJson(data), hint);
+        } else {
+          const md = [
+            `## Attachment ${attachmentId}`,
+            `- Content-Type: ${data.contentType}`,
+            `- Size: ${data.size} bytes`,
+            `- Base64: ${contentBase64}`,
+          ].join("\n");
+          text = applyCharLimit(md, hint);
+        }
         return { content: [{ type: "text", text }] };
       } catch (err) {
         return handleApiError(err, { tool: "paperclip_download_attachment" });

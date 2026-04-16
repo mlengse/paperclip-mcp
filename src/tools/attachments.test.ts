@@ -30,6 +30,26 @@ function mockFetch(status: number, body: unknown) {
   return { fn, calls };
 }
 
+function mockRawFetch(status: number, bytes: Uint8Array, contentType: string = "text/plain") {
+  const calls: { url: string; init: RequestInit }[] = [];
+  const fn = async (url: string, init: RequestInit): Promise<Response> => {
+    calls.push({ url, init });
+    if (status >= 400) {
+      return new Response("error body", {
+        status,
+        statusText: "Error",
+        headers: new Headers({ "Content-Type": "text/plain" }),
+      });
+    }
+    return new Response(bytes.buffer as ArrayBuffer, {
+      status,
+      statusText: "OK",
+      headers: new Headers({ "Content-Type": contentType }),
+    });
+  };
+  return { fn, calls };
+}
+
 const listAttachments = attachmentTools.find((t) => t.name === "paperclip_list_attachments")!;
 const uploadAttachment = attachmentTools.find((t) => t.name === "paperclip_upload_attachment")!;
 const downloadAttachment = attachmentTools.find((t) => t.name === "paperclip_download_attachment")!;
@@ -129,9 +149,9 @@ describe("paperclip_upload_attachment", () => {
 });
 
 describe("paperclip_download_attachment", () => {
-  it("calls GET /api/attachments/{attachmentId}/content and returns content", async () => {
-    const content = { data: "base64encodedcontent==" };
-    const { fn, calls } = mockFetch(200, content);
+  it("calls GET /api/attachments/{attachmentId}/content and returns base64 envelope (json format)", async () => {
+    const fileBytes = new Uint8Array([72, 105]); // "Hi"
+    const { fn, calls } = mockRawFetch(200, fileBytes, "text/plain");
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await downloadAttachment.handler(
       { attachmentId: "att-1", response_format: "json" },
@@ -139,12 +159,31 @@ describe("paperclip_download_attachment", () => {
     );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/attachments/att-1/content");
     assert.equal(calls[0]!.init.method, "GET");
-    const parsedContent = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsedContent, content);
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.equal(parsed.attachmentId, "att-1");
+    assert.equal(parsed.contentType, "text/plain");
+    assert.equal(parsed.size, 2);
+    assert.equal(parsed.contentBase64, Buffer.from(fileBytes).toString("base64"));
+  });
+
+  it("returns markdown summary with contentType, size, and base64 (markdown format)", async () => {
+    const fileBytes = new Uint8Array([104, 101, 108, 108, 111]); // "hello"
+    const { fn } = mockRawFetch(200, fileBytes, "text/plain");
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await downloadAttachment.handler(
+      { attachmentId: "att-2", response_format: "markdown" },
+      client
+    );
+    assert.ok(!result.isError);
+    const text = result.content[0]!.text;
+    assert.ok(text.includes("att-2"), "should include attachment id");
+    assert.ok(text.includes("text/plain"), "should include content-type");
+    assert.ok(text.includes("5 bytes"), "should include size");
+    assert.ok(text.includes(Buffer.from(fileBytes).toString("base64")), "should include base64");
   });
 
   it("throws McpError when attachmentId is empty string (validation failure, fetch not called)", async () => {
-    const { fn, calls } = mockFetch(200, {});
+    const { fn, calls } = mockRawFetch(200, new Uint8Array());
     const client = new PaperclipClient(TEST_AUTH, fn);
     await assert.rejects(
       () => downloadAttachment.handler({ attachmentId: "" }, client),
@@ -157,7 +196,7 @@ describe("paperclip_download_attachment", () => {
   });
 
   it("returns isError response on 404 API error", async () => {
-    const { fn } = mockFetch(404, { message: "Attachment not found" });
+    const { fn } = mockRawFetch(404, new Uint8Array());
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await downloadAttachment.handler({ attachmentId: "missing-att" }, client);
     assert.equal(result.isError, true);
