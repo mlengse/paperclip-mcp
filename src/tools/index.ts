@@ -27,13 +27,11 @@ export type ToolResult = {
 };
 
 export interface ToolAnnotations {
+  title?: string;
   readOnlyHint?: boolean;
   destructiveHint?: boolean;
   idempotentHint?: boolean;
   openWorldHint?: boolean;
-  /** Set to true when the underlying API endpoint requires board (human-user) authentication.
-   *  Agent callers will always receive HTTP 403 from these endpoints. */
-  boardOnlyHint?: boolean;
 }
 
 export interface ToolDefinition {
@@ -84,10 +82,21 @@ export function registerAllTools(server: Server): void {
   }));
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const tool = toolMap.get(request.params.name);
+    const toolName = request.params.name;
+    const tool = toolMap.get(toolName);
     if (!tool) {
-      throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${request.params.name}`);
+      throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${toolName}`);
     }
-    return tool.handler(request.params.arguments ?? {}, client);
+    try {
+      return await tool.handler(request.params.arguments ?? {}, client);
+    } catch (err) {
+      if (err instanceof McpError) throw err;
+      const message = err instanceof Error ? err.message : String(err);
+      process.stderr.write(`Paperclip MCP unhandled error in ${toolName}: ${message}\n`);
+      return {
+        isError: true,
+        content: [{ type: "text", text: `Paperclip MCP error in ${toolName}: ${message}` }],
+      };
+    }
   });
 }
