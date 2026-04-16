@@ -2,6 +2,7 @@
 
 # ─── Stage 1: Builder ─────────────────────────────────────────────────────────
 # Install all dependencies (dev + prod) and compile TypeScript.
+# Uses node:22-slim (glibc) for full toolchain compatibility with tsc and npm.
 FROM node:22-slim AS builder
 
 WORKDIR /app
@@ -20,20 +21,21 @@ COPY src/ ./src/
 RUN npx tsc --project tsconfig.json
 
 # ─── Stage 2: Runtime ─────────────────────────────────────────────────────────
-# Lean image: dumb-init + prod node_modules + compiled dist only.
-FROM node:22-slim AS runtime
+# node:22-alpine: ~115 MB compressed, musl libc, no bundled npm after --omit=dev
+# install, minimal attack surface. Both @modelcontextprotocol/sdk and zod are
+# pure JS — no native compilation needed, musl is fully compatible.
+# tini (Alpine's built-in init) replaces dumb-init for SIGTERM forwarding.
+FROM node:22-alpine AS runtime
 
-# dumb-init: PID-1 shim that forwards SIGTERM → Node.js and reaps zombies.
-# Critical for clean stdio MCP shutdown when the client closes the pipe.
-RUN apt-get update -qq && \
-    apt-get install -y --no-install-recommends dumb-init && \
-    rm -rf /var/lib/apt/lists/*
+# tini: minimal PID-1 init that forwards SIGTERM → Node and reaps zombies.
+# apk keeps no package cache after install, so no extra layer to clean up.
+RUN apk add --no-cache tini
 
 WORKDIR /app
 
 # Create a dedicated non-root user/group for the MCP server process.
-RUN groupadd --gid 1001 mcp && \
-    useradd --uid 1001 --gid mcp --shell /bin/sh --no-create-home mcp
+RUN addgroup -S -g 1001 mcp && \
+    adduser -S -u 1001 -G mcp -H -s /sbin/nologin mcp
 
 # Copy manifests for production install.
 COPY --chown=mcp:mcp package.json package-lock.json ./
@@ -67,6 +69,6 @@ LABEL org.opencontainers.image.title="paperclip-mcp" \
 #   PAPERCLIP_RUN_ID       — Optional execution run ID for tracing mutations
 
 # ─── Entrypoint ───────────────────────────────────────────────────────────────
-# dumb-init wraps Node so SIGTERM is forwarded correctly through the PID chain.
+# tini wraps Node so SIGTERM is forwarded correctly through the PID chain.
 # No CMD — stdio MCP servers require no default arguments.
-ENTRYPOINT ["dumb-init", "--", "node", "dist/index.js"]
+ENTRYPOINT ["/sbin/tini", "--", "node", "dist/index.js"]
