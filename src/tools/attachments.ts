@@ -163,7 +163,7 @@ export const attachmentTools: ToolDefinition[] = [
         "- response_format: 'markdown' | 'json' — Output format (default 'markdown')",
       ],
       returns:
-        "Returns the upstream API response body as a JSON string. Structure varies by attachment type and may include fields such as url, content, mimeType, or other upstream fields.",
+        "Returns either a markdown attachment summary (when response_format is 'markdown') or pretty-printed structured JSON from the upstream response body (when response_format is 'json'). Structure varies by attachment type and may include fields such as url, content, mimeType, or other upstream fields.",
       examples: {
         useWhen: "reading a previously uploaded attachment to extract its content or download URL",
         dontUseWhen:
