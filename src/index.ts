@@ -2,11 +2,13 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { registerAllTools } from "./tools/index.js";
+export { SERVER_VERSION } from "./version.js";
+import { SERVER_VERSION } from "./version.js";
 
 const server = new Server(
   {
     name: "paperclip-mcp",
-    version: "0.1.0",
+    version: SERVER_VERSION,
   },
   {
     capabilities: {
