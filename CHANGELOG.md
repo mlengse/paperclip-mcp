@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file. This file i
 
 - **Pagination envelope shape** — All `list_*` tools now return `{ items, total, count, offset, limit, has_more, next_offset? }` instead of a bare array. Callers must read `result.items` rather than the root array. This affects all 19 list tools.
 
-### New tools (29 total across Stages 8a–8h)
+### New tools (30 total across Stages 8a–8h)
 
 **Stage 8a — Workflow completeness (4 tools)**
 - `paperclip_list_approval_issues` — list issues linked to an approval.

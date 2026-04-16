@@ -94,7 +94,7 @@ describe("ALL_TOOLS registry — structural invariants", () => {
     );
   });
 
-  it("tool count is within expected bounds (≥91, ≤120)", () => {
+  it("tool count is within expected bounds (≥104, ≤120)", () => {
     // Lower bound guards against accidental deletions.
     // Upper bound guards against a Stage 8 typo duplicating a module.
     // Stage 8b adds 6 tools (delete_workspace + 5 company tools): 78 → 84.
@@ -105,10 +105,7 @@ describe("ALL_TOOLS registry — structural invariants", () => {
     // Stage 8g adds 3 tools (feedback module): 98 → 101.
     // Stage 8h adds 3 tools (company-import module): 101 → 104.
     assert.ok(ALL_TOOLS.length >= 104, `Expected at least 104 tools, got ${ALL_TOOLS.length}`);
-    assert.ok(
-      ALL_TOOLS.length <= 120,
-      `Expected at most 120 tools, got ${ALL_TOOLS.length} — Stage 8 should land 103 total`
-    );
+    assert.ok(ALL_TOOLS.length <= 120, `Expected at most 120 tools, got ${ALL_TOOLS.length}`);
   });
 });
 
