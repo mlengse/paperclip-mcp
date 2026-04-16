@@ -1,90 +1,131 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import { validate, toJsonSchema, IssueIdSchema, handleApiError } from "./validation.js";
+import {
+  validate,
+  toJsonSchema,
+  IssueIdSchema,
+  handleApiError,
+  StatusSchema,
+  PrioritySchema,
+} from "./validation.js";
 import { PaperclipApiError } from "../errors.js";
 
 const ISSUES_MAX_LIMIT = 100;
 const ISSUES_DEFAULT_LIMIT = 50;
 
-const ListIssuesInput = z.object({
-  status: z.string().optional().describe("Comma-separated status values (e.g. 'todo,in_progress')"),
-  assigneeAgentId: z.string().optional().describe("Filter by assignee agent ID"),
-  projectId: z.string().optional().describe("Filter by project ID"),
-  goalId: z.string().optional().describe("Filter by goal ID"),
-  labelId: z.string().optional().describe("Filter by label ID"),
-  q: z.string().optional().describe("Full-text search query"),
-  limit: z
-    .number()
-    .int()
-    .min(1)
-    .max(ISSUES_MAX_LIMIT)
-    .default(ISSUES_DEFAULT_LIMIT)
-    .optional()
-    .describe(
-      `Maximum number of issues to return (1–${ISSUES_MAX_LIMIT}, default ${ISSUES_DEFAULT_LIMIT})`
-    ),
-  offset: z
-    .number()
-    .int()
-    .min(0)
-    .default(0)
-    .optional()
-    .describe("Number of issues to skip before returning results (default 0)"),
-});
+const ListIssuesInput = z
+  .object({
+    status: z
+      .string()
+      .optional()
+      .describe("Comma-separated status values (e.g. 'todo,in_progress')"),
+    assigneeAgentId: z.string().optional().describe("Filter by assignee agent ID"),
+    projectId: z.string().optional().describe("Filter by project ID"),
+    goalId: z.string().optional().describe("Filter by goal ID"),
+    labelId: z.string().optional().describe("Filter by label ID"),
+    q: z.string().optional().describe("Full-text search query"),
+    limit: z
+      .number()
+      .int()
+      .min(1)
+      .max(ISSUES_MAX_LIMIT)
+      .default(ISSUES_DEFAULT_LIMIT)
+      .optional()
+      .describe(
+        `Maximum number of issues to return (1–${ISSUES_MAX_LIMIT}, default ${ISSUES_DEFAULT_LIMIT})`
+      ),
+    offset: z
+      .number()
+      .int()
+      .min(0)
+      .default(0)
+      .optional()
+      .describe("Number of issues to skip before returning results (default 0)"),
+  })
+  .strict();
 
-const IssueIdInput = IssueIdSchema;
+const IssueIdInput = IssueIdSchema.strict();
 
 // Some MCP clients serialize array parameters as a JSON-encoded string.
 // This preprocess normalizes both forms before Zod validates the array.
 const jsonArrayPreprocess = (v: unknown) => (typeof v === "string" ? JSON.parse(v) : v);
 
-const CheckoutIssueInput = z.object({
-  issueId: z.string().min(1),
-  expectedStatuses: z.preprocess(jsonArrayPreprocess, z.array(z.string())).optional(),
-});
+const CheckoutIssueInput = z
+  .object({
+    issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-21)"),
+    expectedStatuses: z
+      .preprocess(jsonArrayPreprocess, z.array(z.string()))
+      .optional()
+      .describe(
+        "Expected statuses for atomic validation — checkout fails with 409 if current status is not in this list"
+      ),
+  })
+  .strict();
 
-const UpdateIssueInput = z.object({
-  issueId: z.string().min(1),
-  status: z.string().optional(),
-  comment: z.string().optional(),
-  priority: z.string().optional(),
-  title: z.string().optional(),
-  description: z.string().optional(),
-  assigneeAgentId: z.string().nullable().optional(),
-  assigneeUserId: z.string().nullable().optional(),
-  goalId: z.string().nullable().optional(),
-  projectId: z.string().nullable().optional(),
-  parentId: z.string().nullable().optional(),
-  billingCode: z.string().nullable().optional(),
-  labelIds: z.preprocess(jsonArrayPreprocess, z.array(z.string())).optional(),
-  executionRunId: z
-    .string()
-    .nullable()
-    .optional()
-    .describe("Execution run ID holding the checkout lock; pass null to clear a stale lock"),
-  executionLockedAt: z
-    .string()
-    .nullable()
-    .optional()
-    .describe("ISO timestamp of when the execution lock was acquired; pass null to clear"),
-});
+const UpdateIssueInput = z
+  .object({
+    issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-21)"),
+    status: StatusSchema.optional().describe("New status"),
+    comment: z.string().optional().describe("Comment to add alongside the update"),
+    priority: PrioritySchema.optional().describe("New priority level"),
+    title: z.string().optional().describe("New title"),
+    description: z.string().optional().describe("New description (markdown)"),
+    assigneeAgentId: z
+      .string()
+      .nullable()
+      .optional()
+      .describe("Assignee agent UUID; null to unassign"),
+    assigneeUserId: z
+      .string()
+      .nullable()
+      .optional()
+      .describe("Assignee user UUID; null to unassign"),
+    goalId: z.string().nullable().optional().describe("Goal UUID; null to unlink"),
+    projectId: z.string().nullable().optional().describe("Project UUID; null to unlink"),
+    parentId: z.string().nullable().optional().describe("Parent issue UUID; null to unlink"),
+    billingCode: z
+      .string()
+      .nullable()
+      .optional()
+      .describe("Billing code for cost tracking; null to clear"),
+    labelIds: z
+      .preprocess(jsonArrayPreprocess, z.array(z.string()))
+      .optional()
+      .describe("Label UUIDs to set (replaces existing set); pass [] to clear all labels"),
+    executionRunId: z
+      .string()
+      .nullable()
+      .optional()
+      .describe("Execution run ID holding the checkout lock; pass null to clear a stale lock"),
+    executionLockedAt: z
+      .string()
+      .nullable()
+      .optional()
+      .describe("ISO timestamp of when the execution lock was acquired; pass null to clear"),
+  })
+  .strict();
 
-const CreateIssueInput = z.object({
-  title: z.string().min(1),
-  description: z.string().optional(),
-  status: z.string().optional(),
-  priority: z.string().optional(),
-  parentId: z.string().optional(),
-  goalId: z.string().optional(),
-  projectId: z.string().optional(),
-  assigneeAgentId: z.string().optional(),
-  billingCode: z.string().optional(),
-  labelIds: z.preprocess(jsonArrayPreprocess, z.array(z.string())).optional(),
-  inheritExecutionWorkspaceFromIssueId: z
-    .string()
-    .optional()
-    .describe("Link to an existing execution workspace (for follow-up tasks on same checkout)"),
-});
+const CreateIssueInput = z
+  .object({
+    title: z.string().min(1).describe("Issue title"),
+    description: z.string().optional().describe("Issue description (markdown)"),
+    status: StatusSchema.optional().describe("Initial status (default: backlog)"),
+    priority: PrioritySchema.optional().describe("Priority level"),
+    parentId: z.string().optional().describe("Parent issue UUID"),
+    goalId: z.string().optional().describe("Goal UUID to link the issue to"),
+    projectId: z.string().optional().describe("Project UUID to associate"),
+    assigneeAgentId: z.string().optional().describe("Assignee agent UUID"),
+    billingCode: z.string().optional().describe("Billing code for cost tracking"),
+    labelIds: z
+      .preprocess(jsonArrayPreprocess, z.array(z.string()))
+      .optional()
+      .describe("Label UUIDs to apply"),
+    inheritExecutionWorkspaceFromIssueId: z
+      .string()
+      .optional()
+      .describe("Link to an existing execution workspace (for follow-up tasks on same checkout)"),
+  })
+  .strict();
 
 export const issueTools: ToolDefinition[] = [
   {

@@ -425,10 +425,12 @@ describe("paperclip_update_issue", () => {
     assert.equal(calls.length, 0);
   });
 
-  it("returns isError response on 422 API error", async () => {
+  it("returns isError response on 422 API error (valid status triggers API-side error)", async () => {
+    // Note: after Stage 2, invalid enum values are caught at validation — this tests a
+    // valid status that the API rejects (e.g. invalid transition).
     const { fn } = mockFetch(422, { message: "Invalid status transition" });
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await updateIssue.handler({ issueId: "issue-1", status: "invalid" }, client);
+    const result = await updateIssue.handler({ issueId: "issue-1", status: "done" }, client);
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("422"));
   });
@@ -731,6 +733,104 @@ describe("paperclip_checkout_issue (expectedStatuses JSON-string, PAP-120)", () 
     );
     const sentBody = JSON.parse(calls[0]!.init.body as string);
     assert.deepEqual(sentBody.expectedStatuses, ["todo"]);
+  });
+});
+
+// Stage 2 TDD: A4 (enum rejection) + A5 (.strict() rejects unknown fields)
+describe("[stage-2] paperclip_list_issues — A4: enum rejection + A5: strict", () => {
+  it("A5: rejects unknown extra field (strict)", async () => {
+    const { fn, calls } = mockFetch(200, []);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => listIssues.handler({ unknownField: "oops" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});
+
+describe("[stage-2] paperclip_update_issue — A4: enum rejection + A5: strict", () => {
+  it("A4: rejects invalid status enum value for update_issue", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => updateIssue.handler({ issueId: "issue-1", status: "flying" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A4: rejects invalid priority enum value for update_issue", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => updateIssue.handler({ issueId: "issue-1", priority: "urgent" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A5: rejects unknown extra field (strict) for update_issue", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => updateIssue.handler({ issueId: "issue-1", unknownField: "oops" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});
+
+describe("[stage-2] paperclip_create_issue — A4: enum rejection + A5: strict", () => {
+  it("A4: rejects invalid status enum value for create_issue", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => createIssue.handler({ title: "Test", status: "flying" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A4: rejects invalid priority enum value for create_issue", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => createIssue.handler({ title: "Test", priority: "urgent" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A5: rejects unknown extra field (strict) for create_issue", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => createIssue.handler({ title: "Test", unknownField: "oops" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
   });
 });
 
