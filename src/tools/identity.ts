@@ -175,7 +175,7 @@ export const identityTools: ToolDefinition[] = [
     async handler(args, client) {
       try {
         validate(RevokeCurrentSessionInput, args);
-        const data = await client.post<unknown>(`/api/cli-auth/revoke-current`);
+        const data = await client.post<unknown>(`/api/cli-auth/revoke-current`, {});
         const hint = "Server response too large; the operation likely succeeded.";
         return {
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
