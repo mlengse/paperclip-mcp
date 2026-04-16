@@ -51,3 +51,7 @@ _bmad-output/
 
 # Stale BMAD template artifact (miscreated directory)
 {output_folder}/
+
+# Functional test reports (generated per-run)
+scripts/.functional-test-report.json
+scripts/.functional-test-report.md

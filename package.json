@@ -39,7 +39,8 @@
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx/esm --test 'src/**/*.test.ts'",
     "test:coverage": "node --import tsx/esm --experimental-test-coverage --test-coverage-lines=80 --test-coverage-branches=70 --test 'src/**/*.test.ts'",
-    "docs:check": "find docs -name '*.md' | xargs markdown-link-check -c .markdown-link-check.json"
+    "docs:check": "find docs -name '*.md' | xargs markdown-link-check -c .markdown-link-check.json",
+    "test:functional": "node --import tsx/esm scripts/functional-test.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",

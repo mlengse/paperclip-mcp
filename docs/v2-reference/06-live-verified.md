@@ -38,6 +38,19 @@ Version-bumping value rotation (v1 → v2 → v3 confirmed). Request body: `{ va
 
 Tools: `paperclip_list_feedback_traces`, `paperclip_list_issue_feedback_traces`, `paperclip_get_feedback_trace_bundle` must ALL have `⚠ Board-only:` description prefix and be added to `BOARD_ONLY_TOOLS` in `registry.test.ts`.
 
+## 8h — Company import/export (PAP-192 schema bug fix)
+
+### `POST /api/companies/{companyId}/imports/preview` and `/imports/apply`
+
+**`target` field is REQUIRED.** Both endpoints return `400 { "error": "Validation error", "details": [{ "path": ["target"], "message": "Required" }] }` when `target` is absent.
+
+- The spec (`03-api-contracts.md` §H26) listed `target` correctly; Stage 8h dev missed it.
+- Shape: `{ mode: "existing_company" | "new_company", companyId: string }`.
+- `mode` accepted values: `"existing_company"` **and** `"new_company"` (both return business-logic errors on minimal test bundles but do not 400 on mode itself; spec only lists `"existing_company"` but the API accepts both).
+- A cross-field `.refine()` enforces `target.companyId === companyId` (path param) at the MCP schema level to prevent a confusing 400 from the server.
+
+Fix: `TargetSchema` added to both `PreviewCompanyImportInput` and `ApplyCompanyImportInput`; wired through to the request body.
+
 ## Server startup reference (for future Stage 8 agents)
 
 The local server runs via Podman compose. The `podman-compose.paperclip.yml` at `/var/home/bbrasil/Documents/git/rme-platform/podman-compose.paperclip.yml` was patched (once) for `network_mode: host` to work in `local_trusted` mode. If Stage 8 agents need the API running:

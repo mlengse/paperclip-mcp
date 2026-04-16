@@ -367,10 +367,7 @@ try {
 
 // Step 14: try to get runId (may be empty)
 try {
-  const runs = await apiFetch(
-    "GET",
-    `/api/companies/${COMPANY_ID}/heartbeat-runs`
-  );
+  const runs = await apiFetch("GET", `/api/companies/${COMPANY_ID}/heartbeat-runs`);
   if (runs && runs.length > 0) {
     ctx.runId = runs[0].id;
     seedOk("runId", ctx.runId);
@@ -383,10 +380,7 @@ try {
 
 // Step 15: try to get traceId (usually empty)
 try {
-  const traces = await apiFetch(
-    "GET",
-    `/api/companies/${COMPANY_ID}/feedback-traces`
-  );
+  const traces = await apiFetch("GET", `/api/companies/${COMPANY_ID}/feedback-traces`);
   if (traces && traces.length > 0) {
     ctx.traceId = traces[0].id;
     seedOk("traceId", ctx.traceId);
@@ -413,10 +407,7 @@ try {
 // Step 17: try to get a config revisionId for the agent
 try {
   if (!ctx.agentId) throw new Error("no agentId available");
-  const revisions = await apiFetch(
-    "GET",
-    `/api/agents/${ctx.agentId}/config-revisions`
-  );
+  const revisions = await apiFetch("GET", `/api/agents/${ctx.agentId}/config-revisions`);
   if (revisions && revisions.length > 0) {
     ctx.revisionId = revisions[0].id;
     seedOk("revisionId", ctx.revisionId);
@@ -450,14 +441,25 @@ const TEST_CASES = {
     expectErrorContains: null, // 401 expected — doc the limitation
   },
   paperclip_get_current_user: { args: { response_format: "json" } },
-  paperclip_revoke_current_session: { skip: "would invalidate the board auth token used for all other tests" },
+  paperclip_revoke_current_session: {
+    skip: "would invalidate the board auth token used for all other tests",
+  },
 
   // --- issues ---
   paperclip_list_issues: { args: { response_format: "json" } },
-  paperclip_get_issue: { argsFn: (c) => ({ issueId: c.issueId, response_format: "json" }), dependsOn: "issueId" },
-  paperclip_get_heartbeat_context: { argsFn: (c) => ({ issueId: c.issueId, response_format: "json" }), dependsOn: "issueId" },
+  paperclip_get_issue: {
+    argsFn: (c) => ({ issueId: c.issueId, response_format: "json" }),
+    dependsOn: "issueId",
+  },
+  paperclip_get_heartbeat_context: {
+    argsFn: (c) => ({ issueId: c.issueId, response_format: "json" }),
+    dependsOn: "issueId",
+  },
   paperclip_checkout_issue: {
-    argsFn: (c) => ({ issueId: c.issueId, expectedStatuses: ["todo", "in_progress", "backlog", "blocked", "in_review"] }),
+    argsFn: (c) => ({
+      issueId: c.issueId,
+      expectedStatuses: ["todo", "in_progress", "backlog", "blocked", "in_review"],
+    }),
     dependsOn: "issueId",
     before: async (c, _client) => {
       // Defensively release before checkout — ensures clean state even if a
@@ -465,7 +467,9 @@ const TEST_CASES = {
       // POST /release is idempotent on an unlocked issue (returns 409 which we ignore).
       try {
         await apiFetch("POST", `/api/issues/${c.issueId}/release`);
-      } catch { /* 409 = already clean — ignore */ }
+      } catch {
+        /* 409 = already clean — ignore */
+      }
     },
     after: async (c, client) => {
       // Release the checkout so the issue is clean for later tests
@@ -473,7 +477,9 @@ const TEST_CASES = {
       if (releaseTool) {
         try {
           await releaseTool.handler({ issueId: c.issueId }, client);
-        } catch { /* ignore release errors in after hook */ }
+        } catch {
+          /* ignore release errors in after hook */
+        }
       }
     },
   },
@@ -488,10 +494,23 @@ const TEST_CASES = {
       if (checkoutTool) {
         try {
           await checkoutTool.handler(
-            { issueId: c.issueId, expectedStatuses: ["todo", "in_progress", "backlog", "blocked", "in_review", "done", "cancelled"] },
+            {
+              issueId: c.issueId,
+              expectedStatuses: [
+                "todo",
+                "in_progress",
+                "backlog",
+                "blocked",
+                "in_review",
+                "done",
+                "cancelled",
+              ],
+            },
             client
           );
-        } catch { /* might be already released — ok */ }
+        } catch {
+          /* might be already released — ok */
+        }
       }
     },
   },
@@ -507,8 +526,14 @@ const TEST_CASES = {
   },
 
   // --- comments ---
-  paperclip_list_comments: { argsFn: (c) => ({ issueId: c.issueId, response_format: "json" }), dependsOn: "issueId" },
-  paperclip_add_comment: { argsFn: (c) => ({ issueId: c.issueId, body: "Functional test comment" }), dependsOn: "issueId" },
+  paperclip_list_comments: {
+    argsFn: (c) => ({ issueId: c.issueId, response_format: "json" }),
+    dependsOn: "issueId",
+  },
+  paperclip_add_comment: {
+    argsFn: (c) => ({ issueId: c.issueId, body: "Functional test comment" }),
+    dependsOn: "issueId",
+  },
   paperclip_get_comment: {
     // NOTE: GetCommentInput has no response_format field — strict schema would reject it
     argsFn: (c) => ({ issueId: c.issueId, commentId: c.commentId }),
@@ -516,7 +541,10 @@ const TEST_CASES = {
   },
 
   // --- documents ---
-  paperclip_list_documents: { argsFn: (c) => ({ issueId: c.issueId, response_format: "json" }), dependsOn: "issueId" },
+  paperclip_list_documents: {
+    argsFn: (c) => ({ issueId: c.issueId, response_format: "json" }),
+    dependsOn: "issueId",
+  },
   paperclip_get_document: {
     argsFn: (c) => ({ issueId: c.issueId, key: c.documentKey, response_format: "json" }),
     dependsOn: "issueId",
@@ -545,7 +573,10 @@ const TEST_CASES = {
 
   // --- agents ---
   paperclip_list_agents: { args: { response_format: "json" } },
-  paperclip_get_agent: { argsFn: (c) => ({ agentId: c.agentId, response_format: "json" }), dependsOn: "agentId" },
+  paperclip_get_agent: {
+    argsFn: (c) => ({ agentId: c.agentId, response_format: "json" }),
+    dependsOn: "agentId",
+  },
   paperclip_update_agent: {
     argsFn: (c) => ({
       agentId: c.agentId,
@@ -570,7 +601,9 @@ const TEST_CASES = {
       if (resumeTool) {
         try {
           await resumeTool.handler({ agentId: c.agentId }, client);
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
     },
   },
@@ -580,7 +613,9 @@ const TEST_CASES = {
     dependsOn: "agentId",
   },
   paperclip_invoke_heartbeat: { argsFn: (c) => ({ agentId: c.agentId }), dependsOn: "agentId" },
-  paperclip_terminate_agent: { skip: "would permanently deactivate the test agent needed for all other tests" },
+  paperclip_terminate_agent: {
+    skip: "would permanently deactivate the test agent needed for all other tests",
+  },
   paperclip_create_agent_key: {
     argsFn: (c) => ({
       agentId: c.agentId,
@@ -681,7 +716,10 @@ const TEST_CASES = {
 
   // --- goals ---
   paperclip_list_goals: { args: { response_format: "json" } },
-  paperclip_get_goal: { argsFn: (c) => ({ goalId: c.goalId, response_format: "json" }), dependsOn: "goalId" },
+  paperclip_get_goal: {
+    argsFn: (c) => ({ goalId: c.goalId, response_format: "json" }),
+    dependsOn: "goalId",
+  },
   paperclip_create_goal: { args: { title: "Functional test goal" } },
   paperclip_update_goal: {
     argsFn: (c) => ({ goalId: c.goalId, title: "Functional test goal (updated)" }),
@@ -917,25 +955,135 @@ const TEST_CASES = {
 // ---------------------------------------------------------------------------
 
 const MODULE_MAP = {
-  identity: ["paperclip_get_me", "paperclip_get_inbox", "paperclip_get_current_user", "paperclip_revoke_current_session"],
-  issues: ["paperclip_list_issues", "paperclip_get_issue", "paperclip_get_heartbeat_context", "paperclip_checkout_issue", "paperclip_release_issue", "paperclip_update_issue", "paperclip_create_issue"],
+  identity: [
+    "paperclip_get_me",
+    "paperclip_get_inbox",
+    "paperclip_get_current_user",
+    "paperclip_revoke_current_session",
+  ],
+  issues: [
+    "paperclip_list_issues",
+    "paperclip_get_issue",
+    "paperclip_get_heartbeat_context",
+    "paperclip_checkout_issue",
+    "paperclip_release_issue",
+    "paperclip_update_issue",
+    "paperclip_create_issue",
+  ],
   comments: ["paperclip_list_comments", "paperclip_add_comment", "paperclip_get_comment"],
-  documents: ["paperclip_list_documents", "paperclip_get_document", "paperclip_upsert_document", "paperclip_delete_document", "paperclip_get_document_revisions"],
-  agents: ["paperclip_list_agents", "paperclip_get_agent", "paperclip_update_agent", "paperclip_update_agent_permissions", "paperclip_pause_agent", "paperclip_resume_agent", "paperclip_invoke_heartbeat", "paperclip_terminate_agent", "paperclip_create_agent_key", "paperclip_list_agent_config_revisions", "paperclip_rollback_agent_config", "paperclip_set_agent_instructions_path", "paperclip_get_org_chart", "paperclip_sync_agent_skills", "paperclip_list_company_skills", "paperclip_wakeup_agent", "paperclip_create_agent"],
+  documents: [
+    "paperclip_list_documents",
+    "paperclip_get_document",
+    "paperclip_upsert_document",
+    "paperclip_delete_document",
+    "paperclip_get_document_revisions",
+  ],
+  agents: [
+    "paperclip_list_agents",
+    "paperclip_get_agent",
+    "paperclip_update_agent",
+    "paperclip_update_agent_permissions",
+    "paperclip_pause_agent",
+    "paperclip_resume_agent",
+    "paperclip_invoke_heartbeat",
+    "paperclip_terminate_agent",
+    "paperclip_create_agent_key",
+    "paperclip_list_agent_config_revisions",
+    "paperclip_rollback_agent_config",
+    "paperclip_set_agent_instructions_path",
+    "paperclip_get_org_chart",
+    "paperclip_sync_agent_skills",
+    "paperclip_list_company_skills",
+    "paperclip_wakeup_agent",
+    "paperclip_create_agent",
+  ],
   dashboard: ["paperclip_get_dashboard"],
-  approvals: ["paperclip_list_approvals", "paperclip_get_approval", "paperclip_create_approval", "paperclip_approve", "paperclip_reject", "paperclip_request_revision", "paperclip_resubmit_approval", "paperclip_list_approval_comments", "paperclip_add_approval_comment", "paperclip_create_agent_hire", "paperclip_list_approval_issues"],
-  goals: ["paperclip_list_goals", "paperclip_get_goal", "paperclip_create_goal", "paperclip_update_goal"],
-  projects: ["paperclip_list_projects", "paperclip_get_project", "paperclip_create_project", "paperclip_update_project", "paperclip_list_workspaces", "paperclip_create_workspace", "paperclip_update_workspace", "paperclip_delete_workspace"],
-  activity: ["paperclip_get_activity", "paperclip_get_cost_summary", "paperclip_get_costs_by_agent", "paperclip_get_costs_by_project", "paperclip_report_cost_event"],
-  routines: ["paperclip_list_routines", "paperclip_get_routine", "paperclip_create_routine", "paperclip_update_routine", "paperclip_add_routine_trigger", "paperclip_update_routine_trigger", "paperclip_delete_routine_trigger", "paperclip_run_routine", "paperclip_list_routine_runs"],
-  attachments: ["paperclip_list_attachments", "paperclip_upload_attachment", "paperclip_download_attachment", "paperclip_delete_attachment"],
+  approvals: [
+    "paperclip_list_approvals",
+    "paperclip_get_approval",
+    "paperclip_create_approval",
+    "paperclip_approve",
+    "paperclip_reject",
+    "paperclip_request_revision",
+    "paperclip_resubmit_approval",
+    "paperclip_list_approval_comments",
+    "paperclip_add_approval_comment",
+    "paperclip_create_agent_hire",
+    "paperclip_list_approval_issues",
+  ],
+  goals: [
+    "paperclip_list_goals",
+    "paperclip_get_goal",
+    "paperclip_create_goal",
+    "paperclip_update_goal",
+  ],
+  projects: [
+    "paperclip_list_projects",
+    "paperclip_get_project",
+    "paperclip_create_project",
+    "paperclip_update_project",
+    "paperclip_list_workspaces",
+    "paperclip_create_workspace",
+    "paperclip_update_workspace",
+    "paperclip_delete_workspace",
+  ],
+  activity: [
+    "paperclip_get_activity",
+    "paperclip_get_cost_summary",
+    "paperclip_get_costs_by_agent",
+    "paperclip_get_costs_by_project",
+    "paperclip_report_cost_event",
+  ],
+  routines: [
+    "paperclip_list_routines",
+    "paperclip_get_routine",
+    "paperclip_create_routine",
+    "paperclip_update_routine",
+    "paperclip_add_routine_trigger",
+    "paperclip_update_routine_trigger",
+    "paperclip_delete_routine_trigger",
+    "paperclip_run_routine",
+    "paperclip_list_routine_runs",
+  ],
+  attachments: [
+    "paperclip_list_attachments",
+    "paperclip_upload_attachment",
+    "paperclip_download_attachment",
+    "paperclip_delete_attachment",
+  ],
   labels: ["paperclip_list_labels", "paperclip_create_label"],
-  company: ["paperclip_list_companies", "paperclip_get_company", "paperclip_create_company", "paperclip_update_company", "paperclip_archive_company"],
-  plugins: ["paperclip_list_plugins", "paperclip_get_plugin", "paperclip_install_plugin", "paperclip_list_plugin_examples", "paperclip_enable_plugin", "paperclip_disable_plugin"],
-  secrets: ["paperclip_list_secrets", "paperclip_create_secret", "paperclip_update_secret", "paperclip_rotate_secret"],
+  company: [
+    "paperclip_list_companies",
+    "paperclip_get_company",
+    "paperclip_create_company",
+    "paperclip_update_company",
+    "paperclip_archive_company",
+  ],
+  plugins: [
+    "paperclip_list_plugins",
+    "paperclip_get_plugin",
+    "paperclip_install_plugin",
+    "paperclip_list_plugin_examples",
+    "paperclip_enable_plugin",
+    "paperclip_disable_plugin",
+  ],
+  secrets: [
+    "paperclip_list_secrets",
+    "paperclip_create_secret",
+    "paperclip_update_secret",
+    "paperclip_rotate_secret",
+  ],
   runs: ["paperclip_list_heartbeat_runs", "paperclip_list_run_events", "paperclip_get_run_log"],
-  feedback: ["paperclip_list_feedback_traces", "paperclip_list_issue_feedback_traces", "paperclip_get_feedback_trace_bundle"],
-  "company-import": ["paperclip_export_company", "paperclip_preview_company_import", "paperclip_apply_company_import"],
+  feedback: [
+    "paperclip_list_feedback_traces",
+    "paperclip_list_issue_feedback_traces",
+    "paperclip_get_feedback_trace_bundle",
+  ],
+  "company-import": [
+    "paperclip_export_company",
+    "paperclip_preview_company_import",
+    "paperclip_apply_company_import",
+  ],
 };
 
 // ---------------------------------------------------------------------------
@@ -1062,10 +1210,7 @@ for (const tool of ALL_TOOLS) {
     } else if (result.isError === true && testCase.expectError) {
       // Expected error — check content if expectErrorContains is set
       const errText = result.content?.[0]?.text ?? "";
-      if (
-        testCase.expectErrorContains &&
-        !errText.includes(testCase.expectErrorContains)
-      ) {
+      if (testCase.expectErrorContains && !errText.includes(testCase.expectErrorContains)) {
         outcome = {
           name,
           result: "FAIL",
@@ -1167,7 +1312,8 @@ function mdTable(rows) {
   const body = rows
     .map((r) => {
       const icon = r.result === "PASS" ? "✓" : r.result === "FAIL" ? "✗" : "~";
-      const note = r.result === "FAIL" ? (r.error ?? r.reason ?? "").slice(0, 120) : (r.reason ?? "");
+      const note =
+        r.result === "FAIL" ? (r.error ?? r.reason ?? "").slice(0, 120) : (r.reason ?? "");
       return `| ${r.name} | ${icon} ${r.result} | ${note} |`;
     })
     .join("\n");
@@ -1187,9 +1333,7 @@ for (const s of seedLog) {
 
 md += `\n## Results by module\n\n`;
 for (const [mod, toolNames] of Object.entries(MODULE_MAP)) {
-  const modResults = toolNames
-    .map((n) => results.find((r) => r.name === n))
-    .filter(Boolean);
+  const modResults = toolNames.map((n) => results.find((r) => r.name === n)).filter(Boolean);
   if (modResults.length === 0) continue;
   md += `### ${mod} (${modResults.length} tools)\n\n`;
   md += mdTable(modResults);
