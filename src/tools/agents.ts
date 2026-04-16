@@ -43,9 +43,11 @@ const UpdateAgentInput = z
               .optional()
               .describe("Allow on-demand heartbeat invocation via the invoke endpoint"),
           })
+          .strict()
           .optional()
           .describe("Heartbeat scheduling settings"),
       })
+      .strict()
       .optional()
       .describe("Agent runtime configuration"),
     adapterConfig: z
@@ -93,9 +95,11 @@ const UpdateAgentInput = z
               .optional()
               .describe("Skill names the agent should have installed"),
           })
+          .strict()
           .optional()
           .describe("Paperclip skill auto-sync configuration"),
       })
+      .strict()
       .optional()
       .describe("Adapter configuration for the agent process"),
   })

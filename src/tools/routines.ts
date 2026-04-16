@@ -61,6 +61,7 @@ const AddTriggerInput = z
           .optional()
           .describe("5-field cron expression for schedule triggers (e.g. '*/5 * * * *')"),
       })
+      .strict()
       .optional()
       .describe("Trigger configuration"),
   })
@@ -78,6 +79,7 @@ const UpdateTriggerInput = z
           .optional()
           .describe("New 5-field cron expression for schedule triggers"),
       })
+      .strict()
       .optional()
       .describe("New trigger configuration"),
   })

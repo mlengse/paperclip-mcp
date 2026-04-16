@@ -19,6 +19,7 @@ const CreateProjectInput = z
         cwd: z.string().optional().describe("Local working directory path"),
         repoUrl: z.string().optional().describe("Remote repository URL"),
       })
+      .strict()
       .optional()
       .describe("Optional workspace config to create alongside the project"),
   })
