@@ -118,23 +118,15 @@ export interface ApiErrorContext {
   hint?: string;
 }
 
-/** Default timeout shown in AbortError messages when ctx is unavailable. */
-const DEFAULT_TIMEOUT_MS = 30_000;
-
 function makeError(text: string): ToolResult {
   return { isError: true, content: [{ type: "text", text }] };
 }
 
 /**
- * Convert any caught error into an LLM-actionable { isError: true } ToolResult.
- *
- * Dispatch logic:
- *  - PaperclipApiError  → status-coded message with recovery hint
- *  - DOMException (AbortError) → timeout message
- *  - TypeError ("fetch failed") → network-unreachable message
- *  - anything else → unexpected-error message
- *
- * Never re-throws. All errors become { isError: true } responses.
+ * Convert an API error into a ToolResult.
+ * - Re-throws `McpError` (protocol-level validation errors from Zod).
+ * - All other errors (PaperclipApiError, AbortError, network, unknown) become
+ *   { isError: true, content: [...] } with an LLM-actionable message.
  */
 export function handleApiError(err: unknown, ctx?: ApiErrorContext): ToolResult {
   // McpError (from validate()) is a protocol-level error — let it propagate
@@ -195,10 +187,15 @@ export function handleApiError(err: unknown, ctx?: ApiErrorContext): ToolResult 
   }
 
   // ── AbortError (timeout via AbortSignal.timeout) ─────────────────────────
-  if (err instanceof DOMException && err.name === "AbortError") {
+  // Covers both DOMException (browser/Node globals) and plain Error (test
+  // doubles and some runtimes that don't expose DOMException).
+  if (
+    (err instanceof DOMException && err.name === "AbortError") ||
+    (err instanceof Error && err.name === "AbortError")
+  ) {
     return makeError(
       withHint(
-        `Request timeout in ${tool}. The Paperclip API took longer than ${DEFAULT_TIMEOUT_MS}ms. Retry, or check PAPERCLIP_API_URL connectivity.`
+        `Request timeout in ${tool}. The Paperclip API took longer than the configured timeout. Retry, or check PAPERCLIP_API_URL connectivity.`
       )
     );
   }
@@ -213,7 +210,8 @@ export function handleApiError(err: unknown, ctx?: ApiErrorContext): ToolResult 
   }
 
   // ── Unknown error ─────────────────────────────────────────────────────────
-  return makeError(withHint(`Unexpected error in ${tool}: ${String(err)}`));
+  const msg = err instanceof Error ? err.message : String(err);
+  return makeError(withHint(`Unexpected error in ${tool}: ${msg}`));
 }
 
 // Common input schemas reused across tool modules
