@@ -4,7 +4,7 @@ import { validate, toJsonSchema, handleApiError, composeDescription } from "./va
 import {
   ResponseFormatSchema,
   formatJson,
-  formatSingleIssue,
+  formatGenericList,
   formatIssueList,
   applyCharLimit,
 } from "./format.js";
@@ -64,7 +64,8 @@ export const identityTools: ToolDefinition[] = [
         // API key's principal, which is the CEO when a company-level key is used —
         // not the dispatched agent. The ID-scoped path always returns the correct agent.
         const data = await client.get<unknown>(`/api/agents/${client.agentId}`);
-        const text = (fmt ?? "markdown") === "json" ? formatJson(data) : formatSingleIssue(data);
+        const text =
+          (fmt ?? "markdown") === "json" ? formatJson(data) : formatGenericList([data], "Agent");
         const hint = "Entity response too large. This entity may have oversized fields.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
@@ -137,7 +138,10 @@ export const identityTools: ToolDefinition[] = [
       try {
         const { response_format: fmt } = validate(GetCurrentUserInput, args);
         const data = await client.get<unknown>(`/api/cli-auth/me`);
-        const text = (fmt ?? "markdown") === "json" ? formatJson(data) : formatSingleIssue(data);
+        const text =
+          (fmt ?? "markdown") === "json"
+            ? formatJson(data)
+            : formatGenericList([data], "Current User");
         const hint = "Entity response too large. This entity may have oversized fields.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
