@@ -238,7 +238,7 @@ describe("[stage-5] paperclip_list_comments — truncation + format", () => {
     assert.match(result.content[0]!.text, /^##|\n- /m);
   });
 
-  it("F2: response_format 'json' returns parseable JSON array", async () => {
+  it("F2: response_format 'json' returns parseable JSON envelope", async () => {
     const comments = [commentFixture()];
     const { fn } = mockFetch(200, comments);
     const client = new PaperclipClient(TEST_AUTH, fn);
