@@ -809,3 +809,39 @@ describe("[stage-2] paperclip_sync_agent_skills — A5: strict", () => {
     assert.equal(calls.length, 0);
   });
 });
+
+describe("[stage-2] paperclip_update_agent — A5: nested strict rejection", () => {
+  it("A5: rejects unknown key inside runtimeConfig.heartbeat (nested strict)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        updateAgent.handler(
+          { agentId: "agent-1", runtimeConfig: { heartbeat: { enabled: true, typoKey: false } } },
+          client
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A5: rejects unknown key inside adapterConfig (nested strict)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        updateAgent.handler(
+          { agentId: "agent-1", adapterConfig: { model: "claude-sonnet-4-6", unknownKey: "x" } },
+          client
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});

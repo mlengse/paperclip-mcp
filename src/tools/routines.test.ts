@@ -428,3 +428,58 @@ describe("[stage-2] paperclip_add_routine_trigger — cron format validator", ()
     assert.equal(result.isError, undefined);
   });
 });
+
+describe("[stage-2] paperclip_add_routine_trigger — A5: nested strict rejection", () => {
+  it("A5: rejects unknown key inside config (nested strict)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        addTrigger.handler(
+          { routineId: "r-1", type: "schedule", config: { cron: "* * * * *", unknownField: "x" } },
+          client
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});
+
+describe("[stage-2] paperclip_update_routine_trigger — A4: cron + A5: nested strict rejection", () => {
+  it("A4: rejects invalid cron format", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        updateTrigger.handler(
+          { triggerId: "t-1", config: { cron: "* * * *" } }, // 4 fields, invalid
+          client
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A5: rejects unknown key inside config (nested strict)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        updateTrigger.handler(
+          { triggerId: "t-1", config: { cron: "* * * * *", unknownField: "x" } },
+          client
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});

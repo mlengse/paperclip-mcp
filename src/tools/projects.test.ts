@@ -340,6 +340,25 @@ describe("[stage-2] paperclip_update_project — A5: strict", () => {
   });
 });
 
+describe("[stage-2] paperclip_create_project — A5: nested strict rejection", () => {
+  it("A5: rejects unknown key inside workspace (nested strict)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        createProject.handler(
+          { name: "Proj", workspace: { cwd: "/tmp", unknownField: "x" } },
+          client
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});
+
 describe("[stage-2] paperclip_create_workspace — .refine() cwd||repoUrl", () => {
   it("refine: rejects when neither cwd nor repoUrl is provided", async () => {
     const { fn, calls } = mockFetch(200, {});
