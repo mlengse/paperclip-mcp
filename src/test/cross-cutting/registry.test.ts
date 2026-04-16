@@ -103,7 +103,8 @@ describe("ALL_TOOLS registry — structural invariants", () => {
     // Stage 8e adds 4 tools (secrets module): 91 → 95.
     // Stage 8f adds 3 tools (runs module): 95 → 98.
     // Stage 8g adds 3 tools (feedback module): 98 → 101.
-    assert.ok(ALL_TOOLS.length >= 101, `Expected at least 101 tools, got ${ALL_TOOLS.length}`);
+    // Stage 8h adds 3 tools (company-import module): 101 → 104.
+    assert.ok(ALL_TOOLS.length >= 104, `Expected at least 104 tools, got ${ALL_TOOLS.length}`);
     assert.ok(
       ALL_TOOLS.length <= 120,
       `Expected at most 120 tools, got ${ALL_TOOLS.length} — Stage 8 should land 103 total`
@@ -305,6 +306,7 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
     "paperclip_list_feedback_traces",
     "paperclip_list_issue_feedback_traces",
     "paperclip_get_feedback_trace_bundle",
+    "paperclip_preview_company_import",
   ];
 
   it("read-only tools have readOnlyHint: true", () => {
@@ -342,6 +344,7 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
     "paperclip_disable_plugin",
     "paperclip_update_secret",
     "paperclip_rotate_secret",
+    "paperclip_apply_company_import",
   ];
 
   it("destructive tools have destructiveHint: true", () => {
@@ -417,6 +420,9 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
     "paperclip_list_feedback_traces",
     "paperclip_list_issue_feedback_traces",
     "paperclip_get_feedback_trace_bundle",
+    "paperclip_export_company",
+    "paperclip_preview_company_import",
+    "paperclip_apply_company_import",
   ];
 
   it("board-only tools have '⚠ Board-only:' description prefix", () => {
@@ -520,6 +526,9 @@ describe("ALL_TOOLS registry — description quality", () => {
       "paperclip_list_feedback_traces",
       "paperclip_list_issue_feedback_traces",
       "paperclip_get_feedback_trace_bundle",
+      "paperclip_export_company",
+      "paperclip_preview_company_import",
+      "paperclip_apply_company_import",
     ];
     const bad: string[] = [];
     for (const name of boardOnlyTools) {
