@@ -243,3 +243,132 @@ describe("ALL_TOOLS registry — required MCP tool metadata", () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// Stage 3 — Annotation correctness allow-lists
+// ---------------------------------------------------------------------------
+
+describe("ALL_TOOLS registry — annotation correctness", () => {
+  // Tools that perform only GETs and MUST be read-only
+  const READ_ONLY_TOOLS = [
+    "paperclip_get_me",
+    "paperclip_get_inbox",
+    "paperclip_get_dashboard",
+    "paperclip_list_issues",
+    "paperclip_get_issue",
+    "paperclip_get_heartbeat_context",
+    "paperclip_list_comments",
+    "paperclip_get_comment",
+    "paperclip_list_documents",
+    "paperclip_get_document",
+    "paperclip_get_document_revisions",
+    "paperclip_list_attachments",
+    "paperclip_download_attachment",
+    "paperclip_list_agents",
+    "paperclip_get_agent",
+    "paperclip_list_agent_config_revisions",
+    "paperclip_get_org_chart",
+    "paperclip_list_company_skills",
+    "paperclip_list_goals",
+    "paperclip_get_goal",
+    "paperclip_list_projects",
+    "paperclip_get_project",
+    "paperclip_list_workspaces",
+    "paperclip_get_activity",
+    "paperclip_get_cost_summary",
+    "paperclip_get_costs_by_agent",
+    "paperclip_get_costs_by_project",
+    "paperclip_list_approvals",
+    "paperclip_get_approval",
+    "paperclip_list_approval_comments",
+    "paperclip_list_routines",
+    "paperclip_get_routine",
+    "paperclip_list_routine_runs",
+    "paperclip_list_labels",
+  ];
+
+  it("read-only tools have readOnlyHint: true", () => {
+    const bad: string[] = [];
+    for (const name of READ_ONLY_TOOLS) {
+      const t = ALL_TOOLS.find((x) => x.name === name);
+      assert.ok(t, `Tool ${name} not found in ALL_TOOLS`);
+      if (t!.annotations?.readOnlyHint !== true) bad.push(name);
+    }
+    assert.deepEqual(bad, [], "Tools missing readOnlyHint:true");
+  });
+
+  const DESTRUCTIVE_TOOLS = [
+    "paperclip_delete_document",
+    "paperclip_delete_attachment",
+    "paperclip_terminate_agent",
+    "paperclip_rollback_agent_config",
+    "paperclip_update_agent", // replaces many fields
+    "paperclip_update_agent_permissions",
+    "paperclip_update_issue", // replaces many fields
+    "paperclip_update_goal",
+    "paperclip_update_project",
+    "paperclip_update_workspace",
+    "paperclip_update_routine",
+    "paperclip_update_routine_trigger",
+    "paperclip_delete_routine_trigger",
+    "paperclip_approve",
+    "paperclip_reject",
+  ];
+
+  it("destructive tools have destructiveHint: true", () => {
+    const bad: string[] = [];
+    for (const name of DESTRUCTIVE_TOOLS) {
+      const t = ALL_TOOLS.find((x) => x.name === name);
+      assert.ok(t, `Tool ${name} not found`);
+      if (t!.annotations?.destructiveHint !== true) bad.push(name);
+    }
+    assert.deepEqual(bad, [], "Tools missing destructiveHint:true");
+  });
+
+  const IDEMPOTENT_TOOLS = [
+    "paperclip_release_issue",
+    "paperclip_upsert_document",
+    "paperclip_pause_agent",
+    "paperclip_resume_agent",
+    "paperclip_update_issue",
+    "paperclip_update_goal",
+    "paperclip_update_project",
+    "paperclip_update_workspace",
+    "paperclip_update_agent",
+    "paperclip_update_agent_permissions",
+    "paperclip_update_routine",
+    "paperclip_update_routine_trigger",
+  ];
+
+  it("idempotent tools have idempotentHint: true", () => {
+    const bad: string[] = [];
+    for (const name of IDEMPOTENT_TOOLS) {
+      const t = ALL_TOOLS.find((x) => x.name === name);
+      assert.ok(t, `Tool ${name} not found`);
+      if (t!.annotations?.idempotentHint !== true) bad.push(name);
+    }
+    assert.deepEqual(bad, [], "Tools missing idempotentHint:true");
+  });
+
+  const BOARD_ONLY_TOOLS = [
+    "paperclip_delete_document",
+    "paperclip_terminate_agent",
+    "paperclip_create_agent_key",
+    "paperclip_rollback_agent_config",
+    "paperclip_update_agent_permissions",
+    "paperclip_set_agent_instructions_path",
+    "paperclip_approve",
+    "paperclip_reject",
+    "paperclip_request_revision",
+  ];
+
+  it("board-only tools have '⚠ Board-only:' description prefix", () => {
+    const bad: string[] = [];
+    for (const name of BOARD_ONLY_TOOLS) {
+      const t = ALL_TOOLS.find((x) => x.name === name);
+      assert.ok(t, `Tool ${name} not found`);
+      if (!t!.description.startsWith("⚠ Board-only:")) bad.push(name);
+    }
+    assert.deepEqual(bad, [], "Tools missing '⚠ Board-only:' description prefix");
+  });
+});
