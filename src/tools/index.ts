@@ -19,6 +19,7 @@ import { activityTools } from "./activity.js";
 import { routineTools } from "./routines.js";
 import { attachmentTools } from "./attachments.js";
 import { labelTools } from "./labels.js";
+import { companyTools } from "./company.js";
 export { validate as validateInput } from "./validation.js";
 
 export type ToolResult = {
@@ -68,6 +69,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
   ...routineTools,
   ...attachmentTools,
   ...labelTools,
+  ...companyTools,
 ];
 
 export function registerAllTools(server: Server): void {
