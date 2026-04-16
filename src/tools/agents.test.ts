@@ -973,3 +973,119 @@ describe("[stage-5] paperclip_list_company_skills — format", () => {
     assert.deepEqual(parsed, skills);
   });
 });
+
+// ---------------------------------------------------------------------------
+// [stage-6] E1/E2/E3 pagination envelope — list_agents / list_agent_config_revisions / list_company_skills
+// ---------------------------------------------------------------------------
+describe("[stage-6] paperclip_list_agents — pagination envelope", () => {
+  it("E1: default limit=50, offset=0 in envelope", async () => {
+    const items = Array.from({ length: 3 }, (_, i) => agentFixture({ id: `agent-${i}` }));
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listAgents.handler({ response_format: "json" }, client);
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.total, 3);
+    assert.equal(data.count, 3);
+    assert.equal(data.limit, 50);
+    assert.equal(data.offset, 0);
+    assert.equal(data.has_more, false);
+    assert.ok(Array.isArray(data.items));
+  });
+
+  it("E2: explicit limit=2, offset=1 in envelope", async () => {
+    const items = Array.from({ length: 5 }, (_, i) => agentFixture({ id: `a-${i}` }));
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listAgents.handler(
+      { response_format: "json", limit: 2, offset: 1 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.total, 5);
+    assert.equal(data.count, 2);
+    assert.equal(data.limit, 2);
+    assert.equal(data.offset, 1);
+    assert.equal(data.has_more, true);
+    assert.equal(data.next_offset, 3);
+  });
+
+  it("E3: offset past end returns empty items with correct total", async () => {
+    const items = [agentFixture()];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listAgents.handler(
+      { response_format: "json", limit: 10, offset: 100 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.total, 1);
+    assert.equal(data.count, 0);
+    assert.deepEqual(data.items, []);
+  });
+});
+
+describe("[stage-6] paperclip_list_agent_config_revisions — pagination envelope", () => {
+  it("E1: default limit=50, offset=0 in envelope", async () => {
+    const items = [{ revisionId: "rev-1", changedAt: "2026-01-01T00:00:00.000Z" }];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listConfigRevisions.handler(
+      { agentId: "agent-1", response_format: "json" },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.total, 1);
+    assert.equal(data.limit, 50);
+    assert.equal(data.offset, 0);
+    assert.equal(data.has_more, false);
+    assert.ok(Array.isArray(data.items));
+  });
+
+  it("E3: offset past end returns empty items", async () => {
+    const items = [{ revisionId: "rev-1" }];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listConfigRevisions.handler(
+      { agentId: "agent-1", response_format: "json", limit: 10, offset: 100 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.count, 0);
+    assert.deepEqual(data.items, []);
+  });
+});
+
+describe("[stage-6] paperclip_list_company_skills — pagination envelope", () => {
+  it("E1: default limit=50, offset=0 in envelope", async () => {
+    const items = [{ id: "skill-1", name: "paperclip-mcp" }];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listCompanySkills.handler({ response_format: "json" }, client);
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.total, 1);
+    assert.equal(data.limit, 50);
+    assert.equal(data.offset, 0);
+    assert.equal(data.has_more, false);
+    assert.ok(Array.isArray(data.items));
+  });
+
+  it("E3: offset past end returns empty items", async () => {
+    const items = [{ id: "skill-1", name: "paperclip-mcp" }];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listCompanySkills.handler(
+      { response_format: "json", limit: 10, offset: 100 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.count, 0);
+    assert.deepEqual(data.items, []);
+  });
+});

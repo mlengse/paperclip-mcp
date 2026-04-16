@@ -253,6 +253,73 @@ describe("[stage-5] paperclip_list_goals — truncation + format", () => {
 });
 
 // ---------------------------------------------------------------------------
+// [stage-6] E1/E2/E3 pagination envelope — paperclip_list_goals
+// ---------------------------------------------------------------------------
+describe("[stage-6] paperclip_list_goals — pagination envelope", () => {
+  it("E1: default limit=50, offset=0 in envelope", async () => {
+    const items = Array.from({ length: 3 }, (_, i) => goalFixture({ id: `goal-${i}` }));
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listGoals.handler({ response_format: "json" }, client);
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.total, 3);
+    assert.equal(data.count, 3);
+    assert.equal(data.limit, 50);
+    assert.equal(data.offset, 0);
+    assert.equal(data.has_more, false);
+    assert.equal(data.next_offset, undefined);
+    assert.ok(Array.isArray(data.items));
+  });
+
+  it("E2: explicit limit=10, offset=20 reflected in envelope", async () => {
+    const items = Array.from({ length: 30 }, (_, i) => goalFixture({ id: `g-${i}` }));
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listGoals.handler(
+      { response_format: "json", limit: 10, offset: 20 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.total, 30);
+    assert.equal(data.count, 10);
+    assert.equal(data.limit, 10);
+    assert.equal(data.offset, 20);
+    assert.equal(data.has_more, false);
+    assert.equal(data.next_offset, undefined);
+  });
+
+  it("E3: offset past end returns empty items with correct total", async () => {
+    const items = [goalFixture()];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listGoals.handler(
+      { response_format: "json", limit: 10, offset: 100 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.total, 1);
+    assert.equal(data.count, 0);
+    assert.deepEqual(data.items, []);
+  });
+
+  it("E4: has_more=true when more pages remain", async () => {
+    const items = Array.from({ length: 60 }, (_, i) => goalFixture({ id: `g-${i}` }));
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listGoals.handler(
+      { response_format: "json", limit: 10, offset: 0 },
+      client
+    );
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.has_more, true);
+    assert.equal(data.next_offset, 10);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // [stage-5] D1/D2 truncation + F1/F2 — paperclip_get_goal
 // ---------------------------------------------------------------------------
 describe("[stage-5] paperclip_get_goal — truncation + format", () => {

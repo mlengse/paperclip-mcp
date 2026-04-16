@@ -250,3 +250,74 @@ describe("[stage-5] paperclip_list_comments — truncation + format", () => {
     assert.deepEqual(parsed, comments);
   });
 });
+
+// ---------------------------------------------------------------------------
+// [stage-6] E1/E2/E3 pagination envelope — paperclip_list_comments
+// ---------------------------------------------------------------------------
+describe("[stage-6] paperclip_list_comments — pagination envelope", () => {
+  it("E1: default limit=50, offset=0 in envelope", async () => {
+    const items = Array.from({ length: 3 }, (_, i) => commentFixture({ id: `cmt-${i}` }));
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listComments.handler(
+      { issueId: "PAP-1", response_format: "json" },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.total, 3);
+    assert.equal(data.count, 3);
+    assert.equal(data.limit, 50);
+    assert.equal(data.offset, 0);
+    assert.equal(data.has_more, false);
+    assert.ok(Array.isArray(data.items));
+  });
+
+  it("E2: explicit limit=2, offset=1 reflected in envelope", async () => {
+    const items = Array.from({ length: 5 }, (_, i) => commentFixture({ id: `c-${i}` }));
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listComments.handler(
+      { issueId: "PAP-1", response_format: "json", limit: 2, offset: 1 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.total, 5);
+    assert.equal(data.count, 2);
+    assert.equal(data.limit, 2);
+    assert.equal(data.offset, 1);
+    assert.equal(data.has_more, true);
+    assert.equal(data.next_offset, 3);
+  });
+
+  it("E3: offset past end returns empty items with correct total", async () => {
+    const items = [commentFixture()];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listComments.handler(
+      { issueId: "PAP-1", response_format: "json", limit: 10, offset: 100 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.total, 1);
+    assert.equal(data.count, 0);
+    assert.deepEqual(data.items, []);
+  });
+
+  it("E4: after cursor wraps in envelope, total=filtered count", async () => {
+    const items = Array.from({ length: 5 }, (_, i) => commentFixture({ id: `c-${i}` }));
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listComments.handler(
+      { issueId: "PAP-1", response_format: "json", after: "c-1" },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    // after "c-1" means comments c-2, c-3, c-4 (3 items)
+    assert.equal(data.total, 3);
+    assert.ok(Array.isArray(data.items));
+  });
+});

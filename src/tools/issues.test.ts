@@ -1112,3 +1112,56 @@ describe("[stage-5] paperclip_get_heartbeat_context — format", () => {
     assert.deepEqual(parsed, ctx);
   });
 });
+
+// ---------------------------------------------------------------------------
+// [stage-6] E1/E2/E3 pagination envelope — paperclip_list_issues
+// ---------------------------------------------------------------------------
+describe("[stage-6] paperclip_list_issues — pagination envelope", () => {
+  it("E1: default limit=50, offset=0 in envelope", async () => {
+    const items = Array.from({ length: 3 }, (_, i) => issueFixture({ id: `issue-${i}` }));
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler({ response_format: "json" }, client);
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.total, 3);
+    assert.equal(data.count, 3);
+    assert.equal(data.limit, 50);
+    assert.equal(data.offset, 0);
+    assert.equal(data.has_more, false);
+    assert.ok(Array.isArray(data.items));
+  });
+
+  it("E2: explicit limit=5, offset=10 reflected in envelope", async () => {
+    const items = Array.from({ length: 20 }, (_, i) => issueFixture({ id: `i-${i}` }));
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler(
+      { response_format: "json", limit: 5, offset: 10 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.total, 20);
+    assert.equal(data.count, 5);
+    assert.equal(data.limit, 5);
+    assert.equal(data.offset, 10);
+    assert.equal(data.has_more, true);
+    assert.equal(data.next_offset, 15);
+  });
+
+  it("E3: offset past end returns empty items with correct total", async () => {
+    const items = [issueFixture()];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler(
+      { response_format: "json", limit: 10, offset: 100 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.total, 1);
+    assert.equal(data.count, 0);
+    assert.deepEqual(data.items, []);
+  });
+});

@@ -7,8 +7,67 @@ import {
   formatIssueList,
   formatDashboard,
   formatOrgChart,
+  paginate,
 } from "./format.js";
 import { CHARACTER_LIMIT } from "../constants.js";
+
+// ---------------------------------------------------------------------------
+// [stage-6] paginate helper
+// ---------------------------------------------------------------------------
+describe("[stage-6] paginate", () => {
+  it("E0a: empty list returns total=0, count=0, has_more=false", () => {
+    const result = paginate([], {});
+    assert.equal(result.total, 0);
+    assert.equal(result.count, 0);
+    assert.equal(result.has_more, false);
+    assert.equal(result.next_offset, undefined);
+    assert.deepEqual(result.items, []);
+  });
+
+  it("E0b: single page (items < limit) returns has_more=false", () => {
+    const items = [1, 2, 3];
+    const result = paginate(items, { limit: 50, offset: 0 });
+    assert.equal(result.total, 3);
+    assert.equal(result.count, 3);
+    assert.equal(result.has_more, false);
+    assert.equal(result.next_offset, undefined);
+    assert.deepEqual(result.items, [1, 2, 3]);
+  });
+
+  it("E0c: multi-page middle returns has_more=true, next_offset correct", () => {
+    const items = Array.from({ length: 100 }, (_, i) => i);
+    const result = paginate(items, { limit: 10, offset: 0 });
+    assert.equal(result.total, 100);
+    assert.equal(result.count, 10);
+    assert.equal(result.has_more, true);
+    assert.equal(result.next_offset, 10);
+  });
+
+  it("E0d: end of list (offset + limit > total) returns has_more=false", () => {
+    const items = Array.from({ length: 25 }, (_, i) => i);
+    const result = paginate(items, { limit: 10, offset: 20 });
+    assert.equal(result.total, 25);
+    assert.equal(result.count, 5);
+    assert.equal(result.has_more, false);
+    assert.equal(result.next_offset, undefined);
+  });
+
+  it("E0e: offset past end returns count=0, items=[]", () => {
+    const items = [1, 2, 3];
+    const result = paginate(items, { limit: 10, offset: 100 });
+    assert.equal(result.total, 3);
+    assert.equal(result.count, 0);
+    assert.equal(result.has_more, false);
+    assert.deepEqual(result.items, []);
+  });
+
+  it("E0f: limit and offset are reflected in the envelope", () => {
+    const items = Array.from({ length: 30 }, (_, i) => i);
+    const result = paginate(items, { limit: 10, offset: 20 });
+    assert.equal(result.limit, 10);
+    assert.equal(result.offset, 20);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // applyCharLimit
@@ -147,7 +206,7 @@ describe("formatIssueList", () => {
   });
 
   it("shows envelope stats when provided", () => {
-    const result = formatIssueList(issues, { total: 127, limit: 2, offset: 0 });
+    const result = formatIssueList(issues, { total: 127, count: 2, offset: 0 });
     assert.ok(result.includes("127"));
     assert.ok(result.includes("offset 0"));
   });

@@ -53,21 +53,26 @@ export function assertTruncated(result: ToolResult): void {
 
 /**
  * Assert the result body is a pagination envelope with the expected
- * total / limit / offset values. Use for Stage 6 list_* tests.
+ * total / limit / offset / count values. Use for Stage 6 list_* tests.
  */
 export function assertPaginationEnvelope(
   result: ToolResult,
-  expected: { total?: number; limit: number; offset: number }
+  expected: { total?: number; limit: number; offset: number; count?: number }
 ): void {
   assertSuccess(result);
   const data = JSON.parse(result.content[0]!.text);
   assert.equal(typeof data.total, "number", "envelope missing 'total' number");
   assert.equal(typeof data.limit, "number", "envelope missing 'limit' number");
   assert.equal(typeof data.offset, "number", "envelope missing 'offset' number");
+  assert.equal(typeof data.count, "number", "envelope missing 'count' number");
   assert.equal(typeof data.has_more, "boolean", "envelope missing 'has_more' boolean");
+  assert.ok(Array.isArray(data.items), "envelope missing 'items' array");
   assert.equal(data.limit, expected.limit, "limit mismatch");
   assert.equal(data.offset, expected.offset, "offset mismatch");
   if (expected.total !== undefined) {
     assert.equal(data.total, expected.total, "total mismatch");
+  }
+  if (expected.count !== undefined) {
+    assert.equal(data.count, expected.count, "count mismatch");
   }
 }
