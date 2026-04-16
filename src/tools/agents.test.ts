@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { McpError } from "@modelcontextprotocol/sdk/types.js";
 import { PaperclipClient } from "../client.js";
 import { agentTools } from "./agents.js";
+import { agentFixture } from "../test/helpers/fixtures.js";
 
 const TEST_AUTH = {
   apiKey: "test-jwt",
@@ -843,5 +844,60 @@ describe("[stage-2] paperclip_update_agent — A5: nested strict rejection", () 
       }
     );
     assert.equal(calls.length, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] D1/D2 truncation + F1/F2/F3 — paperclip_list_agents
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_list_agents — truncation + format", () => {
+  function largeAgentList(count: number) {
+    return Array.from({ length: count }, (_, i) =>
+      agentFixture({
+        id: `agent-${i + 1}`,
+        name: `Agent ${i + 1} ${"x".repeat(80)}`,
+        urlKey: `agent-${i + 1}`,
+      })
+    );
+  }
+
+  it("D1: response >25k chars is truncated with hint (json mode)", async () => {
+    const big = largeAgentList(300);
+    const { fn } = mockFetch(200, big);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listAgents.handler({ response_format: "json" }, client);
+    assert.equal(result.isError, undefined);
+    assert.ok(result.content[0]!.text.length < 26_000);
+    assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("D2: response ≤25k chars is not truncated (json mode)", async () => {
+    const small = [agentFixture()];
+    const { fn } = mockFetch(200, small);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listAgents.handler({ response_format: "json" }, client);
+    assert.ok(!result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, [agentFixture()]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listAgents.handler({}, client);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("F2: response_format: 'json' returns parseable JSON", async () => {
+    const { fn } = mockFetch(200, [agentFixture()]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listAgents.handler({ response_format: "json" }, client);
+    assert.doesNotThrow(() => JSON.parse(result.content[0]!.text));
+  });
+
+  it("F3: markdown path renders ## header for agent list", async () => {
+    const { fn } = mockFetch(200, [agentFixture({ name: "Test Agent" })]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listAgents.handler({ response_format: "markdown" }, client);
+    assert.match(result.content[0]!.text, /^##/m);
+    assert.ok(result.content[0]!.text.includes("Test Agent"));
   });
 });

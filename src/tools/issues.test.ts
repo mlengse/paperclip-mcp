@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { McpError } from "@modelcontextprotocol/sdk/types.js";
 import { PaperclipClient } from "../client.js";
 import { issueTools } from "./issues.js";
+import { largeIssueList, issueFixture } from "../test/helpers/fixtures.js";
 
 const TEST_AUTH = {
   apiKey: "test-jwt",
@@ -981,5 +982,80 @@ describe("paperclip_checkout_issue (PAP-123: auto-release stale executionRunId)"
       1,
       "must not retry checkout when release did not clear the lock"
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] D1/D2 truncation + F1/F2/F3 format tests — paperclip_list_issues
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_list_issues — truncation + format", () => {
+  it("D1: response >25k chars is truncated with hint (json mode)", async () => {
+    const big = largeIssueList(500);
+    const { fn } = mockFetch(200, big);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler({ response_format: "json" }, client);
+    assert.equal(result.isError, undefined);
+    assert.ok(result.content[0]!.text.length < 26_000);
+    assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("D2: response ≤25k chars is not truncated (json mode)", async () => {
+    const small = [issueFixture({ id: "issue-1" })];
+    const { fn } = mockFetch(200, small);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler({ response_format: "json" }, client);
+    assert.ok(!result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, [issueFixture()]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler({}, client);
+    assert.equal(result.content[0]!.type, "text");
+    // markdown output has headers or bullets
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("F2: response_format: 'json' returns parseable JSON", async () => {
+    const { fn } = mockFetch(200, [issueFixture()]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler({ response_format: "json" }, client);
+    assert.doesNotThrow(() => JSON.parse(result.content[0]!.text));
+  });
+
+  it("F3: markdown path renders ## header for issues list", async () => {
+    const { fn } = mockFetch(200, [issueFixture({ identifier: "PAP-99", title: "Test issue" })]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler({ response_format: "markdown" }, client);
+    assert.match(result.content[0]!.text, /^##/m);
+    assert.ok(result.content[0]!.text.includes("PAP-99"));
+  });
+
+  it("D1: markdown mode response >25k is also truncated", async () => {
+    const big = largeIssueList(500);
+    const { fn } = mockFetch(200, big);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler({ response_format: "markdown" }, client);
+    assert.ok(result.content[0]!.text.length < 26_000);
+    assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] D1/D2 truncation + F1/F2 — paperclip_get_issue
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_get_issue — truncation + format", () => {
+  it("F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, issueFixture());
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getIssue.handler({ issueId: "issue-1" }, client);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("F2: response_format: 'json' returns parseable JSON", async () => {
+    const { fn } = mockFetch(200, issueFixture());
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getIssue.handler({ issueId: "issue-1", response_format: "json" }, client);
+    assert.doesNotThrow(() => JSON.parse(result.content[0]!.text));
   });
 });
