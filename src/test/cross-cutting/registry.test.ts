@@ -94,11 +94,12 @@ describe("ALL_TOOLS registry — structural invariants", () => {
     );
   });
 
-  it("tool count is within expected bounds (≥84, ≤110)", () => {
+  it("tool count is within expected bounds (≥85, ≤110)", () => {
     // Lower bound guards against accidental deletions.
     // Upper bound guards against a Stage 8 typo duplicating a module.
     // Stage 8b adds 6 tools (delete_workspace + 5 company tools): 78 → 84.
-    assert.ok(ALL_TOOLS.length >= 84, `Expected at least 84 tools, got ${ALL_TOOLS.length}`);
+    // Stage 8c adds 1 tool (create_agent): 84 → 85.
+    assert.ok(ALL_TOOLS.length >= 85, `Expected at least 85 tools, got ${ALL_TOOLS.length}`);
     assert.ok(
       ALL_TOOLS.length <= 110,
       `Expected at most 110 tools, got ${ALL_TOOLS.length} — Stage 8 should land 103 total`
@@ -380,6 +381,7 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
     "paperclip_create_company",
     "paperclip_update_company",
     "paperclip_archive_company",
+    "paperclip_create_agent",
   ];
 
   it("board-only tools have '⚠ Board-only:' description prefix", () => {
@@ -466,6 +468,7 @@ describe("ALL_TOOLS registry — description quality", () => {
       "paperclip_create_company",
       "paperclip_update_company",
       "paperclip_archive_company",
+      "paperclip_create_agent",
     ];
     const bad: string[] = [];
     for (const name of boardOnlyTools) {
