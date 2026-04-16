@@ -162,7 +162,8 @@ export const commentTools: ToolDefinition[] = [
       try {
         const { issueId, commentId } = validate(GetCommentInput, args);
         const data = await client.get<unknown>(`/api/issues/${issueId}/comments/${commentId}`);
-        const hint = "Server response too large.";
+        const hint =
+          "Server response too large. This comment may have an unusually long body or attachment data.";
         return {
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
         };
