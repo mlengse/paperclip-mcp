@@ -513,6 +513,127 @@ describe("[stage-6] paperclip_list_projects — pagination envelope", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// [stage-8b] paperclip_delete_workspace
+// ---------------------------------------------------------------------------
+const deleteWorkspace = projectTools.find((t) => t.name === "paperclip_delete_workspace")!;
+
+describe("paperclip_delete_workspace", () => {
+  it("A1: calls DELETE /api/projects/{pid}/workspaces/{wid} and returns workspace object", async () => {
+    const deleted = {
+      id: "ws-1",
+      companyId: "company-1",
+      projectId: "proj-1",
+      name: "my-workspace",
+      sourceType: "local_path",
+      cwd: "/tmp/repo",
+      repoUrl: null,
+      isPrimary: true,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+    const { fn, calls } = mockFetch(200, deleted);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await deleteWorkspace.handler(
+      { projectId: "proj-1", workspaceId: "ws-1" },
+      client
+    );
+    assert.equal(calls[0]!.url, "http://localhost:3100/api/projects/proj-1/workspaces/ws-1");
+    assert.equal(calls[0]!.init.method, "DELETE");
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, deleted);
+  });
+
+  it("A4: rejects empty projectId (min 1 validation)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => deleteWorkspace.handler({ projectId: "", workspaceId: "ws-1" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A5: rejects unknown extra field (.strict())", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        deleteWorkspace.handler(
+          { projectId: "proj-1", workspaceId: "ws-1", unknownField: "x" },
+          client
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("B1: throws McpError when workspaceId is missing (validation failure, fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => deleteWorkspace.handler({ projectId: "proj-1" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("B2: throws McpError when projectId is missing (validation failure, fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => deleteWorkspace.handler({ workspaceId: "ws-1" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("C1: returns isError on 403 (board-only endpoint)", async () => {
+    const { fn } = mockFetch(403, { error: "Board access required" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await deleteWorkspace.handler(
+      { projectId: "proj-1", workspaceId: "ws-1" },
+      client
+    );
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("403"));
+  });
+
+  it("C2: returns isError on 404 (workspace not found)", async () => {
+    const { fn } = mockFetch(404, { error: "Workspace not found" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await deleteWorkspace.handler(
+      { projectId: "proj-1", workspaceId: "missing" },
+      client
+    );
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("404"));
+  });
+
+  it("C3: returns isError on 500 API error", async () => {
+    const { fn } = mockFetch(500, { error: "Internal Server Error" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await deleteWorkspace.handler(
+      { projectId: "proj-1", workspaceId: "ws-1" },
+      client
+    );
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("500"));
+  });
+});
+
 describe("[stage-6] paperclip_list_workspaces — pagination envelope", () => {
   it("E1: default limit=50, offset=0 in envelope", async () => {
     const items = [{ id: "ws-1", cwd: "/home/user/repo", projectId: "proj-1" }];
