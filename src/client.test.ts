@@ -226,4 +226,64 @@ describe("[stage-7] PaperclipClient — AbortSignal timeout", () => {
     assert.equal(signal.aborted, false);
     if (savedEnv !== undefined) process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"] = savedEnv;
   });
+
+  it("[stage-7] falls back to DEFAULT_TIMEOUT_MS when env var is non-numeric", () => {
+    const original = process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"];
+    process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"] = "abc";
+    try {
+      const client = new PaperclipClient(TEST_AUTH);
+      assert.equal(client.timeoutMs, 30_000, "non-numeric env var must fall back to 30_000ms");
+    } finally {
+      if (original === undefined) delete process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"];
+      else process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"] = original;
+    }
+  });
+
+  it("[stage-7] respects PAPERCLIP_REQUEST_TIMEOUT_MS env var when numeric", () => {
+    const original = process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"];
+    process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"] = "5000";
+    try {
+      const client = new PaperclipClient(TEST_AUTH);
+      assert.equal(client.timeoutMs, 5000, "valid numeric env var must be used as timeout");
+    } finally {
+      if (original === undefined) delete process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"];
+      else process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"] = original;
+    }
+  });
+
+  it("[stage-7] passes a signal in fetch init for PUT requests", async () => {
+    const calls: { url: string; init: RequestInit }[] = [];
+    const fn = async (url: string, init: RequestInit): Promise<Response> => {
+      calls.push({ url, init });
+      return new Response(JSON.stringify({}), {
+        status: 200,
+        headers: new Headers({ "Content-Type": "application/json" }),
+      });
+    };
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await client.put("/api/agents/agent-1/instructions", { path: "/agents/eng.md" });
+    assert.ok(
+      calls[0]!.init.signal instanceof AbortSignal,
+      "fetch init must include an AbortSignal for PUT"
+    );
+  });
+
+  it("[stage-7] passes a signal in fetch init for postForm requests", async () => {
+    const calls: { url: string; init: RequestInit }[] = [];
+    const fn = async (url: string, init: RequestInit): Promise<Response> => {
+      calls.push({ url, init });
+      return new Response(JSON.stringify({ url: "https://example.com/file" }), {
+        status: 200,
+        headers: new Headers({ "Content-Type": "application/json" }),
+      });
+    };
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const form = new FormData();
+    form.append("file", new Blob(["content"], { type: "text/plain" }), "test.txt");
+    await client.postForm("/api/attachments", form);
+    assert.ok(
+      calls[0]!.init.signal instanceof AbortSignal,
+      "fetch init must include an AbortSignal for postForm"
+    );
+  });
 });

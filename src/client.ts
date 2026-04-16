@@ -1,20 +1,24 @@
 import { getAuthConfig, type PaperclipAuth } from "./auth.js";
 import { PaperclipApiError } from "./errors.js";
+import { DEFAULT_TIMEOUT_MS } from "./constants.js";
 
 export type FetchFn = (url: string, init: RequestInit) => Promise<Response>;
-
-const DEFAULT_TIMEOUT_MS = 30_000;
 
 export class PaperclipClient {
   private auth: PaperclipAuth;
   private fetchFn: FetchFn;
-  private timeoutMs: number;
+  private _timeoutMs: number;
+
+  get timeoutMs(): number {
+    return this._timeoutMs;
+  }
 
   constructor(auth?: PaperclipAuth, fetchFn?: FetchFn) {
     this.auth = auth ?? getAuthConfig();
     this.fetchFn = fetchFn ?? ((url, init) => fetch(url, init));
     const envTimeout = process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"];
-    this.timeoutMs = envTimeout ? parseInt(envTimeout, 10) : DEFAULT_TIMEOUT_MS;
+    const parsed = envTimeout ? parseInt(envTimeout, 10) : NaN;
+    this._timeoutMs = Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_TIMEOUT_MS;
   }
 
   get companyId(): string {
