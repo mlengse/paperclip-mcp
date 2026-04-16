@@ -304,6 +304,8 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
     "paperclip_rollback_agent_config",
     "paperclip_update_agent", // replaces many fields
     "paperclip_update_agent_permissions",
+    "paperclip_set_agent_instructions_path", // writes config, alters agent behavior
+    "paperclip_sync_agent_skills", // removes skills not in desiredSkills list
     "paperclip_update_issue", // replaces many fields
     "paperclip_update_goal",
     "paperclip_update_project",
@@ -326,7 +328,7 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
   });
 
   const IDEMPOTENT_TOOLS = [
-    "paperclip_release_issue",
+    // paperclip_release_issue omitted — a double-release may return 409; verify in Stage 8b
     "paperclip_upsert_document",
     "paperclip_pause_agent",
     "paperclip_resume_agent",
