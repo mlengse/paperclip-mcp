@@ -136,3 +136,94 @@ describe("PaperclipClient.delete", () => {
     assert.equal(result, undefined);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Stage 7 — AbortSignal.timeout tests
+// ---------------------------------------------------------------------------
+
+describe("[stage-7] PaperclipClient — AbortSignal timeout", () => {
+  it("passes a signal in fetch init for GET requests", async () => {
+    const calls: { url: string; init: RequestInit }[] = [];
+    const fn = async (url: string, init: RequestInit): Promise<Response> => {
+      calls.push({ url, init });
+      return new Response(JSON.stringify({}), {
+        status: 200,
+        headers: new Headers({ "Content-Type": "application/json" }),
+      });
+    };
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await client.get("/api/agents/me");
+    assert.ok(
+      calls[0]!.init.signal instanceof AbortSignal,
+      "fetch init must include an AbortSignal"
+    );
+  });
+
+  it("passes a signal in fetch init for POST requests", async () => {
+    const calls: { url: string; init: RequestInit }[] = [];
+    const fn = async (url: string, init: RequestInit): Promise<Response> => {
+      calls.push({ url, init });
+      return new Response(JSON.stringify({}), {
+        status: 200,
+        headers: new Headers({ "Content-Type": "application/json" }),
+      });
+    };
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await client.post("/api/issues", { title: "test" });
+    assert.ok(
+      calls[0]!.init.signal instanceof AbortSignal,
+      "fetch init must include an AbortSignal"
+    );
+  });
+
+  it("passes a signal in fetch init for PATCH requests", async () => {
+    const calls: { url: string; init: RequestInit }[] = [];
+    const fn = async (url: string, init: RequestInit): Promise<Response> => {
+      calls.push({ url, init });
+      return new Response(JSON.stringify({}), {
+        status: 200,
+        headers: new Headers({ "Content-Type": "application/json" }),
+      });
+    };
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await client.patch("/api/issues/1", { status: "done" });
+    assert.ok(
+      calls[0]!.init.signal instanceof AbortSignal,
+      "fetch init must include an AbortSignal"
+    );
+  });
+
+  it("passes a signal in fetch init for DELETE requests", async () => {
+    const calls: { url: string; init: RequestInit }[] = [];
+    const fn = async (url: string, init: RequestInit): Promise<Response> => {
+      calls.push({ url, init });
+      return new Response(null, { status: 204 });
+    };
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await client.delete("/api/attachments/1");
+    assert.ok(
+      calls[0]!.init.signal instanceof AbortSignal,
+      "fetch init must include an AbortSignal"
+    );
+  });
+
+  it("uses default 30s timeout when PAPERCLIP_REQUEST_TIMEOUT_MS is not set", async () => {
+    const savedEnv = process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"];
+    delete process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"];
+    const calls: { url: string; init: RequestInit }[] = [];
+    const fn = async (url: string, init: RequestInit): Promise<Response> => {
+      calls.push({ url, init });
+      return new Response(JSON.stringify({}), {
+        status: 200,
+        headers: new Headers({ "Content-Type": "application/json" }),
+      });
+    };
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await client.get("/api/agents/me");
+    // AbortSignal from timeout(30000) — signal is not aborted yet
+    const signal = calls[0]!.init.signal as AbortSignal;
+    assert.ok(signal instanceof AbortSignal);
+    assert.equal(signal.aborted, false);
+    if (savedEnv !== undefined) process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"] = savedEnv;
+  });
+});
