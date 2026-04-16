@@ -94,10 +94,11 @@ describe("ALL_TOOLS registry — structural invariants", () => {
     );
   });
 
-  it("tool count is within expected bounds (≥78, ≤110)", () => {
+  it("tool count is within expected bounds (≥84, ≤110)", () => {
     // Lower bound guards against accidental deletions.
     // Upper bound guards against a Stage 8 typo duplicating a module.
-    assert.ok(ALL_TOOLS.length >= 78, `Expected at least 78 tools, got ${ALL_TOOLS.length}`);
+    // Stage 8b adds 6 tools (delete_workspace + 5 company tools): 78 → 84.
+    assert.ok(ALL_TOOLS.length >= 84, `Expected at least 84 tools, got ${ALL_TOOLS.length}`);
     assert.ok(
       ALL_TOOLS.length <= 110,
       `Expected at most 110 tools, got ${ALL_TOOLS.length} — Stage 8 should land 103 total`
@@ -287,6 +288,8 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
     "paperclip_list_labels",
     "paperclip_list_approval_issues",
     "paperclip_get_current_user",
+    "paperclip_list_companies",
+    "paperclip_get_company",
   ];
 
   it("read-only tools have readOnlyHint: true", () => {
@@ -318,6 +321,9 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
     "paperclip_approve",
     "paperclip_reject",
     "paperclip_revoke_current_session",
+    "paperclip_delete_workspace",
+    "paperclip_update_company",
+    "paperclip_archive_company",
   ];
 
   it("destructive tools have destructiveHint: true", () => {
@@ -343,6 +349,7 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
     "paperclip_update_agent_permissions",
     "paperclip_update_routine",
     "paperclip_update_routine_trigger",
+    "paperclip_update_company",
   ];
 
   it("idempotent tools have idempotentHint: true", () => {
@@ -367,6 +374,12 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
     "paperclip_request_revision",
     "paperclip_get_current_user",
     "paperclip_revoke_current_session",
+    "paperclip_delete_workspace",
+    "paperclip_list_companies",
+    "paperclip_get_company",
+    "paperclip_create_company",
+    "paperclip_update_company",
+    "paperclip_archive_company",
   ];
 
   it("board-only tools have '⚠ Board-only:' description prefix", () => {
@@ -447,6 +460,12 @@ describe("ALL_TOOLS registry — description quality", () => {
       "paperclip_request_revision",
       "paperclip_get_current_user",
       "paperclip_revoke_current_session",
+      "paperclip_delete_workspace",
+      "paperclip_list_companies",
+      "paperclip_get_company",
+      "paperclip_create_company",
+      "paperclip_update_company",
+      "paperclip_archive_company",
     ];
     const bad: string[] = [];
     for (const name of boardOnlyTools) {
