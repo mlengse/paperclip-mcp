@@ -3,13 +3,18 @@ import { PaperclipApiError } from "./errors.js";
 
 export type FetchFn = (url: string, init: RequestInit) => Promise<Response>;
 
+const DEFAULT_TIMEOUT_MS = 30_000;
+
 export class PaperclipClient {
   private auth: PaperclipAuth;
   private fetchFn: FetchFn;
+  private timeoutMs: number;
 
   constructor(auth?: PaperclipAuth, fetchFn?: FetchFn) {
     this.auth = auth ?? getAuthConfig();
     this.fetchFn = fetchFn ?? ((url, init) => fetch(url, init));
+    const envTimeout = process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"];
+    this.timeoutMs = envTimeout ? parseInt(envTimeout, 10) : DEFAULT_TIMEOUT_MS;
   }
 
   get companyId(): string {
@@ -36,6 +41,7 @@ export class PaperclipClient {
     const response = await this.fetchFn(`${this.auth.apiUrl}${path}`, {
       method: "GET",
       headers: this.buildHeaders(),
+      signal: AbortSignal.timeout(this.timeoutMs),
     });
     return this.handleResponse<T>(response);
   }
@@ -45,6 +51,7 @@ export class PaperclipClient {
       method: "POST",
       headers: this.buildHeaders(runId),
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(this.timeoutMs),
     });
     return this.handleResponse<T>(response);
   }
@@ -54,6 +61,7 @@ export class PaperclipClient {
       method: "PATCH",
       headers: this.buildHeaders(runId),
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(this.timeoutMs),
     });
     return this.handleResponse<T>(response);
   }
@@ -63,6 +71,7 @@ export class PaperclipClient {
       method: "PUT",
       headers: this.buildHeaders(runId),
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(this.timeoutMs),
     });
     return this.handleResponse<T>(response);
   }
@@ -79,6 +88,7 @@ export class PaperclipClient {
       method: "POST",
       headers,
       body: form,
+      signal: AbortSignal.timeout(this.timeoutMs),
     });
     return this.handleResponse<T>(response);
   }
@@ -87,6 +97,7 @@ export class PaperclipClient {
     const response = await this.fetchFn(`${this.auth.apiUrl}${path}`, {
       method: "DELETE",
       headers: this.buildHeaders(runId),
+      signal: AbortSignal.timeout(this.timeoutMs),
     });
     return this.handleResponse<T>(response);
   }
