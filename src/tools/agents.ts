@@ -206,6 +206,35 @@ const SetInstructionsPathInput = z
   })
   .strict();
 
+const WakeupAgentInput = z
+  .object({
+    agentId: z.string().min(1).describe("Agent UUID to wake up"),
+    source: z
+      .enum(["timer", "assignment", "on_demand", "automation"])
+      .optional()
+      .describe("Invocation source (default: on_demand)"),
+    triggerDetail: z
+      .enum(["manual", "ping", "callback", "system"])
+      .optional()
+      .describe("Trigger detail qualifier (default: manual)"),
+    reason: z.string().nullable().optional().describe("Human-readable reason for the wakeup"),
+    payload: z
+      .record(z.string(), z.unknown())
+      .nullable()
+      .optional()
+      .describe("Arbitrary JSON payload passed to the agent session"),
+    idempotencyKey: z
+      .string()
+      .nullable()
+      .optional()
+      .describe("Idempotency key — same key within 60s returns the existing run"),
+    forceFreshSession: z
+      .boolean()
+      .optional()
+      .describe("Start a new session even if one is already active"),
+  })
+  .strict();
+
 const jsonArrayPreprocess = (v: unknown) => (typeof v === "string" ? JSON.parse(v) : v);
 
 const SyncAgentSkillsInput = z
@@ -875,6 +904,54 @@ export const agentTools: ToolDefinition[] = [
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err, { tool: "paperclip_list_company_skills" });
+      }
+    },
+  },
+  {
+    name: "paperclip_wakeup_agent",
+    description: composeDescription({
+      summary: "Wake up an agent by invoking a wakeup request on-demand.",
+      args: [
+        '- agentId: string — Agent UUID (example: "agt_abc123")',
+        '- source: "timer"|"assignment"|"on_demand"|"automation" (optional) — Invocation source',
+        '- triggerDetail: "manual"|"ping"|"callback"|"system" (optional) — Trigger qualifier',
+        "- reason: string|null (optional) — Human-readable reason for the wakeup",
+        "- payload: object|null (optional) — Arbitrary JSON passed to the agent session",
+        "- idempotencyKey: string|null (optional) — Same key within 60s returns existing run",
+        "- forceFreshSession: boolean (optional) — Force a new session even if one is active",
+      ],
+      returns:
+        "Heartbeat run object { id, agentId, companyId, status, invocationSource, triggerDetail, startedAt, createdAt } OR { status: 'skipped' } if the agent is already running or paused.",
+      examples: {
+        useWhen: "triggering an agent to process a new assignment or respond to an @-mention",
+        dontUseWhen:
+          "the agent has a scheduled heartbeat and will fire on its own — use paperclip_invoke_heartbeat for scheduled agents",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: agent not found → verify ID with paperclip_list_agents",
+        "- 409: agent already running → check returned { status: 'skipped' } response",
+      ],
+    }),
+    inputSchema: toJsonSchema(WakeupAgentInput),
+    annotations: { title: "Wake up agent on demand", destructiveHint: false, openWorldHint: false },
+    async handler(args, client) {
+      try {
+        const input = validate(WakeupAgentInput, args);
+        const body: Record<string, unknown> = {};
+        if (input.source !== undefined) body.source = input.source;
+        if (input.triggerDetail !== undefined) body.triggerDetail = input.triggerDetail;
+        if (input.reason !== undefined) body.reason = input.reason;
+        if (input.payload !== undefined) body.payload = input.payload;
+        if (input.idempotencyKey !== undefined) body.idempotencyKey = input.idempotencyKey;
+        if (input.forceFreshSession !== undefined) body.forceFreshSession = input.forceFreshSession;
+        const data = await client.post<unknown>(`/api/agents/${input.agentId}/wakeup`, body);
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
+      } catch (err) {
+        return handleApiError(err, { tool: "paperclip_wakeup_agent", resource: "agent" });
       }
     },
   },
