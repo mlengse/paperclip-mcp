@@ -1,3 +1,71 @@
+## [1.2.5](https://github.com/bruhsb/paperclip-mcp/compare/v1.2.4...v1.2.5) (2026-04-10)
+
+
+### Bug Fixes
+
+* **identity:** call agent-scoped endpoints directly, drop /api/agents/me priority (PAP-128) ([8028de8](https://github.com/bruhsb/paperclip-mcp/commit/8028de8147c6bf8310dfba12416d65e3fa21ef67))
+
+## [1.2.4](https://github.com/bruhsb/paperclip-mcp/compare/v1.2.3...v1.2.4) (2026-04-10)
+
+
+### Bug Fixes
+
+* **checkout:** detect stale executionRunId post-release and surface descriptive error (PAP-125) ([cfcaaa4](https://github.com/bruhsb/paperclip-mcp/commit/cfcaaa456dfc05e24cb4454ce2528146a07be8b5))
+
+## [1.2.3](https://github.com/bruhsb/paperclip-mcp/compare/v1.2.2...v1.2.3) (2026-04-10)
+
+
+### Bug Fixes
+
+* **agents:** add regression tests for non-existent UUID in paperclip_get_agent (PAP-119) ([10344bc](https://github.com/bruhsb/paperclip-mcp/commit/10344bc5710883c813bc433efb89da8d8d91b43d))
+* **agents:** pass companyId query param on paperclip_get_agent to avoid 422 (PAP-119) ([4ebf258](https://github.com/bruhsb/paperclip-mcp/commit/4ebf258c52551fcf12edbb733bc23da28f838ab5))
+* **issues:** accept labelIds and expectedStatuses as JSON-string (PAP-120) ([2fc34f3](https://github.com/bruhsb/paperclip-mcp/commit/2fc34f337f2b82b50c0b16cdb2f5e71a4bf42ad1))
+* **issues:** auto-release stale executionRunId before retrying 409 in paperclip_checkout_issue (PAP-123) ([ce537e5](https://github.com/bruhsb/paperclip-mcp/commit/ce537e56b97def65ffcf63b634d6692ac8f53a5f))
+* **issues:** restore preprocess fix lost in lint-staged race (PAP-120) ([f3a86a0](https://github.com/bruhsb/paperclip-mcp/commit/f3a86a0cf9861c781ba22a3da25b661c29c15d68))
+
+## [1.2.2](https://github.com/bruhsb/paperclip-mcp/compare/v1.2.1...v1.2.2) (2026-04-10)
+
+
+### Bug Fixes
+
+* **identity:** fall back to agent-id endpoint when /api/agents/me returns 401 (PAP-117) ([3c095bb](https://github.com/bruhsb/paperclip-mcp/commit/3c095bb260007185b6d248c7ef2726b53c966500))
+
+## [1.2.1](https://github.com/bruhsb/paperclip-mcp/compare/v1.2.0...v1.2.1) (2026-04-10)
+
+
+### Bug Fixes
+
+* **errors:** include response body in PaperclipApiError message (PAP-116) ([bd6a3b3](https://github.com/bruhsb/paperclip-mcp/commit/bd6a3b3a303da04d88e22c348d48d07a94ed2c44))
+
+# [1.2.0](https://github.com/bruhsb/paperclip-mcp/compare/v1.1.0...v1.2.0) (2026-04-10)
+
+
+### Bug Fixes
+
+* **activity:** add required occurredAt field to paperclip_report_cost_event (PAP-95) ([0fdb994](https://github.com/bruhsb/paperclip-mcp/commit/0fdb994cb8569e6c8567cf20018d19bd9259fadf))
+* **approvals:** correct paperclip_get_approval description to remove false linked-issues claim (PAP-85) ([758f0f5](https://github.com/bruhsb/paperclip-mcp/commit/758f0f58e8205c6828607131c5c2dd7fe62a9c40))
+* **approvals:** send type+payload instead of title+description to POST /approvals (PAP-84) ([7888350](https://github.com/bruhsb/paperclip-mcp/commit/788835084921445758ce84583b310ba4f3e3338f))
+* **comments:** implement client-side after-cursor workaround for broken server param (PAP-88) ([fed09fa](https://github.com/bruhsb/paperclip-mcp/commit/fed09fad8f0ec220155bfbf6a3e34d28e1bc6f98))
+* **documents:** mark paperclip_delete_document as boardOnlyHint (PAP-96) ([2a531ce](https://github.com/bruhsb/paperclip-mcp/commit/2a531ce0e7cfc576ffce9b32d6e515ab3dcdf78a))
+* **issues:** inject agentId in paperclip_checkout_issue POST body (PAP-101) ([2a13441](https://github.com/bruhsb/paperclip-mcp/commit/2a13441c18b384c54ebcd934ebba304ab75f45fb))
+* **pre-commit:** stage README.md in regression test so lint-staged actually runs (PAP-107) ([15e6fb8](https://github.com/bruhsb/paperclip-mcp/commit/15e6fb8a15ecb7071556f248063c4b309437e50a))
+
+
+### Features
+
+* **activity:** add paperclip_report_cost_event tool (PAP-87) ([ba0f10c](https://github.com/bruhsb/paperclip-mcp/commit/ba0f10cea45f3f3f231b76491e6b0266a857e015))
+* **comments:** add paperclip_get_comment tool for GET /api/issues/{id}/comments/{commentId} (PAP-86) ([295bfeb](https://github.com/bruhsb/paperclip-mcp/commit/295bfeb543ec84c7dbe9199620c240015c7aeb98))
+* **labels:** add paperclip_list_labels, paperclip_create_label, and labelIds support on issues (PAP-99) ([77c8a74](https://github.com/bruhsb/paperclip-mcp/commit/77c8a74df66253a03807f969a49686a5b3adc9ad))
+
+# [1.1.0](https://github.com/bruhsb/paperclip-mcp/compare/v1.0.0...v1.1.0) (2026-04-10)
+
+
+### Features
+
+* **documents:** add .describe() to Zod schema fields (PAP-72) ([947800d](https://github.com/bruhsb/paperclip-mcp/commit/947800da7b5b3f724eb953c0d74b61588b31d99e))
+* **release:** implement semantic-release for automated versioning (PAP-76) ([4093f34](https://github.com/bruhsb/paperclip-mcp/commit/4093f3457389998fb78f2a71c4a188616b84ceba))
+* **tooling:** add husky + lint-staged pre-commit hooks (PAP-74) ([56ff366](https://github.com/bruhsb/paperclip-mcp/commit/56ff366a373e4a9a554ebec665e25fc7c7781b1d))
+
 # Changelog
 
 All notable changes to this project will be documented in this file. This file is auto-generated by [semantic-release](https://github.com/semantic-release/semantic-release).
