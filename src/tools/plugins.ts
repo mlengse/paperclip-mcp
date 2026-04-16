@@ -148,7 +148,8 @@ export const pluginTools: ToolDefinition[] = [
       try {
         const { pluginKey, response_format: fmt } = validate(GetPluginInput, args);
         const data = await client.get<unknown>(`/api/plugins/${encodeURIComponent(pluginKey)}`);
-        const text = (fmt ?? "markdown") === "json" ? formatJson(data) : formatJson(data);
+        const text =
+          (fmt ?? "markdown") === "json" ? formatJson(data) : formatGenericList([data], "Plugin");
         const hint = "Plugin response too large; use response_format='json' for structured output.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
