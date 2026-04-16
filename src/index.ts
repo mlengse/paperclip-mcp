@@ -2,7 +2,6 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { registerAllTools } from "./tools/index.js";
-export { SERVER_VERSION } from "./version.js";
 import { SERVER_VERSION } from "./version.js";
 
 const server = new Server(
