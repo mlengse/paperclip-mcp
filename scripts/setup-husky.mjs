@@ -5,6 +5,8 @@ import { spawnSync } from "node:child_process";
 const isWindows = process.platform === "win32";
 const bin = `node_modules/.bin/husky${isWindows ? ".cmd" : ""}`;
 if (existsSync(bin)) {
-  const result = spawnSync(bin, [], { stdio: "inherit" });
-  if (result.status) process.exit(result.status);
+  const result = spawnSync(bin, ["install"], { stdio: "inherit" });
+  if (result.error || result.status) {
+    console.error("Warning: husky install failed; continuing without Git hooks.");
+  }
 }
