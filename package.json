@@ -29,8 +29,8 @@
   "homepage": "https://github.com/bruhsb/paperclip-mcp#readme",
   "scripts": {
     "build": "tsc && shx chmod +x dist/*.js",
-    "prepare": "npm run build && ([ -f node_modules/.bin/husky ] && husky || true) && bash scripts/check-no-raw-inputschema.sh",
-    "check:no-raw-inputschema": "bash scripts/check-no-raw-inputschema.sh",
+    "prepare": "npm run build && node scripts/setup-husky.mjs",
+    "check:no-raw-inputschema": "node scripts/check-no-raw-inputschema.mjs",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "lint": "eslint src",
