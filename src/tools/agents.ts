@@ -1067,7 +1067,7 @@ export const agentTools: ToolDefinition[] = [
     name: "paperclip_create_agent",
     description: composeDescription({
       summary:
-        "⚠ Board-only: direct creation; agent-initiated hires go through paperclip_create_agent_hire.",
+        "Directly create an agent; prefer paperclip_create_agent_hire for approval-flow hires.",
       args: [
         "- companyId: string — Company UUID (required)",
         "- name: string — Display name (required, min 1 char)",
