@@ -22,6 +22,23 @@ const IncludeSchema = z
   .strict();
 
 /**
+ * Target object specifying where the import should be applied.
+ * `mode` must be "existing_company"; `companyId` must match the path param.
+ */
+const TargetSchema = z
+  .object({
+    mode: z
+      .enum(["existing_company", "new_company"])
+      .describe("Import mode: 'existing_company' applies into an existing company"),
+    companyId: z
+      .string()
+      .min(1)
+      .describe("Target company UUID (must match the companyId path parameter)"),
+  })
+  .strict()
+  .describe("Import destination");
+
+/**
  * Source union for import operations.
  * - `inline`: caller provides the bundle in-memory (rootPath + files map).
  * - `github`: API fetches the bundle from the given GitHub repository URL.
@@ -86,6 +103,7 @@ const PreviewCompanyImportInput = z
     include: IncludeSchema.describe(
       "Which resource types to consider during the import (company, agents, projects, issues, skills)"
     ),
+    target: TargetSchema,
     agents: z
       .union([z.literal("all"), z.array(z.string())])
       .default("all")
@@ -103,7 +121,11 @@ const PreviewCompanyImportInput = z
         "Subset of file paths from the bundle to process (omit for all files in the bundle)"
       ),
   })
-  .strict();
+  .strict()
+  .refine((v) => v.target.companyId === v.companyId, {
+    message: "target.companyId must match the top-level companyId path parameter",
+    path: ["target", "companyId"],
+  });
 
 const ApplyCompanyImportInput = z
   .object({
@@ -114,6 +136,7 @@ const ApplyCompanyImportInput = z
     include: IncludeSchema.describe(
       "Which resource types to apply (company, agents, projects, issues, skills)"
     ),
+    target: TargetSchema,
     agents: z
       .union([z.literal("all"), z.array(z.string())])
       .default("all")
@@ -135,7 +158,11 @@ const ApplyCompanyImportInput = z
         "Adapter-specific overrides map from the preview step (key: adapter name, value: override config)"
       ),
   })
-  .strict();
+  .strict()
+  .refine((v) => v.target.companyId === v.companyId, {
+    message: "target.companyId must match the top-level companyId path parameter",
+    path: ["target", "companyId"],
+  });
 
 // ---------------------------------------------------------------------------
 // Tool definitions
@@ -210,6 +237,7 @@ export const companyImportTools: ToolDefinition[] = [
         "- companyId: string — Target company UUID",
         "- source: union — { type: 'inline', rootPath: string, files: Record<string,string> } or { type: 'github', url: string }",
         "- include: object — Which resource types to preview (company, agents, projects, issues, skills)",
+        "- target: object — { mode: 'existing_company' | 'new_company', companyId: string } — must match the top-level companyId",
         "- agents: 'all' | string[] (optional) — Which agents to import (default: 'all')",
         "- collisionStrategy: 'rename' | 'skip' | 'replace' (optional) — Collision handling (default: rename)",
         "- selectedFiles: string[] (optional) — Subset of bundle files to process",
@@ -237,12 +265,10 @@ export const companyImportTools: ToolDefinition[] = [
     },
     async handler(args, client) {
       try {
-        const { companyId, source, include, agents, collisionStrategy, selectedFiles } = validate(
-          PreviewCompanyImportInput,
-          args
-        );
+        const { companyId, source, include, target, agents, collisionStrategy, selectedFiles } =
+          validate(PreviewCompanyImportInput, args);
 
-        const body: Record<string, unknown> = { source, include };
+        const body: Record<string, unknown> = { source, include, target };
         if (agents !== undefined) body.agents = agents;
         if (collisionStrategy !== undefined) body.collisionStrategy = collisionStrategy;
         if (selectedFiles !== undefined) body.selectedFiles = selectedFiles;
@@ -272,13 +298,14 @@ export const companyImportTools: ToolDefinition[] = [
         "- companyId: string — Target company UUID",
         "- source: union — { type: 'inline', rootPath: string, files: Record<string,string> } or { type: 'github', url: string }",
         "- include: object — Which resource types to apply (company, agents, projects, issues, skills)",
-        "- agents: 'all' | string[] (optional) — Which agents to import (default: 'all')",
-        "- collisionStrategy: 'rename' | 'skip' | 'replace' (optional) — Collision handling (default: rename)",
+        "- target: object — { mode: 'existing_company'|'new_company', companyId: string } — must match top-level companyId",
+        "- agents: 'all' | string[] (optional) — Agents to import (default: 'all')",
+        "- collisionStrategy: 'rename'|'skip'|'replace' (optional) — Collision handling (default: rename)",
         "- selectedFiles: string[] (optional) — Subset of bundle files to apply",
-        "- adapterOverrides: Record<string,unknown> (optional) — Adapter overrides from preview step",
+        "- adapterOverrides: Record<string,unknown> (optional) — Adapter overrides from the preview",
       ],
       returns:
-        "Import result counts (JSON only): { insertedAgents, insertedProjects, insertedIssues, insertedSkills, warnings }. This operation is destructive — it writes new records into the company.",
+        "Import result counts (JSON only): { insertedAgents, insertedProjects, insertedIssues, insertedSkills, warnings }. Destructive — writes new records.",
       examples: {
         useWhen:
           "applying a validated import bundle; run paperclip_preview_company_import first to inspect changes",
@@ -305,13 +332,14 @@ export const companyImportTools: ToolDefinition[] = [
           companyId,
           source,
           include,
+          target,
           agents,
           collisionStrategy,
           selectedFiles,
           adapterOverrides,
         } = validate(ApplyCompanyImportInput, args);
 
-        const body: Record<string, unknown> = { source, include };
+        const body: Record<string, unknown> = { source, include, target };
         if (agents !== undefined) body.agents = agents;
         if (collisionStrategy !== undefined) body.collisionStrategy = collisionStrategy;
         if (selectedFiles !== undefined) body.selectedFiles = selectedFiles;

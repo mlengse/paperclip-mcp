@@ -112,6 +112,11 @@ const githubSource = {
   url: "https://github.com/org/repo",
 };
 
+const defaultTarget = {
+  mode: "existing_company" as const,
+  companyId: "company-1",
+};
+
 // ---------------------------------------------------------------------------
 // Tool handles
 // ---------------------------------------------------------------------------
@@ -270,7 +275,7 @@ describe("paperclip_export_company", () => {
 // paperclip_preview_company_import
 // ===========================================================================
 describe("paperclip_preview_company_import", () => {
-  it("A1: calls POST /api/companies/{id}/imports/preview with inline source", async () => {
+  it("A1: calls POST /api/companies/{id}/imports/preview with inline source and target", async () => {
     const preview = previewFixture();
     const { fn, calls } = mockFetch(200, preview);
     const client = new PaperclipClient(TEST_AUTH, fn);
@@ -279,6 +284,7 @@ describe("paperclip_preview_company_import", () => {
         companyId: "company-1",
         source: inlineSource,
         include: includeAll,
+        target: defaultTarget,
       },
       client
     );
@@ -287,6 +293,7 @@ describe("paperclip_preview_company_import", () => {
     const body = JSON.parse(calls[0]!.init.body as string);
     assert.equal(body.source.type, "inline");
     assert.deepEqual(body.include, includeAll);
+    assert.deepEqual(body.target, defaultTarget);
     const parsed = JSON.parse(result.content[0]!.text);
     assert.ok("agents" in parsed);
   });
@@ -295,7 +302,12 @@ describe("paperclip_preview_company_import", () => {
     const { fn, calls } = mockFetch(200, previewFixture());
     const client = new PaperclipClient(TEST_AUTH, fn);
     await previewImport.handler(
-      { companyId: "c1", source: githubSource, include: includeAll },
+      {
+        companyId: "c1",
+        source: githubSource,
+        include: includeAll,
+        target: { mode: "existing_company", companyId: "c1" },
+      },
       client
     );
     const body = JSON.parse(calls[0]!.init.body as string);
@@ -307,7 +319,13 @@ describe("paperclip_preview_company_import", () => {
     const { fn: fn1, calls: calls1 } = mockFetch(200, previewFixture());
     const client1 = new PaperclipClient(TEST_AUTH, fn1);
     await previewImport.handler(
-      { companyId: "c1", source: inlineSource, include: includeAll, agents: "all" },
+      {
+        companyId: "c1",
+        source: inlineSource,
+        include: includeAll,
+        target: { mode: "existing_company", companyId: "c1" },
+        agents: "all",
+      },
       client1
     );
     const body1 = JSON.parse(calls1[0]!.init.body as string);
@@ -316,7 +334,13 @@ describe("paperclip_preview_company_import", () => {
     const { fn: fn2, calls: calls2 } = mockFetch(200, previewFixture());
     const client2 = new PaperclipClient(TEST_AUTH, fn2);
     await previewImport.handler(
-      { companyId: "c1", source: inlineSource, include: includeAll, agents: ["agent-1"] },
+      {
+        companyId: "c1",
+        source: inlineSource,
+        include: includeAll,
+        target: { mode: "existing_company", companyId: "c1" },
+        agents: ["agent-1"],
+      },
       client2
     );
     const body2 = JSON.parse(calls2[0]!.init.body as string);
@@ -333,6 +357,7 @@ describe("paperclip_preview_company_import", () => {
             companyId: "c1",
             source: inlineSource,
             include: includeAll,
+            target: { mode: "existing_company", companyId: "c1" },
             collisionStrategy: "destroy",
           },
           client
@@ -345,7 +370,7 @@ describe("paperclip_preview_company_import", () => {
     assert.equal(calls.length, 0);
   });
 
-  it("A5: rejects extra field on inline source (.strict())", async () => {
+  it("A5: rejects missing target (required field)", async () => {
     const { fn, calls } = mockFetch(200, {});
     const client = new PaperclipClient(TEST_AUTH, fn);
     await assert.rejects(
@@ -353,7 +378,7 @@ describe("paperclip_preview_company_import", () => {
         previewImport.handler(
           {
             companyId: "c1",
-            source: { ...inlineSource, unknownField: "x" },
+            source: inlineSource,
             include: includeAll,
           },
           client
@@ -366,7 +391,51 @@ describe("paperclip_preview_company_import", () => {
     assert.equal(calls.length, 0);
   });
 
-  it("A5b: rejects source without discriminator type", async () => {
+  it("A5b: rejects target.companyId mismatch with top-level companyId (.refine())", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        previewImport.handler(
+          {
+            companyId: "c1",
+            source: inlineSource,
+            include: includeAll,
+            target: { mode: "existing_company", companyId: "different-company" },
+          },
+          client
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A5c: rejects extra field on inline source (.strict())", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        previewImport.handler(
+          {
+            companyId: "c1",
+            source: { ...inlineSource, unknownField: "x" },
+            include: includeAll,
+            target: { mode: "existing_company", companyId: "c1" },
+          },
+          client
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A5d: rejects source without discriminator type", async () => {
     const { fn, calls } = mockFetch(200, {});
     const client = new PaperclipClient(TEST_AUTH, fn);
     await assert.rejects(
@@ -376,6 +445,7 @@ describe("paperclip_preview_company_import", () => {
             companyId: "c1",
             source: { rootPath: "test", files: {} },
             include: includeAll,
+            target: { mode: "existing_company", companyId: "c1" },
           },
           client
         ),
@@ -417,7 +487,12 @@ describe("paperclip_preview_company_import", () => {
     const { fn } = mockFetch(400, { message: "Invalid import bundle" });
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await previewImport.handler(
-      { companyId: "c1", source: inlineSource, include: includeAll },
+      {
+        companyId: "c1",
+        source: inlineSource,
+        include: includeAll,
+        target: { mode: "existing_company", companyId: "c1" },
+      },
       client
     );
     assert.equal(result.isError, true);
@@ -428,7 +503,12 @@ describe("paperclip_preview_company_import", () => {
     const { fn } = mockFetch(403, { error: "Board access required" });
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await previewImport.handler(
-      { companyId: "c1", source: inlineSource, include: includeAll },
+      {
+        companyId: "c1",
+        source: inlineSource,
+        include: includeAll,
+        target: { mode: "existing_company", companyId: "c1" },
+      },
       client
     );
     assert.equal(result.isError, true);
@@ -439,7 +519,12 @@ describe("paperclip_preview_company_import", () => {
     const { fn } = mockFetch(500, { error: "Server error" });
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await previewImport.handler(
-      { companyId: "c1", source: inlineSource, include: includeAll },
+      {
+        companyId: "c1",
+        source: inlineSource,
+        include: includeAll,
+        target: { mode: "existing_company", companyId: "c1" },
+      },
       client
     );
     assert.equal(result.isError, true);
@@ -456,7 +541,12 @@ describe("paperclip_preview_company_import", () => {
     const { fn } = mockFetch(200, bigPayload);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await previewImport.handler(
-      { companyId: "c1", source: inlineSource, include: includeAll },
+      {
+        companyId: "c1",
+        source: inlineSource,
+        include: includeAll,
+        target: { mode: "existing_company", companyId: "c1" },
+      },
       client
     );
     assert.ok(result.content[0]!.text.length <= 25_000);
@@ -468,7 +558,7 @@ describe("paperclip_preview_company_import", () => {
 // paperclip_apply_company_import
 // ===========================================================================
 describe("paperclip_apply_company_import", () => {
-  it("A1: calls POST /api/companies/{id}/imports/apply with inline source", async () => {
+  it("A1: calls POST /api/companies/{id}/imports/apply with inline source and target", async () => {
     const applied = applyFixture();
     const { fn, calls } = mockFetch(200, applied);
     const client = new PaperclipClient(TEST_AUTH, fn);
@@ -477,6 +567,7 @@ describe("paperclip_apply_company_import", () => {
         companyId: "company-1",
         source: inlineSource,
         include: includeAll,
+        target: { mode: "existing_company", companyId: "company-1" },
       },
       client
     );
@@ -484,6 +575,7 @@ describe("paperclip_apply_company_import", () => {
     assert.equal(calls[0]!.init.method, "POST");
     const body = JSON.parse(calls[0]!.init.body as string);
     assert.equal(body.source.type, "inline");
+    assert.deepEqual(body.target, { mode: "existing_company", companyId: "company-1" });
     const parsed = JSON.parse(result.content[0]!.text);
     assert.ok("insertedAgents" in parsed);
   });
@@ -496,6 +588,7 @@ describe("paperclip_apply_company_import", () => {
         companyId: "c1",
         source: githubSource,
         include: includeAll,
+        target: { mode: "existing_company", companyId: "c1" },
         adapterOverrides: { key: "value" },
       },
       client
@@ -513,6 +606,7 @@ describe("paperclip_apply_company_import", () => {
         companyId: "c1",
         source: inlineSource,
         include: includeAll,
+        target: { mode: "existing_company", companyId: "c1" },
         collisionStrategy: "replace",
         selectedFiles: ["COMPANY.md"],
       },
@@ -533,6 +627,7 @@ describe("paperclip_apply_company_import", () => {
             companyId: "c1",
             source: inlineSource,
             include: includeAll,
+            target: { mode: "existing_company", companyId: "c1" },
             collisionStrategy: "overwrite",
           },
           client
@@ -545,7 +640,7 @@ describe("paperclip_apply_company_import", () => {
     assert.equal(calls.length, 0);
   });
 
-  it("A5: rejects extra field on top-level schema (.strict())", async () => {
+  it("A5: rejects missing target (required field)", async () => {
     const { fn, calls } = mockFetch(200, {});
     const client = new PaperclipClient(TEST_AUTH, fn);
     await assert.rejects(
@@ -555,6 +650,50 @@ describe("paperclip_apply_company_import", () => {
             companyId: "c1",
             source: inlineSource,
             include: includeAll,
+          },
+          client
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A5b: rejects target.companyId mismatch (.refine())", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        applyImport.handler(
+          {
+            companyId: "c1",
+            source: inlineSource,
+            include: includeAll,
+            target: { mode: "existing_company", companyId: "different-company" },
+          },
+          client
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A5c: rejects extra field on top-level schema (.strict())", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        applyImport.handler(
+          {
+            companyId: "c1",
+            source: inlineSource,
+            include: includeAll,
+            target: { mode: "existing_company", companyId: "c1" },
             unknownField: "x",
           },
           client
@@ -597,7 +736,12 @@ describe("paperclip_apply_company_import", () => {
     const { fn } = mockFetch(400, { message: "Invalid import bundle" });
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await applyImport.handler(
-      { companyId: "c1", source: inlineSource, include: includeAll },
+      {
+        companyId: "c1",
+        source: inlineSource,
+        include: includeAll,
+        target: { mode: "existing_company", companyId: "c1" },
+      },
       client
     );
     assert.equal(result.isError, true);
@@ -608,7 +752,12 @@ describe("paperclip_apply_company_import", () => {
     const { fn } = mockFetch(403, { error: "Board access required" });
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await applyImport.handler(
-      { companyId: "c1", source: inlineSource, include: includeAll },
+      {
+        companyId: "c1",
+        source: inlineSource,
+        include: includeAll,
+        target: { mode: "existing_company", companyId: "c1" },
+      },
       client
     );
     assert.equal(result.isError, true);
@@ -619,7 +768,12 @@ describe("paperclip_apply_company_import", () => {
     const { fn } = mockFetch(500, { error: "Server error" });
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await applyImport.handler(
-      { companyId: "c1", source: inlineSource, include: includeAll },
+      {
+        companyId: "c1",
+        source: inlineSource,
+        include: includeAll,
+        target: { mode: "existing_company", companyId: "c1" },
+      },
       client
     );
     assert.equal(result.isError, true);
@@ -633,7 +787,12 @@ describe("paperclip_apply_company_import", () => {
     const { fn } = mockFetch(200, bigPayload);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await applyImport.handler(
-      { companyId: "c1", source: inlineSource, include: includeAll },
+      {
+        companyId: "c1",
+        source: inlineSource,
+        include: includeAll,
+        target: { mode: "existing_company", companyId: "c1" },
+      },
       client
     );
     assert.ok(result.content[0]!.text.length <= 25_000);
