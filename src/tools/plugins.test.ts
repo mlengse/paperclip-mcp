@@ -365,14 +365,13 @@ describe("paperclip_get_plugin", () => {
     );
   });
 
-  it("F1: defaults to json output when response_format not specified", async () => {
+  it("F1: defaults to markdown output when response_format not specified", async () => {
     const { fn } = mockFetch(200, pluginFixture());
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await getPlugin.handler({ pluginKey: "some-plugin" }, client);
     assert.ok(!result.isError);
-    // Should be parseable JSON
-    const parsed = JSON.parse(result.content[0]!.text);
-    assert.ok(typeof parsed === "object" && parsed !== null);
+    // Default is markdown — should contain a section header or bullet
+    assert.match(result.content[0]!.text, /##|^- /m);
   });
 
   it("F2: response_format='json' returns parseable JSON object", async () => {
@@ -573,6 +572,14 @@ describe("paperclip_list_plugin_examples", () => {
     assert.ok(Array.isArray(parsed));
     assert.equal(parsed[0].packageName, "foo");
   });
+
+  it("[stage-8d] B1: returns isError on 401", async () => {
+    const { fn } = mockFetch(401, { error: "Unauthorized" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listExamples.handler({}, client);
+    assert.equal(result.isError, true);
+    assert.match(result.content[0]!.text.toLowerCase(), /auth|401/);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -672,6 +679,14 @@ describe("paperclip_enable_plugin", () => {
     const parsed = JSON.parse(result.content[0]!.text);
     assert.equal(parsed.status, "ready");
   });
+
+  it("[stage-8d] B1: returns isError on 401", async () => {
+    const { fn } = mockFetch(401, { error: "Unauthorized" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await enablePlugin.handler({ pluginKey: "test" }, client);
+    assert.equal(result.isError, true);
+    assert.match(result.content[0]!.text.toLowerCase(), /auth|401/);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -770,5 +785,13 @@ describe("paperclip_disable_plugin", () => {
     const result = await disablePlugin.handler({ pluginKey: "my-plugin" }, client);
     const parsed = JSON.parse(result.content[0]!.text);
     assert.equal(parsed.status, "disabled");
+  });
+
+  it("[stage-8d] B1: returns isError on 401", async () => {
+    const { fn } = mockFetch(401, { error: "Unauthorized" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await disablePlugin.handler({ pluginKey: "test" }, client);
+    assert.equal(result.isError, true);
+    assert.match(result.content[0]!.text.toLowerCase(), /auth|401/);
   });
 });
