@@ -55,3 +55,5 @@ _bmad-output/
 # Functional test reports (generated per-run)
 scripts/.functional-test-report.json
 scripts/.functional-test-report.md
+scripts/.functional-test-docker-report.json
+scripts/.functional-test-docker-report.md

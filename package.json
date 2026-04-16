@@ -42,7 +42,8 @@
     "docs:check": "find docs -name '*.md' | xargs markdown-link-check -c .markdown-link-check.json",
     "test:functional": "node --import tsx/esm scripts/functional-test.mjs",
     "docker:build": "podman build -t paperclip-mcp:2.0.0 -t paperclip-mcp:latest .",
-    "docker:smoke": "node scripts/smoke-docker.mjs"
+    "docker:smoke": "node scripts/smoke-docker.mjs",
+    "test:functional:docker": "node --import tsx/esm scripts/functional-test-docker.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
