@@ -51,7 +51,8 @@ export const labelTools: ToolDefinition[] = [
         const data = await client.get<unknown>(`/api/companies/${client.companyId}/labels`);
         const text =
           (fmt ?? "markdown") === "json" ? formatJson(data) : formatGenericList(data, "Labels");
-        const hint = "Response too large.";
+        const hint =
+          "Response too large; the company has an unusually large number of labels. Consider filtering by name.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);

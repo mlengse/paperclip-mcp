@@ -161,7 +161,8 @@ export const approvalTools: ToolDefinition[] = [
         const data = await client.get<unknown>(`/api/approvals/${approvalId}`);
         const text =
           (fmt ?? "markdown") === "json" ? formatJson(data) : formatGenericList([data], "Approval");
-        const hint = "Response too large.";
+        const hint =
+          "Entity response too large. This approval may have oversized fields or an unusual number of comments.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);

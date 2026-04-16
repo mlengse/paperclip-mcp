@@ -136,7 +136,8 @@ export const projectTools: ToolDefinition[] = [
         const data = await client.get<unknown>(`/api/projects/${projectId}`);
         const text =
           (fmt ?? "markdown") === "json" ? formatJson(data) : formatGenericList([data], "Project");
-        const hint = "Response too large.";
+        const hint =
+          "Entity response too large. This project may have oversized description or metadata fields.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
@@ -264,7 +265,8 @@ export const projectTools: ToolDefinition[] = [
         const data = await client.get<unknown>(`/api/projects/${projectId}/workspaces`);
         const text =
           (fmt ?? "markdown") === "json" ? formatJson(data) : formatGenericList(data, "Workspaces");
-        const hint = "Response too large.";
+        const hint =
+          "Response too large; this project has an unusually large number of workspaces.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);

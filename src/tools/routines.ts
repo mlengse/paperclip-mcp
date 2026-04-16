@@ -445,7 +445,8 @@ export const routineTools: ToolDefinition[] = [
           (fmt ?? "markdown") === "json"
             ? formatJson(data)
             : formatGenericList(data, "Routine Runs");
-        const hint = "Response too large.";
+        const hint =
+          "Response too large; this routine has an unusually long run history. Consider pruning old runs.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
