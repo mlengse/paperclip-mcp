@@ -101,7 +101,8 @@ describe("ALL_TOOLS registry — structural invariants", () => {
     // Stage 8c adds 1 tool (create_agent): 84 → 85.
     // Stage 8d adds 6 tools (plugins module): 85 → 91.
     // Stage 8e adds 4 tools (secrets module): 91 → 95.
-    assert.ok(ALL_TOOLS.length >= 95, `Expected at least 95 tools, got ${ALL_TOOLS.length}`);
+    // Stage 8f adds 3 tools (runs module): 95 → 98.
+    assert.ok(ALL_TOOLS.length >= 98, `Expected at least 98 tools, got ${ALL_TOOLS.length}`);
     assert.ok(
       ALL_TOOLS.length <= 120,
       `Expected at most 120 tools, got ${ALL_TOOLS.length} — Stage 8 should land 103 total`
@@ -297,6 +298,9 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
     "paperclip_get_plugin",
     "paperclip_list_plugin_examples",
     "paperclip_list_secrets",
+    "paperclip_list_heartbeat_runs",
+    "paperclip_list_run_events",
+    "paperclip_get_run_log",
   ];
 
   it("read-only tools have readOnlyHint: true", () => {
@@ -403,6 +407,9 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
     "paperclip_create_secret",
     "paperclip_update_secret",
     "paperclip_rotate_secret",
+    "paperclip_list_heartbeat_runs",
+    "paperclip_list_run_events",
+    "paperclip_get_run_log",
   ];
 
   it("board-only tools have '⚠ Board-only:' description prefix", () => {
