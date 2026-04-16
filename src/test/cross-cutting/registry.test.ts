@@ -507,6 +507,9 @@ describe("ALL_TOOLS registry — description quality", () => {
       "paperclip_create_secret",
       "paperclip_update_secret",
       "paperclip_rotate_secret",
+      "paperclip_list_heartbeat_runs",
+      "paperclip_list_run_events",
+      "paperclip_get_run_log",
     ];
     const bad: string[] = [];
     for (const name of boardOnlyTools) {
