@@ -46,7 +46,7 @@ describe("paperclip_list_routines", () => {
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/routines");
     assert.equal(calls[0]!.init.method, "GET");
     const parsed = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsed, routines);
+    assert.deepEqual(parsed.items, routines);
   });
 
   it("throws McpError when args is not an object (validation failure, fetch not called)", async () => {
@@ -352,7 +352,7 @@ describe("paperclip_list_routine_runs", () => {
     assert.equal(calls[0]!.url, "http://localhost:3100/api/routines/routine-1/runs");
     assert.equal(calls[0]!.init.method, "GET");
     const parsedRuns = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsedRuns, runs);
+    assert.deepEqual(parsedRuns.items, runs);
   });
 
   it("throws McpError when routineId is empty string (validation failure, fetch not called)", async () => {
@@ -507,7 +507,7 @@ describe("[stage-5] paperclip_list_routines — truncation + format", () => {
     const big = largeRoutineList(300);
     const { fn } = mockFetch(200, big);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listRoutines.handler({ response_format: "json" }, client);
+    const result = await listRoutines.handler({ limit: 100, response_format: "json" }, client);
     assert.ok(result.content[0]!.text.length < 26_000);
     assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
   });
@@ -534,7 +534,7 @@ describe("[stage-5] paperclip_list_routines — truncation + format", () => {
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await listRoutines.handler({ response_format: "json" }, client);
     assert.doesNotThrow(() => JSON.parse(result.content[0]!.text));
-    assert.deepEqual(JSON.parse(result.content[0]!.text), routines);
+    assert.deepEqual(JSON.parse(result.content[0]!.text).items, routines);
   });
 });
 
@@ -595,7 +595,7 @@ describe("[stage-5] paperclip_list_routine_runs — truncation + format", () => 
     const { fn } = mockFetch(200, big);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await listRuns.handler(
-      { routineId: "routine-1", response_format: "json" },
+      { routineId: "routine-1", limit: 100, response_format: "json" },
       client
     );
     assert.ok(result.content[0]!.text.length < 26_000);
@@ -631,7 +631,7 @@ describe("[stage-5] paperclip_list_routine_runs — truncation + format", () => 
       client
     );
     assert.doesNotThrow(() => JSON.parse(result.content[0]!.text));
-    assert.deepEqual(JSON.parse(result.content[0]!.text), runs);
+    assert.deepEqual(JSON.parse(result.content[0]!.text).items, runs);
   });
 });
 

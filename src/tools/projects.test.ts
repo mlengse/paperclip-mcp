@@ -42,7 +42,7 @@ describe("paperclip_list_projects", () => {
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/projects");
     assert.equal(calls[0]!.init.method, "GET");
     const parsed = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsed, projects);
+    assert.deepEqual(parsed.items, projects);
   });
 
   it("throws McpError when args is not an object (validation failure, fetch not called)", async () => {
@@ -198,7 +198,7 @@ describe("paperclip_list_workspaces", () => {
     assert.equal(calls[0]!.url, "http://localhost:3100/api/projects/proj-1/workspaces");
     assert.equal(calls[0]!.init.method, "GET");
     const parsed = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsed, workspaces);
+    assert.deepEqual(parsed.items, workspaces);
   });
 
   it("throws McpError when projectId is empty string (validation failure, fetch not called)", async () => {
@@ -413,7 +413,7 @@ describe("[stage-5] paperclip_list_projects — truncation + format", () => {
     const big = largeProjectList(300);
     const { fn } = mockFetch(200, big);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listProjects.handler({ response_format: "json" }, client);
+    const result = await listProjects.handler({ limit: 100, response_format: "json" }, client);
     assert.ok(result.content[0]!.text.length <= 25_000);
     assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
   });
@@ -440,7 +440,7 @@ describe("[stage-5] paperclip_list_projects — truncation + format", () => {
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await listProjects.handler({ response_format: "json" }, client);
     const parsed = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsed, projects);
+    assert.deepEqual(parsed.items, projects);
   });
 });
 

@@ -40,7 +40,7 @@ describe("paperclip_get_activity", () => {
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/activity");
     assert.equal(calls[0]!.init.method, "GET");
     const parsed = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsed, activity);
+    assert.deepEqual(parsed.items, activity);
   });
 
   it("appends query params when filters are provided", async () => {
@@ -220,7 +220,7 @@ describe("[stage-5] paperclip_get_activity — truncation + format", () => {
     const big = largeActivityList(500);
     const { fn } = mockFetch(200, big);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getActivity.handler({ response_format: "json" }, client);
+    const result = await getActivity.handler({ limit: 100, response_format: "json" }, client);
     assert.ok(result.content[0]!.text.length < 26_000);
     assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
   });
@@ -247,7 +247,7 @@ describe("[stage-5] paperclip_get_activity — truncation + format", () => {
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await getActivity.handler({ response_format: "json" }, client);
     assert.doesNotThrow(() => JSON.parse(result.content[0]!.text));
-    assert.deepEqual(JSON.parse(result.content[0]!.text), events);
+    assert.deepEqual(JSON.parse(result.content[0]!.text).items, events);
   });
 });
 

@@ -42,7 +42,14 @@ describe("paperclip_list_issues", () => {
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/issues");
     assert.equal(calls[0]!.init.method, "GET");
     const parsed = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsed, { issues: [], total: 0, limit: 50, offset: 0 });
+    assert.deepEqual(parsed, {
+      items: [],
+      total: 0,
+      count: 0,
+      limit: 50,
+      offset: 0,
+      has_more: false,
+    });
   });
 
   it("appends query params when filters are provided", async () => {
@@ -83,8 +90,8 @@ describe("paperclip_list_issues", () => {
     assert.equal(parsed.total, 10);
     assert.equal(parsed.limit, 5);
     assert.equal(parsed.offset, 0);
-    assert.equal(parsed.issues.length, 5);
-    assert.deepEqual(parsed.issues, allIssues.slice(0, 5));
+    assert.equal(parsed.items.length, 5);
+    assert.deepEqual(parsed.items, allIssues.slice(0, 5));
   });
 
   it("pagination: limit=5, offset=5 returns items 5–9 with total=10", async () => {
@@ -97,8 +104,8 @@ describe("paperclip_list_issues", () => {
     );
     const parsed = JSON.parse(result.content[0]!.text);
     assert.equal(parsed.total, 10);
-    assert.equal(parsed.issues.length, 5);
-    assert.deepEqual(parsed.issues, allIssues.slice(5, 10));
+    assert.equal(parsed.items.length, 5);
+    assert.deepEqual(parsed.items, allIssues.slice(5, 10));
   });
 
   it("pagination: offset past end returns empty issues with correct total", async () => {
@@ -111,7 +118,7 @@ describe("paperclip_list_issues", () => {
     );
     const parsed = JSON.parse(result.content[0]!.text);
     assert.equal(parsed.total, 3);
-    assert.deepEqual(parsed.issues, []);
+    assert.deepEqual(parsed.items, []);
   });
 
   it("pagination validation: limit=0 throws McpError before fetch", async () => {
@@ -149,7 +156,7 @@ describe("paperclip_list_issues", () => {
     assert.equal(parsed.total, 60);
     assert.equal(parsed.limit, 50);
     assert.equal(parsed.offset, 0);
-    assert.equal(parsed.issues.length, 50);
+    assert.equal(parsed.items.length, 50);
   });
 });
 

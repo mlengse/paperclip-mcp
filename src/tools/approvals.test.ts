@@ -45,7 +45,7 @@ describe("paperclip_list_approvals", () => {
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/approvals");
     assert.equal(calls[0]!.init.method, "GET");
     const parsed = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsed, approvals);
+    assert.deepEqual(parsed.items, approvals);
   });
 
   it("appends status filter when provided", async () => {
@@ -348,7 +348,7 @@ describe("paperclip_list_approval_comments", () => {
     assert.equal(calls[0]!.url, "http://localhost:3100/api/approvals/appr-1/comments");
     assert.equal(calls[0]!.init.method, "GET");
     const parsed = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsed, comments);
+    assert.deepEqual(parsed.items, comments);
   });
 
   it("throws McpError when approvalId is empty string (validation failure, fetch not called)", async () => {
@@ -500,7 +500,7 @@ describe("[stage-5] paperclip_list_approvals — truncation + format", () => {
     const big = largeApprovalList(300);
     const { fn } = mockFetch(200, big);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listApprovals.handler({ response_format: "json" }, client);
+    const result = await listApprovals.handler({ limit: 100, response_format: "json" }, client);
     assert.ok(result.content[0]!.text.length <= 25_000);
     assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
   });
@@ -527,7 +527,7 @@ describe("[stage-5] paperclip_list_approvals — truncation + format", () => {
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await listApprovals.handler({ response_format: "json" }, client);
     const parsed = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsed, approvals);
+    assert.deepEqual(parsed.items, approvals);
   });
 });
 

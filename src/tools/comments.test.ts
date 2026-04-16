@@ -42,7 +42,7 @@ describe("paperclip_list_comments", () => {
     assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1/comments");
     assert.equal(calls[0]!.init.method, "GET");
     const parsed = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsed, comments);
+    assert.deepEqual(parsed.items, comments);
   });
 
   it("appends order query param when provided without after", async () => {
@@ -71,8 +71,7 @@ describe("paperclip_list_comments", () => {
     assert.ok(url.includes("limit=500"), `URL missing limit=500: ${url}`);
     assert.ok(!url.includes("after="), `URL should not include after param: ${url}`);
     const parsed = JSON.parse(result.content[0]!.text);
-    assert.ok(parsed._note, "Result should include _note field");
-    assert.deepEqual(parsed.comments, [
+    assert.deepEqual(parsed.items, [
       { id: "c-2", body: "Second" },
       { id: "c-3", body: "Third" },
     ]);
@@ -90,7 +89,7 @@ describe("paperclip_list_comments", () => {
       client
     );
     const parsed = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsed.comments, allComments);
+    assert.deepEqual(parsed.items, allComments);
   });
 
   it("returns empty comments array when after ID is the last comment", async () => {
@@ -105,7 +104,7 @@ describe("paperclip_list_comments", () => {
       client
     );
     const parsed = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsed.comments, []);
+    assert.deepEqual(parsed.items, []);
   });
 
   it("throws McpError when issueId is missing (validation failure, fetch not called)", async () => {
@@ -212,7 +211,7 @@ describe("[stage-5] paperclip_list_comments — truncation + format", () => {
     const { fn } = mockFetch(200, big);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await listComments.handler(
-      { issueId: "issue-1", response_format: "json" },
+      { issueId: "issue-1", limit: 100, response_format: "json" },
       client
     );
     assert.ok(result.content[0]!.text.length <= 25_000);
@@ -247,7 +246,7 @@ describe("[stage-5] paperclip_list_comments — truncation + format", () => {
       client
     );
     const parsed = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsed, comments);
+    assert.deepEqual(parsed.items, comments);
   });
 });
 

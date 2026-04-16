@@ -46,7 +46,7 @@ describe("paperclip_list_attachments", () => {
     assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1/attachments");
     assert.equal(calls[0]!.init.method, "GET");
     const parsed = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsed, attachments);
+    assert.deepEqual(parsed.items, attachments);
   });
 
   it("throws McpError when issueId is empty string (validation failure, fetch not called)", async () => {

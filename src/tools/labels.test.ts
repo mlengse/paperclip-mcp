@@ -41,7 +41,7 @@ describe("paperclip_list_labels", () => {
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/labels");
     assert.equal(calls[0]!.init.method, "GET");
     const parsed = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsed, labels);
+    assert.deepEqual(parsed.items, labels);
   });
 
   it("returns isError response on 500 API error", async () => {
@@ -171,7 +171,7 @@ describe("[stage-5] paperclip_list_labels — truncation + format", () => {
     const big = largeLabelList(500);
     const { fn } = mockFetch(200, big);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listLabels.handler({ response_format: "json" }, client);
+    const result = await listLabels.handler({ limit: 100, response_format: "json" }, client);
     assert.ok(result.content[0]!.text.length <= 25_000);
     assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
   });
@@ -198,7 +198,7 @@ describe("[stage-5] paperclip_list_labels — truncation + format", () => {
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await listLabels.handler({ response_format: "json" }, client);
     const parsed = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsed, labels);
+    assert.deepEqual(parsed.items, labels);
   });
 });
 

@@ -60,7 +60,7 @@ describe("paperclip_list_agents", () => {
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/agents");
     assert.equal(calls[0]!.init.method, "GET");
     const parsed = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsed, agents);
+    assert.deepEqual(parsed.items, agents);
   });
 
   it("throws McpError when args is not an object (validation failure, fetch not called)", async () => {
@@ -384,7 +384,7 @@ describe("paperclip_list_agent_config_revisions", () => {
     assert.equal(calls[0]!.url, "http://localhost:3100/api/agents/agent-1/config-revisions");
     assert.equal(calls[0]!.init.method, "GET");
     const parsedRevisions = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsedRevisions, revisions);
+    assert.deepEqual(parsedRevisions.items, revisions);
   });
 
   it("returns isError response on 404 API error", async () => {
@@ -615,7 +615,7 @@ describe("paperclip_list_company_skills", () => {
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/skills");
     assert.equal(calls[0]!.init.method, "GET");
     const parsedSkills = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsedSkills, skills);
+    assert.deepEqual(parsedSkills.items, skills);
   });
 
   it("returns isError response on 403 API error", async () => {
@@ -878,7 +878,7 @@ describe("[stage-5] paperclip_list_agents — truncation + format", () => {
     return Array.from({ length: count }, (_, i) =>
       agentFixture({
         id: `agent-${i + 1}`,
-        name: `Agent ${i + 1} ${"x".repeat(80)}`,
+        name: `Agent ${i + 1} ${"x".repeat(300)}`,
         urlKey: `agent-${i + 1}`,
       })
     );
@@ -888,7 +888,7 @@ describe("[stage-5] paperclip_list_agents — truncation + format", () => {
     const big = largeAgentList(300);
     const { fn } = mockFetch(200, big);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listAgents.handler({ response_format: "json" }, client);
+    const result = await listAgents.handler({ limit: 100, response_format: "json" }, client);
     assert.equal(result.isError, undefined);
     assert.ok(result.content[0]!.text.length < 26_000);
     assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
@@ -947,7 +947,7 @@ describe("[stage-5] paperclip_list_agent_config_revisions — format", () => {
       client
     );
     const parsed = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsed, revisions);
+    assert.deepEqual(parsed.items, revisions);
   });
 });
 
@@ -970,7 +970,7 @@ describe("[stage-5] paperclip_list_company_skills — format", () => {
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await listCompanySkills.handler({ response_format: "json" }, client);
     const parsed = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsed, skills);
+    assert.deepEqual(parsed.items, skills);
   });
 });
 

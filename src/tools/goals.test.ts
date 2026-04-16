@@ -39,7 +39,7 @@ describe("paperclip_list_goals", () => {
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/goals");
     assert.equal(calls[0]!.init.method, "GET");
     const parsed = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsed, goals);
+    assert.deepEqual(parsed.items, goals);
   });
 
   it("throws McpError when args is not an object (validation failure, fetch not called)", async () => {
@@ -221,7 +221,7 @@ describe("[stage-5] paperclip_list_goals — truncation + format", () => {
     const big = largeGoalList(300);
     const { fn } = mockFetch(200, big);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listGoals.handler({ response_format: "json" }, client);
+    const result = await listGoals.handler({ limit: 100, response_format: "json" }, client);
     assert.ok(result.content[0]!.text.length <= 25_000);
     assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
   });
@@ -248,7 +248,7 @@ describe("[stage-5] paperclip_list_goals — truncation + format", () => {
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await listGoals.handler({ response_format: "json" }, client);
     const parsed = JSON.parse(result.content[0]!.text);
-    assert.deepEqual(parsed, goals);
+    assert.deepEqual(parsed.items, goals);
   });
 });
 
