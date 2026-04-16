@@ -106,6 +106,21 @@ export class PaperclipClient {
     return this.handleResponse<T>(response);
   }
 
+  async getRaw(path: string): Promise<{ contentType: string; bytes: Uint8Array; status: number }> {
+    const response = await this.fetchFn(`${this.auth.apiUrl}${path}`, {
+      method: "GET",
+      headers: this.buildHeaders(),
+      signal: AbortSignal.timeout(this.timeoutMs),
+    });
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new PaperclipApiError(response.status, response.statusText, body);
+    }
+    const contentType = response.headers.get("content-type") ?? "application/octet-stream";
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    return { contentType, bytes, status: response.status };
+  }
+
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
       let body: unknown;
