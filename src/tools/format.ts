@@ -119,7 +119,8 @@ export function formatAgentList(
   const list = Array.isArray(agents) ? (agents as AgentRecord[]) : [];
   let header: string;
   if (envelope) {
-    header = `## Agents (${envelope.count} of ${envelope.total}, offset ${envelope.offset})`;
+    const moreNote = envelope.has_more ? " · more pages available" : "";
+    header = `## Agents (${envelope.count} of ${envelope.total}, offset ${envelope.offset})${moreNote}`;
   } else {
     header = `## Agents (${list.length})`;
   }
@@ -161,12 +162,13 @@ export function formatIssueList(issues: unknown, envelope?: IssueEnvelope): stri
   const list = Array.isArray(issues) ? (issues as IssueRecord[]) : [];
   let header = `## Issues`;
   if (envelope) {
-    const { total, count, offset } = envelope;
+    const { total, count, offset, has_more } = envelope;
     const displayCount = count ?? list.length;
     const parts: string[] = [];
     if (total !== undefined) parts.push(`${displayCount} of ${total}`);
     if (offset !== undefined) parts.push(`offset ${offset}`);
     if (parts.length > 0) header += ` (${parts.join(", ")})`;
+    if (has_more) header += " · more pages available";
   } else {
     header += ` (${list.length})`;
   }
@@ -340,7 +342,8 @@ export function formatGenericList(
   const list = Array.isArray(data) ? data : [];
   let header: string;
   if (envelope) {
-    header = `## ${label} (${envelope.count} of ${envelope.total}, offset ${envelope.offset})`;
+    const moreNote = envelope.has_more ? " · more pages available" : "";
+    header = `## ${label} (${envelope.count} of ${envelope.total}, offset ${envelope.offset})${moreNote}`;
   } else {
     header = `## ${label} (${list.length})`;
   }
