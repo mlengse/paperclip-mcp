@@ -246,6 +246,114 @@ const SyncAgentSkillsInput = z
   })
   .strict();
 
+const CreateAgentInput = z
+  .object({
+    companyId: z.string().min(1).describe("Company UUID to create the agent in"),
+    name: z.string().min(1).describe("Agent display name"),
+    role: z
+      .enum([
+        "ceo",
+        "cto",
+        "cmo",
+        "cfo",
+        "engineer",
+        "designer",
+        "pm",
+        "qa",
+        "devops",
+        "researcher",
+        "general",
+      ])
+      .optional()
+      .describe("Agent role (default: general)"),
+    title: z.string().nullable().optional().describe("Job title shown on the agent profile"),
+    icon: z
+      .enum([
+        "user",
+        "bot",
+        "brain",
+        "cpu",
+        "code",
+        "terminal",
+        "bug",
+        "shield",
+        "chart",
+        "magnifier",
+        "pen",
+        "book",
+        "rocket",
+        "gear",
+        "lightning",
+        "star",
+        "crown",
+        "diamond",
+        "flag",
+        "globe",
+      ])
+      .optional()
+      .describe("Icon displayed for this agent in the Paperclip UI"),
+    reportsTo: z
+      .string()
+      .uuid()
+      .nullable()
+      .optional()
+      .describe("UUID of the parent agent this agent reports to"),
+    capabilities: z
+      .string()
+      .nullable()
+      .optional()
+      .describe("Free-text description of what this agent can do"),
+    desiredSkills: z
+      .array(z.string())
+      .optional()
+      .describe("Skill names to install on the agent at creation"),
+    adapterType: z
+      .enum([
+        "process",
+        "http",
+        "claude_local",
+        "codex_local",
+        "gemini_local",
+        "opencode_local",
+        "pi_local",
+        "cursor",
+        "openclaw_gateway",
+        "hermes_local",
+      ])
+      .optional()
+      .describe("Adapter type controlling how the agent process is launched (default: process)"),
+    adapterConfig: z
+      .record(z.string(), z.unknown())
+      .optional()
+      .describe("Adapter-specific configuration passed at agent launch"),
+    runtimeConfig: z
+      .record(z.string(), z.unknown())
+      .optional()
+      .describe("Runtime configuration (heartbeat, concurrency, etc.)"),
+    budgetMonthlyCents: z
+      .number()
+      .int()
+      .nonnegative()
+      .optional()
+      .describe("Monthly budget cap in cents (0 = unlimited / subscription billing)"),
+    permissions: z
+      .object({
+        canCreateAgents: z
+          .boolean()
+          .optional()
+          .describe("Allow this agent to create new agents (CEO-only by governance policy)"),
+      })
+      .strict()
+      .optional()
+      .describe("Governance permissions granted to this agent"),
+    metadata: z
+      .record(z.string(), z.unknown())
+      .nullable()
+      .optional()
+      .describe("Arbitrary key-value metadata attached to the agent"),
+  })
+  .strict();
+
 export const agentTools: ToolDefinition[] = [
   {
     name: "paperclip_list_agents",
@@ -952,6 +1060,65 @@ export const agentTools: ToolDefinition[] = [
         };
       } catch (err) {
         return handleApiError(err, { tool: "paperclip_wakeup_agent", resource: "agent" });
+      }
+    },
+  },
+  {
+    name: "paperclip_create_agent",
+    description: composeDescription({
+      summary:
+        "⚠ Board-only: direct creation; agent-initiated hires go through paperclip_create_agent_hire.",
+      args: [
+        "- companyId: string — UUID of the company to create the agent in",
+        "- name: string — Agent display name (required, min 1 char)",
+        '- role: enum (optional) — One of: ceo|cto|cmo|cfo|engineer|designer|pm|qa|devops|researcher|general (default: "general")',
+        "- title: string|null (optional) — Job title shown on the agent profile",
+        "- icon: enum (optional) — Icon displayed in the Paperclip UI",
+        "- reportsTo: string UUID|null (optional) — Parent agent this agent reports to",
+        "- capabilities: string|null (optional) — Free-text capability description",
+        "- desiredSkills: string[] (optional) — Skill names to install at creation",
+        '- adapterType: enum (optional) — Launch adapter type (default: "process")',
+        "- adapterConfig: object (optional) — Adapter-specific config",
+        "- runtimeConfig: object (optional) — Runtime config (heartbeat, concurrency)",
+        "- budgetMonthlyCents: integer ≥0 (optional) — Monthly budget cap in cents",
+        "- permissions.canCreateAgents: boolean (optional) — Grant CEO-level create permission",
+        "- metadata: object|null (optional) — Arbitrary key-value metadata",
+      ],
+      returns:
+        "Returns the created agent object: id, companyId, name, role, title, icon, status, reportsTo, capabilities, adapterType, adapterConfig, runtimeConfig, budgetMonthlyCents, permissions, metadata, createdAt, updatedAt.",
+      examples: {
+        useWhen:
+          "provisioning a new agent directly as a board user — bypasses the approval flow used by paperclip_create_agent_hire",
+        dontUseWhen:
+          "you are an agent and need to hire a new specialist — use paperclip_create_agent_hire (approval flow required by governance policy)",
+      },
+      errors: [
+        "- 400: validation failure → check name is non-empty and role/adapterType are valid enum values",
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 403: permission denied → this tool requires a board (human) API key",
+      ],
+      boardOnly: true,
+    }),
+    inputSchema: toJsonSchema(CreateAgentInput),
+    annotations: {
+      title: "Create agent (direct hire)",
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+    async handler(args, client) {
+      try {
+        const { companyId, ...rest } = validate(CreateAgentInput, args);
+        const body: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(rest)) {
+          if (v !== undefined) body[k] = v;
+        }
+        const data = await client.post<unknown>(`/api/companies/${companyId}/agents`, body);
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
+      } catch (err) {
+        return handleApiError(err, { tool: "paperclip_create_agent", resource: "agent" });
       }
     },
   },
