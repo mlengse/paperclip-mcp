@@ -37,6 +37,18 @@ export interface ToolAnnotations {
 export interface ToolDefinition {
   name: string;
   description: string;
+  /**
+   * JSON Schema object produced eagerly via `toJsonSchema(ZodSchema)` in each tool module.
+   *
+   * The Zod schema is the actual source of truth for runtime validation (see `validate()` in
+   * validation.ts); this field is the pre-computed client-facing schema sent to MCP clients.
+   *
+   * Deviation from stage plan: the plan specified `inputSchema: z.ZodTypeAny` with conversion
+   * at registration time. Eager module-load conversion is simpler for a stdio server that loads
+   * 103 tools once and never reloads. Stage 2+ should continue to work directly on the
+   * module-local Zod schema variables (e.g. `const ListIssuesSchema = z.object({...})`),
+   * not on `ToolDefinition.inputSchema`.
+   */
   inputSchema: Record<string, unknown>;
   annotations?: ToolAnnotations;
   handler: (args: unknown, client: PaperclipClient) => Promise<ToolResult>;
