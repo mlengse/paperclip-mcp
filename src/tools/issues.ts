@@ -270,11 +270,12 @@ export const issueTools: ToolDefinition[] = [
       }
     },
   },
+  // idempotentHint omitted — a double-release may return 409; verify against live API in Stage 8b and update if confirmed idempotent.
   {
     name: "paperclip_release_issue",
     description: "Release a checked-out issue without marking it done.",
     inputSchema: toJsonSchema(IssueIdInput),
-    annotations: { title: "Release issue checkout", idempotentHint: true, openWorldHint: false },
+    annotations: { title: "Release issue checkout", openWorldHint: false },
     async handler(args, client) {
       try {
         const { issueId } = validate(IssueIdInput, args);

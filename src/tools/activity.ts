@@ -102,7 +102,12 @@ export const activityTools: ToolDefinition[] = [
     description:
       "Report an agent's token usage and cost to Paperclip for budget tracking and spend analytics. Calls POST /api/companies/{companyId}/cost-events.",
     inputSchema: toJsonSchema(ReportCostEventInput),
-    annotations: { title: "Report agent cost event", readOnlyHint: false, openWorldHint: false },
+    annotations: {
+      title: "Report agent cost event",
+      readOnlyHint: false,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
     async handler(args, client) {
       try {
         const input = validate(ReportCostEventInput, args);

@@ -380,7 +380,7 @@ export const agentTools: ToolDefinition[] = [
     inputSchema: toJsonSchema(SetInstructionsPathInput),
     annotations: {
       title: "Set agent instructions file path",
-      destructiveHint: false,
+      destructiveHint: true,
       openWorldHint: false,
     },
     async handler(args, client) {
@@ -415,7 +415,7 @@ export const agentTools: ToolDefinition[] = [
     description:
       "Sync the desired skill set for an agent, adding or removing skills as needed. Run ID header is injected automatically.",
     inputSchema: toJsonSchema(SyncAgentSkillsInput),
-    annotations: { title: "Sync agent skills", destructiveHint: false, openWorldHint: false },
+    annotations: { title: "Sync agent skills", destructiveHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { agentId, desiredSkills } = validate(SyncAgentSkillsInput, args);
