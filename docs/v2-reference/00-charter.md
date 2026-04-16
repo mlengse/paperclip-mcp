@@ -1,5 +1,7 @@
 # MCP v2.0 Full-Parity Charter — Agent Reference
 
+> **Historical artifact.** This document and the sibling files in `docs/v2-reference/` were produced during the v2.0.0 build process by Paperclip-orchestrated agents. They are kept in-place as a reference for anyone doing similar orchestration or auditing the v2.0.0 design decisions. They are not maintained going forward.
+
 **Branch:** `engineer/mcp-v2-full-parity` (base: `develop`)
 **Goal:** Every Paperclip API endpoint reachable through the Paperclip MCP server.
 **Authority:** [MCP Builder skill](./01-mcp-skill.md) is the design bible. When in doubt, it wins.

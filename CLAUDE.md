@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+This file guides Claude Code (claude.ai/code) when working in this repository. Non-Claude-Code contributors can skip it — see [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/guides/mcp-tool-conventions.md`](docs/guides/mcp-tool-conventions.md) for the standard contributor guide.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project
@@ -70,6 +72,8 @@ See **[`docs/guides/mcp-tool-conventions.md`](docs/guides/mcp-tool-conventions.m
 See [`docs/ci-strategy.md`](docs/ci-strategy.md) for rationale, trigger matrix, and how to extend CI steps.
 
 ## Paperclip Agent Workflow
+
+> **Scope note:** This section is for Paperclip-orchestrated agents running inside the Paperclip control plane. Human developers and general open-source contributors can skip everything below — see [`CONTRIBUTING.md`](CONTRIBUTING.md) instead.
 
 This section is for Paperclip-orchestrated agents. Human developers can skip it.
 
