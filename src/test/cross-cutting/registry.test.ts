@@ -374,3 +374,81 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
     assert.deepEqual(bad, [], "Tools missing '⚠ Board-only:' description prefix");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Stage 4 — Description quality invariants
+// ---------------------------------------------------------------------------
+
+describe("ALL_TOOLS registry — description quality", () => {
+  it("every tool description has a 'Returns:' section", () => {
+    const missing = ALL_TOOLS.filter((t) => !t.description.includes("Returns:"));
+    assert.deepEqual(
+      missing.map((t) => t.name),
+      [],
+      "Tools missing 'Returns:' section in description"
+    );
+  });
+
+  it("every tool description has a 'Use when:' example", () => {
+    const missing = ALL_TOOLS.filter((t) => !t.description.includes("Use when:"));
+    assert.deepEqual(
+      missing.map((t) => t.name),
+      [],
+      "Tools missing 'Use when:' in description"
+    );
+  });
+
+  it("every tool description has an 'Error Handling:' section", () => {
+    const missing = ALL_TOOLS.filter((t) => !t.description.includes("Error Handling:"));
+    assert.deepEqual(
+      missing.map((t) => t.name),
+      [],
+      "Tools missing 'Error Handling:' section in description"
+    );
+  });
+
+  it("every tool description is at least 100 characters (meaningful content)", () => {
+    const short = ALL_TOOLS.filter((t) => t.description.length < 100);
+    assert.deepEqual(
+      short.map((t) => ({ name: t.name, len: t.description.length })),
+      [],
+      "Tools with descriptions under 100 characters"
+    );
+  });
+
+  it("every tool description is under 1500 characters (context budget)", () => {
+    const long = ALL_TOOLS.filter((t) => t.description.length > 1500);
+    assert.deepEqual(
+      long.map((t) => ({ name: t.name, len: t.description.length })),
+      [],
+      "Tools with descriptions over 1500 characters"
+    );
+  });
+
+  it("board-only tools still have '⚠ Board-only:' prefix after description rewrite", () => {
+    // Redundant with the Stage 3 test above but intentionally re-stated here as
+    // a Stage 4 regression guard — rewriting descriptions must not drop the prefix.
+    const boardOnlyTools = [
+      "paperclip_delete_document",
+      "paperclip_terminate_agent",
+      "paperclip_create_agent_key",
+      "paperclip_rollback_agent_config",
+      "paperclip_update_agent_permissions",
+      "paperclip_set_agent_instructions_path",
+      "paperclip_approve",
+      "paperclip_reject",
+      "paperclip_request_revision",
+    ];
+    const bad: string[] = [];
+    for (const name of boardOnlyTools) {
+      const t = ALL_TOOLS.find((x) => x.name === name);
+      assert.ok(t, `Tool ${name} not found`);
+      if (!t!.description.startsWith("⚠ Board-only:")) bad.push(name);
+    }
+    assert.deepEqual(
+      bad,
+      [],
+      "Board-only tools lost '⚠ Board-only:' prefix after description rewrite"
+    );
+  });
+});
