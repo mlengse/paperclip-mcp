@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+This file guides Claude Code (claude.ai/code) when working in this repository. Non-Claude-Code contributors can skip it — see [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/guides/mcp-tool-conventions.md`](docs/guides/mcp-tool-conventions.md) for the standard contributor guide.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project
@@ -36,24 +38,18 @@ paperclip-mcp is a Model Context Protocol (MCP) stdio server that exposes the Pa
 - `src/tools/index.ts` — Tool registry. Collects `ToolDefinition[]` arrays from each tool module into `ALL_TOOLS`, builds a dispatch map, and registers MCP `ListTools` / `CallTool` handlers.
 - `src/tools/validation.ts` — `validate(zodSchema, args)` helper and shared Zod schemas (`NoInput`, `IssueIdSchema`, `StatusSchema`, `PrioritySchema`).
 
-**Tool modules** (each exports a `ToolDefinition[]`):
-
-| Module         | Tools                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `identity.ts`  | `paperclip_get_me`, `paperclip_get_inbox`                                                                                                                                                                                                                                                                                                                                                                                            |
-| `issues.ts`    | 7 issue lifecycle tools (list, get, checkout, release, update, create, heartbeat)                                                                                                                                                                                                                                                                                                                                                    |
-| `comments.ts`  | `paperclip_list_comments`, `paperclip_add_comment`                                                                                                                                                                                                                                                                                                                                                                                   |
-| `documents.ts` | `paperclip_list_documents`, `paperclip_get_document`, `paperclip_upsert_document`                                                                                                                                                                                                                                                                                                                                                    |
-| `agents.ts`    | `paperclip_list_agents`, `paperclip_get_agent`, `paperclip_update_agent`, `paperclip_pause_agent`, `paperclip_resume_agent`, `paperclip_invoke_heartbeat`, `paperclip_terminate_agent`, `paperclip_create_agent_key`, `paperclip_list_agent_config_revisions`, `paperclip_rollback_agent_config`, `paperclip_set_agent_instructions_path`, `paperclip_get_org_chart`, `paperclip_sync_agent_skills`, `paperclip_list_company_skills` |
-| `dashboard.ts` | `paperclip_get_dashboard`                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `goals.ts`     | `paperclip_list_goals`, `paperclip_get_goal`, `paperclip_create_goal`, `paperclip_update_goal`                                                                                                                                                                                                                                                                                                                                       |
-| `projects.ts`  | `paperclip_list_projects`, `paperclip_get_project`, `paperclip_create_project`, `paperclip_update_project`, `paperclip_list_workspaces`, `paperclip_create_workspace`, `paperclip_update_workspace`                                                                                                                                                                                                                                  |
+**Tool modules** (each exports a `ToolDefinition[]`): see **[`docs/guides/api-coverage.md`](docs/guides/api-coverage.md)** for the full authoritative list.
 
 ## Adding a New Tool
 
-1. Create or edit a file in `src/tools/` — define a Zod input schema and export a `ToolDefinition[]` array.
-2. Each tool's handler: validate args with `validate(schema, args)`, call `client.get/post/patch/...`, return `{ content: [{ type: "text", text: JSON.stringify(data) }] }`.
-3. If it's a new module, import and spread its array into `ALL_TOOLS` in `src/tools/index.ts`.
+See **[`docs/guides/mcp-tool-conventions.md`](docs/guides/mcp-tool-conventions.md)** for the full reference. Quick checklist:
+
+1. Define a `.strict()` Zod schema with `.describe()` on every field. Use `toJsonSchema()` for `inputSchema` — never write JSON Schema by hand.
+2. Use `composeDescription()` for the description (Args / Returns / Examples / Error Handling sections required).
+3. Set all applicable annotations (`title` always required, ≤ 60 chars).
+4. Wrap list responses in `paginate()`. Call `applyCharLimit()` on every return value.
+5. Delegate all `catch` blocks to `handleApiError(err, { tool, resource })`.
+6. Register in `src/tools/index.ts` → `ALL_TOOLS` and update registry test allow-lists.
 
 ## Conventions
 
@@ -76,6 +72,8 @@ paperclip-mcp is a Model Context Protocol (MCP) stdio server that exposes the Pa
 See [`docs/ci-strategy.md`](docs/ci-strategy.md) for rationale, trigger matrix, and how to extend CI steps.
 
 ## Paperclip Agent Workflow
+
+> **Scope note:** This section is for Paperclip-orchestrated agents running inside the Paperclip control plane. Human developers and general open-source contributors can skip everything below — see [`CONTRIBUTING.md`](CONTRIBUTING.md) instead.
 
 This section is for Paperclip-orchestrated agents. Human developers can skip it.
 

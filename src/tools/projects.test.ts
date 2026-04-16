@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { McpError } from "@modelcontextprotocol/sdk/types.js";
 import { PaperclipClient } from "../client.js";
 import { projectTools } from "./projects.js";
+import { projectFixture, largeProjectList } from "../test/helpers/fixtures.js";
+import { assertPaginationEnvelope } from "../test/helpers/assert-result.js";
 
 const TEST_AUTH = {
   apiKey: "test-jwt",
@@ -37,10 +39,11 @@ describe("paperclip_list_projects", () => {
     const projects = [{ id: "proj-1", name: "MCP Server", status: "active" }];
     const { fn, calls } = mockFetch(200, projects);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listProjects.handler({}, client);
+    const result = await listProjects.handler({ response_format: "json" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/projects");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(projects) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed.items, projects);
   });
 
   it("throws McpError when args is not an object (validation failure, fetch not called)", async () => {
@@ -70,10 +73,14 @@ describe("paperclip_get_project", () => {
     const project = { id: "proj-1", name: "MCP Server", status: "active" };
     const { fn, calls } = mockFetch(200, project);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getProject.handler({ projectId: "proj-1" }, client);
+    const result = await getProject.handler(
+      { projectId: "proj-1", response_format: "json" },
+      client
+    );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/projects/proj-1");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(project) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, project);
   });
 
   it("throws McpError when projectId is empty string (validation failure, fetch not called)", async () => {
@@ -113,7 +120,8 @@ describe("paperclip_create_project", () => {
     assert.equal(body.name, "New Project");
     assert.equal(body.goalId, "goal-1");
     assert.deepEqual(body.workspace, { cwd: "/app" });
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(created) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, created);
   });
 
   it("throws McpError when name is empty string (validation failure, fetch not called)", async () => {
@@ -153,7 +161,8 @@ describe("paperclip_update_project", () => {
     assert.equal(body.name, "Renamed");
     assert.equal(body.status, "archived");
     assert.ok(!("projectId" in body), "projectId must not be in PATCH body");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, updated);
   });
 
   it("throws McpError when projectId is missing (validation failure, fetch not called)", async () => {
@@ -183,10 +192,14 @@ describe("paperclip_list_workspaces", () => {
     const workspaces = [{ id: "ws-1", cwd: "/app", repoUrl: null }];
     const { fn, calls } = mockFetch(200, workspaces);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listWorkspaces.handler({ projectId: "proj-1" }, client);
+    const result = await listWorkspaces.handler(
+      { projectId: "proj-1", response_format: "json" },
+      client
+    );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/projects/proj-1/workspaces");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(workspaces) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed.items, workspaces);
   });
 
   it("throws McpError when projectId is empty string (validation failure, fetch not called)", async () => {
@@ -226,7 +239,8 @@ describe("paperclip_create_workspace", () => {
     assert.equal(body.cwd, "/app");
     assert.equal(body.repoUrl, "https://github.com/org/repo");
     assert.ok(!("projectId" in body), "projectId must not be in POST body");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(created) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, created);
   });
 
   it("throws McpError when projectId is empty string (validation failure, fetch not called)", async () => {
@@ -242,12 +256,27 @@ describe("paperclip_create_workspace", () => {
     assert.equal(calls.length, 0);
   });
 
-  it("returns isError response on 400 API error", async () => {
+  it("returns isError response on 400 API error (with valid cwd/repoUrl to reach API)", async () => {
+    // Note: after Stage 2, { projectId } with no cwd/repoUrl fails .refine() before reaching API.
+    // Use a valid cwd to test the 400 API error path.
     const { fn } = mockFetch(400, { message: "Bad request" });
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await createWorkspace.handler({ projectId: "proj-1" }, client);
+    const result = await createWorkspace.handler({ projectId: "proj-1", cwd: "/app" }, client);
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("400"));
+  });
+
+  it("throws McpError when neither cwd nor repoUrl is provided (.refine())", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => createWorkspace.handler({ projectId: "proj-1" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
   });
 });
 
@@ -265,7 +294,8 @@ describe("paperclip_update_workspace", () => {
     const body = JSON.parse(calls[0]!.init.body as string);
     assert.equal(body.cwd, "/new-app");
     assert.ok(!("projectId" in body), "projectId must not be in PATCH body");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, updated);
   });
 
   it("throws McpError when workspaceId is missing (validation failure, fetch not called)", async () => {
@@ -290,5 +320,343 @@ describe("paperclip_update_workspace", () => {
     );
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("404"));
+  });
+});
+
+// Stage 2 TDD: A5 (.strict() rejects unknown fields) + .refine()
+// Note: Project status uses domain-specific values (active, archived) distinct from issue StatusSchema.
+describe("[stage-2] paperclip_create_project — A5: strict", () => {
+  it("A5: rejects unknown extra field (strict) for create_project", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => createProject.handler({ name: "Test", unknownField: "oops" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});
+
+describe("[stage-2] paperclip_update_project — A5: strict", () => {
+  it("A5: rejects unknown extra field (strict) for update_project", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => updateProject.handler({ projectId: "proj-1", unknownField: "oops" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});
+
+describe("[stage-2] paperclip_create_project — A5: nested strict rejection", () => {
+  it("A5: rejects unknown key inside workspace (nested strict)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        createProject.handler(
+          { name: "Proj", workspace: { cwd: "/tmp", unknownField: "x" } },
+          client
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});
+
+describe("[stage-2] paperclip_create_workspace — .refine() cwd||repoUrl", () => {
+  it("refine: rejects when neither cwd nor repoUrl is provided", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => createWorkspace.handler({ projectId: "proj-1" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("refine: accepts when only cwd is provided", async () => {
+    const { fn } = mockFetch(200, { id: "ws-1" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await createWorkspace.handler({ projectId: "proj-1", cwd: "/app" }, client);
+    assert.equal(result.isError, undefined);
+  });
+
+  it("refine: accepts when only repoUrl is provided", async () => {
+    const { fn } = mockFetch(200, { id: "ws-1" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await createWorkspace.handler(
+      { projectId: "proj-1", repoUrl: "https://github.com/org/repo" },
+      client
+    );
+    assert.equal(result.isError, undefined);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] D1/D2 truncation + F1/F2 — paperclip_list_projects
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_list_projects — truncation + format", () => {
+  it("D1: response >25k chars is truncated with hint", async () => {
+    const big = largeProjectList(300);
+    const { fn } = mockFetch(200, big);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listProjects.handler({ limit: 100, response_format: "json" }, client);
+    assert.ok(result.content[0]!.text.length <= 25_000);
+    assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("D2: small response is not truncated", async () => {
+    const small = [projectFixture()];
+    const { fn } = mockFetch(200, small);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listProjects.handler({ response_format: "json" }, client);
+    assert.ok(!result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, [projectFixture()]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listProjects.handler({}, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("F2: response_format 'json' returns parseable JSON array", async () => {
+    const projects = [projectFixture()];
+    const { fn } = mockFetch(200, projects);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listProjects.handler({ response_format: "json" }, client);
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed.items, projects);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] D1/D2 truncation + F1/F2 — paperclip_get_project
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_get_project — truncation + format", () => {
+  it("F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, projectFixture());
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getProject.handler({ projectId: "proj-1" }, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("F2: response_format 'json' returns parseable JSON object", async () => {
+    const project = projectFixture();
+    const { fn } = mockFetch(200, project);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getProject.handler(
+      { projectId: "proj-1", response_format: "json" },
+      client
+    );
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, project);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-6] E1/E2/E3 pagination envelope — list_projects / list_workspaces
+// ---------------------------------------------------------------------------
+describe("[stage-6] paperclip_list_projects — pagination envelope", () => {
+  it("E1: default limit=50, offset=0 in envelope", async () => {
+    const items = Array.from({ length: 3 }, (_, i) => projectFixture({ id: `proj-${i}` }));
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listProjects.handler({ response_format: "json" }, client);
+    assertPaginationEnvelope(result, { total: 3, limit: 50, offset: 0, count: 3 });
+  });
+
+  it("E2: explicit limit=2, offset=1 in envelope", async () => {
+    const items = Array.from({ length: 4 }, (_, i) => projectFixture({ id: `p-${i}` }));
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listProjects.handler(
+      { response_format: "json", limit: 2, offset: 1 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.total, 4);
+    assert.equal(data.count, 2);
+    assert.equal(data.has_more, true);
+    assert.equal(data.next_offset, 3);
+  });
+
+  it("E3: offset past end returns empty items", async () => {
+    const items = [projectFixture()];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listProjects.handler(
+      { response_format: "json", limit: 10, offset: 100 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.count, 0);
+    assert.deepEqual(data.items, []);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-8b] paperclip_delete_workspace
+// ---------------------------------------------------------------------------
+const deleteWorkspace = projectTools.find((t) => t.name === "paperclip_delete_workspace")!;
+
+describe("paperclip_delete_workspace", () => {
+  it("A1: calls DELETE /api/projects/{pid}/workspaces/{wid} and returns workspace object", async () => {
+    const deleted = {
+      id: "ws-1",
+      companyId: "company-1",
+      projectId: "proj-1",
+      name: "my-workspace",
+      sourceType: "local_path",
+      cwd: "/tmp/repo",
+      repoUrl: null,
+      isPrimary: true,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+    const { fn, calls } = mockFetch(200, deleted);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await deleteWorkspace.handler(
+      { projectId: "proj-1", workspaceId: "ws-1" },
+      client
+    );
+    assert.equal(calls[0]!.url, "http://localhost:3100/api/projects/proj-1/workspaces/ws-1");
+    assert.equal(calls[0]!.init.method, "DELETE");
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, deleted);
+  });
+
+  it("A4: rejects empty projectId (min 1 validation)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => deleteWorkspace.handler({ projectId: "", workspaceId: "ws-1" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A5: rejects unknown extra field (.strict())", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        deleteWorkspace.handler(
+          { projectId: "proj-1", workspaceId: "ws-1", unknownField: "x" },
+          client
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("B1: throws McpError when workspaceId is missing (validation failure, fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => deleteWorkspace.handler({ projectId: "proj-1" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("B2: throws McpError when projectId is missing (validation failure, fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => deleteWorkspace.handler({ workspaceId: "ws-1" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("C1: returns isError on 403 (board-only endpoint)", async () => {
+    const { fn } = mockFetch(403, { error: "Board access required" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await deleteWorkspace.handler(
+      { projectId: "proj-1", workspaceId: "ws-1" },
+      client
+    );
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("403"));
+  });
+
+  it("C2: returns isError on 404 (workspace not found)", async () => {
+    const { fn } = mockFetch(404, { error: "Workspace not found" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await deleteWorkspace.handler(
+      { projectId: "proj-1", workspaceId: "missing" },
+      client
+    );
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("404"));
+  });
+
+  it("C3: returns isError on 500 API error", async () => {
+    const { fn } = mockFetch(500, { error: "Internal Server Error" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await deleteWorkspace.handler(
+      { projectId: "proj-1", workspaceId: "ws-1" },
+      client
+    );
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("500"));
+  });
+});
+
+describe("[stage-6] paperclip_list_workspaces — pagination envelope", () => {
+  it("E1: default limit=50, offset=0 in envelope", async () => {
+    const items = [{ id: "ws-1", cwd: "/home/user/repo", projectId: "proj-1" }];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listWorkspaces.handler(
+      { projectId: "proj-1", response_format: "json" },
+      client
+    );
+    assertPaginationEnvelope(result, { total: 1, limit: 50, offset: 0, count: 1 });
+  });
+
+  it("E3: offset past end returns empty items", async () => {
+    const items = [{ id: "ws-1", cwd: "/repo" }];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listWorkspaces.handler(
+      { projectId: "proj-1", response_format: "json", limit: 10, offset: 100 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.count, 0);
+    assert.deepEqual(data.items, []);
   });
 });

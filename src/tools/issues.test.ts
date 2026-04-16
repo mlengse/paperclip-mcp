@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { McpError } from "@modelcontextprotocol/sdk/types.js";
 import { PaperclipClient } from "../client.js";
 import { issueTools } from "./issues.js";
+import { largeIssueList, issueFixture } from "../test/helpers/fixtures.js";
+import { assertPaginationEnvelope } from "../test/helpers/assert-result.js";
 
 const TEST_AUTH = {
   apiKey: "test-jwt",
@@ -36,11 +38,19 @@ describe("paperclip_list_issues", () => {
   it("calls GET /api/companies/{id}/issues with no filters", async () => {
     const { fn, calls } = mockFetch(200, []);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listIssues.handler({}, client);
+    const result = await listIssues.handler({ response_format: "json" }, client);
     assert.equal(calls.length, 1);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/issues");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: "[]" }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, {
+      items: [],
+      total: 0,
+      count: 0,
+      limit: 50,
+      offset: 0,
+      has_more: false,
+    });
   });
 
   it("appends query params when filters are provided", async () => {
@@ -68,6 +78,97 @@ describe("paperclip_list_issues", () => {
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("500"));
   });
+
+  it("pagination: limit=5, offset=0 returns first 5 of 10 with total=10", async () => {
+    const allIssues = Array.from({ length: 10 }, (_, i) => ({ id: `issue-${i}` }));
+    const { fn } = mockFetch(200, allIssues);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler(
+      { limit: 5, offset: 0, response_format: "json" },
+      client
+    );
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.equal(parsed.total, 10);
+    assert.equal(parsed.limit, 5);
+    assert.equal(parsed.offset, 0);
+    assert.equal(parsed.items.length, 5);
+    assert.deepEqual(parsed.items, allIssues.slice(0, 5));
+  });
+
+  it("pagination: limit=5, offset=5 returns items 5–9 with total=10", async () => {
+    const allIssues = Array.from({ length: 10 }, (_, i) => ({ id: `issue-${i}` }));
+    const { fn } = mockFetch(200, allIssues);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler(
+      { limit: 5, offset: 5, response_format: "json" },
+      client
+    );
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.equal(parsed.total, 10);
+    assert.equal(parsed.items.length, 5);
+    assert.deepEqual(parsed.items, allIssues.slice(5, 10));
+  });
+
+  it("pagination: offset past end returns empty issues with correct total", async () => {
+    const allIssues = Array.from({ length: 3 }, (_, i) => ({ id: `issue-${i}` }));
+    const { fn } = mockFetch(200, allIssues);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler(
+      { limit: 5, offset: 10, response_format: "json" },
+      client
+    );
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.equal(parsed.total, 3);
+    assert.deepEqual(parsed.items, []);
+  });
+
+  it("pagination validation: limit=0 throws McpError before fetch", async () => {
+    const { fn, calls } = mockFetch(200, []);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => listIssues.handler({ limit: 0 }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("[stage-6] rejects offset: -1 (boundary)", async () => {
+    const { fn, calls } = mockFetch(200, []);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => listIssues.handler({ offset: -1 }, client),
+      (err: unknown) => err instanceof McpError
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("pagination validation: limit=101 throws McpError before fetch", async () => {
+    const { fn, calls } = mockFetch(200, []);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => listIssues.handler({ limit: 101 }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("pagination default: no limit/offset applies default limit=50", async () => {
+    const allIssues = Array.from({ length: 60 }, (_, i) => ({ id: `issue-${i}` }));
+    const { fn } = mockFetch(200, allIssues);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler({ response_format: "json" }, client);
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.equal(parsed.total, 60);
+    assert.equal(parsed.limit, 50);
+    assert.equal(parsed.offset, 0);
+    assert.equal(parsed.items.length, 50);
+  });
 });
 
 describe("paperclip_get_issue", () => {
@@ -75,11 +176,10 @@ describe("paperclip_get_issue", () => {
     const issue = { id: "issue-1", title: "My issue", status: "todo" };
     const { fn, calls } = mockFetch(200, issue);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getIssue.handler({ issueId: "issue-1" }, client);
+    const result = await getIssue.handler({ issueId: "issue-1", response_format: "json" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1");
-    assert.deepEqual(result, {
-      content: [{ type: "text", text: JSON.stringify(issue) }],
-    });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, issue);
   });
 
   it("throws McpError when issueId is empty string (validation failure, fetch not called)", async () => {
@@ -109,9 +209,13 @@ describe("paperclip_get_heartbeat_context", () => {
     const ctx = { state: "in_progress", goal: "Build MCP" };
     const { fn, calls } = mockFetch(200, ctx);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getHeartbeat.handler({ issueId: "issue-1" }, client);
+    const result = await getHeartbeat.handler(
+      { issueId: "issue-1", response_format: "json" },
+      client
+    );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1/heartbeat-context");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(ctx) }] });
+    const parsedCtx = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedCtx, ctx);
   });
 
   it("throws McpError when issueId is missing (validation failure, fetch not called)", async () => {
@@ -151,7 +255,8 @@ describe("paperclip_checkout_issue", () => {
       calls[0]!.init.body,
       JSON.stringify({ agentId: "agent-1", expectedStatuses: ["todo"] })
     );
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsedCheckout = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedCheckout, updated);
   });
 
   it("always includes agentId in POST body even without expectedStatuses", async () => {
@@ -194,7 +299,8 @@ describe("paperclip_release_issue", () => {
     const result = await releaseIssue.handler({ issueId: "issue-1" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1/release");
     assert.equal(calls[0]!.init.method, "POST");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsedRelease = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedRelease, updated);
   });
 
   it("throws McpError when issueId is empty string (validation failure, fetch not called)", async () => {
@@ -299,7 +405,8 @@ describe("paperclip_update_issue", () => {
     assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1");
     assert.equal(calls[0]!.init.method, "PATCH");
     assert.equal(calls[0]!.init.body, JSON.stringify({ status: "done", comment: "All done" }));
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsedUpdate = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedUpdate, updated);
   });
 
   it("forwards all 5 new fields (assigneeUserId, goalId, projectId, parentId, billingCode) in PATCH body", async () => {
@@ -352,10 +459,12 @@ describe("paperclip_update_issue", () => {
     assert.equal(calls.length, 0);
   });
 
-  it("returns isError response on 422 API error", async () => {
+  it("returns isError response on 422 API error (valid status triggers API-side error)", async () => {
+    // Note: after Stage 2, invalid enum values are caught at validation — this tests a
+    // valid status that the API rejects (e.g. invalid transition).
     const { fn } = mockFetch(422, { message: "Invalid status transition" });
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await updateIssue.handler({ issueId: "issue-1", status: "invalid" }, client);
+    const result = await updateIssue.handler({ issueId: "issue-1", status: "done" }, client);
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("422"));
   });
@@ -376,7 +485,8 @@ describe("paperclip_create_issue", () => {
     assert.equal(sentBody.title, "New feature");
     assert.equal(sentBody.priority, "high");
     assert.equal(sentBody.projectId, "proj-1");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(created) }] });
+    const parsedCreate = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedCreate, created);
   });
 
   it("forwards billingCode and inheritExecutionWorkspaceFromIssueId in POST body (PAP-60)", async () => {
@@ -424,6 +534,76 @@ describe("paperclip_create_issue", () => {
     await createIssue.handler({ title: "Tagged issue", labelIds: ["label-1", "label-2"] }, client);
     const sentBody = JSON.parse(calls[0]!.init.body as string);
     assert.deepEqual(sentBody.labelIds, ["label-1", "label-2"]);
+  });
+});
+
+describe("paperclip_update_issue (PAP-139: executionRunId and executionLockedAt)", () => {
+  it("forwards executionRunId as string in PATCH body", async () => {
+    const updated = { id: "issue-1", executionRunId: "run-abc" };
+    const { fn, calls } = mockFetch(200, updated);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await updateIssue.handler({ issueId: "issue-1", executionRunId: "run-abc" }, client);
+    const sentBody = JSON.parse(calls[0]!.init.body as string);
+    assert.equal(sentBody.executionRunId, "run-abc");
+  });
+
+  it("forwards executionLockedAt as string in PATCH body", async () => {
+    const updated = { id: "issue-1", executionLockedAt: "2026-04-10T21:00:00.000Z" };
+    const { fn, calls } = mockFetch(200, updated);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await updateIssue.handler(
+      { issueId: "issue-1", executionLockedAt: "2026-04-10T21:00:00.000Z" },
+      client
+    );
+    const sentBody = JSON.parse(calls[0]!.init.body as string);
+    assert.equal(sentBody.executionLockedAt, "2026-04-10T21:00:00.000Z");
+  });
+
+  it("forwards null executionRunId to clear a stale lock", async () => {
+    const updated = { id: "issue-1", executionRunId: null };
+    const { fn, calls } = mockFetch(200, updated);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await updateIssue.handler({ issueId: "issue-1", executionRunId: null }, client);
+    const sentBody = JSON.parse(calls[0]!.init.body as string);
+    assert.equal(
+      sentBody.executionRunId,
+      null,
+      "null executionRunId must be forwarded to clear lock"
+    );
+  });
+
+  it("forwards null executionLockedAt to clear a stale lock", async () => {
+    const updated = { id: "issue-1", executionLockedAt: null };
+    const { fn, calls } = mockFetch(200, updated);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await updateIssue.handler({ issueId: "issue-1", executionLockedAt: null }, client);
+    const sentBody = JSON.parse(calls[0]!.init.body as string);
+    assert.equal(
+      sentBody.executionLockedAt,
+      null,
+      "null executionLockedAt must be forwarded to clear lock"
+    );
+  });
+
+  it("clears both fields simultaneously when both are passed as null", async () => {
+    const updated = { id: "issue-1", executionRunId: null, executionLockedAt: null };
+    const { fn, calls } = mockFetch(200, updated);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await updateIssue.handler(
+      { issueId: "issue-1", executionRunId: null, executionLockedAt: null },
+      client
+    );
+    const sentBody = JSON.parse(calls[0]!.init.body as string);
+    assert.equal(sentBody.executionRunId, null);
+    assert.equal(sentBody.executionLockedAt, null);
+  });
+
+  it("returns isError on 422 when clearing lock fields", async () => {
+    const { fn } = mockFetch(422, { message: "Validation error" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await updateIssue.handler({ issueId: "issue-1", executionRunId: null }, client);
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("422"));
   });
 });
 
@@ -478,6 +658,101 @@ describe("paperclip_create_issue (labelIds JSON-string, PAP-120)", () => {
   });
 });
 
+// PAP-181: regression — release must clear checkoutRunId as well as executionRunId.
+// A recurrence of PAP-125 was observed where executionRunId stayed non-null across
+// successive release calls, causing false 409 conflicts on subsequent checkouts.
+describe("paperclip_release_issue (PAP-181: regression — release must clear all lock fields)", () => {
+  it("PAP-181: release response has checkoutRunId null", async () => {
+    const released = {
+      id: "issue-1",
+      status: "todo",
+      checkoutRunId: null,
+      executionRunId: null,
+      executionLockedAt: null,
+    };
+    const { fn } = mockFetch(200, released);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await releaseIssue.handler({ issueId: "issue-1" }, client);
+    const body = JSON.parse(result.content[0]!.text);
+    assert.equal(body.checkoutRunId, null, "checkoutRunId must be null after release");
+  });
+
+  it("PAP-181: repeated releases each return executionRunId null (idempotent)", async () => {
+    // Verifies that calling release multiple times does not leave a stale executionRunId.
+    // The PAP-125/PAP-181 bug manifested as repeated calls returning non-null executionRunId.
+    const released = {
+      id: "issue-1",
+      status: "todo",
+      checkoutRunId: null,
+      executionRunId: null,
+      executionLockedAt: null,
+    };
+    const { fn } = mockFetch(200, released);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+
+    for (let i = 0; i < 3; i++) {
+      const result = await releaseIssue.handler({ issueId: "issue-1" }, client);
+      const body = JSON.parse(result.content[0]!.text);
+      assert.equal(
+        body.executionRunId,
+        null,
+        `executionRunId must be null on release call #${i + 1}`
+      );
+      assert.equal(
+        body.checkoutRunId,
+        null,
+        `checkoutRunId must be null on release call #${i + 1}`
+      );
+    }
+  });
+
+  it("PAP-181: auto-release guard triggers isError on successive release that still leaves executionRunId set", async () => {
+    // Simulates the PAP-181 recurrence: successive release calls both return 200 but
+    // executionRunId remains non-null. The MCP guard must catch this and surface an error.
+    let checkoutCallCount = 0;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const statefulFetch = async (url: string, _: RequestInit): Promise<Response> => {
+      if (url.endsWith("/checkout")) {
+        checkoutCallCount++;
+        return new Response(
+          JSON.stringify({
+            error: "Issue checkout conflict",
+            details: { issueId: "issue-1", checkoutRunId: null, executionRunId: "run-stale" },
+          }),
+          {
+            status: 409,
+            statusText: "Conflict",
+            headers: new Headers({ "Content-Type": "application/json" }),
+          }
+        );
+      }
+      // Both release attempts return 200 but fail to clear executionRunId (PAP-181 scenario)
+      return new Response(
+        JSON.stringify({ id: "issue-1", status: "in_review", executionRunId: "run-stale" }),
+        { status: 200, headers: new Headers({ "Content-Type": "application/json" }) }
+      );
+    };
+
+    const client = new PaperclipClient(TEST_AUTH, statefulFetch);
+    const result = await checkoutIssue.handler({ issueId: "issue-1" }, client);
+
+    assert.equal(
+      result.isError,
+      true,
+      "must return isError when repeated release does not clear executionRunId"
+    );
+    assert.ok(
+      result.content[0]!.text.includes("Auto-release returned 200 but executionRunId is still set"),
+      "error must reference the uncleared executionRunId"
+    );
+    assert.equal(
+      checkoutCallCount,
+      1,
+      "must not retry checkout after release failed to clear lock (no infinite loop)"
+    );
+  });
+});
+
 describe("paperclip_checkout_issue (expectedStatuses JSON-string, PAP-120)", () => {
   // PAP-120: regression — client sends expectedStatuses as a JSON-encoded string instead of an array
   it("accepts expectedStatuses as JSON-encoded string and forwards parsed array (checkout)", async () => {
@@ -493,6 +768,104 @@ describe("paperclip_checkout_issue (expectedStatuses JSON-string, PAP-120)", () 
     );
     const sentBody = JSON.parse(calls[0]!.init.body as string);
     assert.deepEqual(sentBody.expectedStatuses, ["todo"]);
+  });
+});
+
+// Stage 2 TDD: A4 (enum rejection) + A5 (.strict() rejects unknown fields)
+describe("[stage-2] paperclip_list_issues — A4: enum rejection + A5: strict", () => {
+  it("A5: rejects unknown extra field (strict)", async () => {
+    const { fn, calls } = mockFetch(200, []);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => listIssues.handler({ unknownField: "oops" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});
+
+describe("[stage-2] paperclip_update_issue — A4: enum rejection + A5: strict", () => {
+  it("A4: rejects invalid status enum value for update_issue", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => updateIssue.handler({ issueId: "issue-1", status: "flying" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A4: rejects invalid priority enum value for update_issue", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => updateIssue.handler({ issueId: "issue-1", priority: "urgent" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A5: rejects unknown extra field (strict) for update_issue", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => updateIssue.handler({ issueId: "issue-1", unknownField: "oops" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});
+
+describe("[stage-2] paperclip_create_issue — A4: enum rejection + A5: strict", () => {
+  it("A4: rejects invalid status enum value for create_issue", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => createIssue.handler({ title: "Test", status: "flying" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A4: rejects invalid priority enum value for create_issue", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => createIssue.handler({ title: "Test", priority: "urgent" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A5: rejects unknown extra field (strict) for create_issue", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => createIssue.handler({ title: "Test", unknownField: "oops" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
   });
 });
 
@@ -643,5 +1016,188 @@ describe("paperclip_checkout_issue (PAP-123: auto-release stale executionRunId)"
       1,
       "must not retry checkout when release did not clear the lock"
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] D1/D2 truncation + F1/F2/F3 format tests — paperclip_list_issues
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_list_issues — truncation + format", () => {
+  it("D1: response >25k chars is truncated with hint (json mode)", async () => {
+    const big = largeIssueList(500);
+    const { fn } = mockFetch(200, big);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler({ response_format: "json", limit: 100 }, client);
+    assert.equal(result.isError, undefined);
+    assert.ok(result.content[0]!.text.length < 26_000);
+    assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("D2: response ≤25k chars is not truncated (json mode)", async () => {
+    const small = [issueFixture({ id: "issue-1" })];
+    const { fn } = mockFetch(200, small);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler({ response_format: "json" }, client);
+    assert.ok(!result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, [issueFixture()]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler({}, client);
+    assert.equal(result.content[0]!.type, "text");
+    // markdown output has headers or bullets
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("F2: response_format: 'json' returns parseable JSON", async () => {
+    const { fn } = mockFetch(200, [issueFixture()]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler({ response_format: "json" }, client);
+    assert.doesNotThrow(() => JSON.parse(result.content[0]!.text));
+  });
+
+  it("F3: markdown path renders ## header for issues list", async () => {
+    const { fn } = mockFetch(200, [issueFixture({ identifier: "PAP-99", title: "Test issue" })]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler({ response_format: "markdown" }, client);
+    assert.match(result.content[0]!.text, /^##/m);
+    assert.ok(result.content[0]!.text.includes("PAP-99"));
+  });
+
+  it("D1: markdown mode response >25k is also truncated", async () => {
+    // Build 100 issues with very long titles (~300 chars each) → ~30k markdown after formatting
+    const bigItems = Array.from({ length: 100 }, (_, i) => ({
+      id: `issue-${i}`,
+      identifier: `PAP-${i}`,
+      title: `Issue ${i} — ${"x".repeat(280)}`,
+      status: "todo",
+      priority: "high",
+      assigneeAgentId: "agent-very-long-id-here",
+      projectId: "project-very-long-id-here",
+      updatedAt: "2026-04-15T14:00:00.000Z",
+    }));
+    const { fn } = mockFetch(200, bigItems);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    // limit=100 (max) so all 100 items go to the formatter
+    const result = await listIssues.handler({ response_format: "markdown", limit: 100 }, client);
+    assert.ok(result.content[0]!.text.length < 26_000);
+    assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] D1/D2 truncation + F1/F2 — paperclip_get_issue
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_get_issue — truncation + format", () => {
+  it("F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, issueFixture());
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getIssue.handler({ issueId: "issue-1" }, client);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("F2: response_format: 'json' returns parseable JSON", async () => {
+    const { fn } = mockFetch(200, issueFixture());
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getIssue.handler({ issueId: "issue-1", response_format: "json" }, client);
+    assert.doesNotThrow(() => JSON.parse(result.content[0]!.text));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] F1/F2 — paperclip_get_heartbeat_context
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_get_heartbeat_context — format", () => {
+  it("F1: defaults to markdown output", async () => {
+    const ctx = { issueId: "PAP-1", status: "todo", lastCommentId: null };
+    const { fn } = mockFetch(200, ctx);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getHeartbeat.handler({ issueId: "PAP-1" }, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("F2: response_format 'json' returns parseable JSON", async () => {
+    const ctx = { issueId: "PAP-1", status: "todo", lastCommentId: null };
+    const { fn } = mockFetch(200, ctx);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getHeartbeat.handler(
+      { issueId: "PAP-1", response_format: "json" },
+      client
+    );
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, ctx);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-6] E1/E2/E3 pagination envelope — paperclip_list_issues
+// ---------------------------------------------------------------------------
+describe("[stage-6] paperclip_list_issues — pagination envelope", () => {
+  it("E1: default limit=50, offset=0 in envelope", async () => {
+    const items = Array.from({ length: 3 }, (_, i) => issueFixture({ id: `issue-${i}` }));
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler({ response_format: "json" }, client);
+    assertPaginationEnvelope(result, { total: 3, limit: 50, offset: 0, count: 3 });
+  });
+
+  it("E2: explicit limit=5, offset=10 reflected in envelope", async () => {
+    const items = Array.from({ length: 20 }, (_, i) => issueFixture({ id: `i-${i}` }));
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler(
+      { response_format: "json", limit: 5, offset: 10 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.total, 20);
+    assert.equal(data.count, 5);
+    assert.equal(data.limit, 5);
+    assert.equal(data.offset, 10);
+    assert.equal(data.has_more, true);
+    assert.equal(data.next_offset, 15);
+  });
+
+  it("E3: offset past end returns empty items with correct total", async () => {
+    const items = [issueFixture()];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listIssues.handler(
+      { response_format: "json", limit: 10, offset: 100 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.total, 1);
+    assert.equal(data.count, 0);
+    assert.deepEqual(data.items, []);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-7] C4/C5: AbortError + network error handling — per module
+// ---------------------------------------------------------------------------
+describe("[stage-7] paperclip_list_issues — C4/C5 timeout + network errors", () => {
+  it("C4: AbortError → isError with timeout text", async () => {
+    const fn = async () => {
+      throw new DOMException("Aborted", "AbortError");
+    };
+    const client = new PaperclipClient(TEST_AUTH, fn as unknown as typeof fetch);
+    const result = await listIssues.handler({ response_format: "json" }, client);
+    assert.equal(result.isError, true);
+    assert.match(result.content[0]!.text.toLowerCase(), /timeout/);
+  });
+
+  it("C5: network TypeError → isError with network text", async () => {
+    const fn = async () => {
+      throw new TypeError("fetch failed");
+    };
+    const client = new PaperclipClient(TEST_AUTH, fn as unknown as typeof fetch);
+    const result = await listIssues.handler({ response_format: "json" }, client);
+    assert.equal(result.isError, true);
+    assert.match(result.content[0]!.text.toLowerCase(), /network|reach/);
   });
 });

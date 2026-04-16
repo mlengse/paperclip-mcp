@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { McpError } from "@modelcontextprotocol/sdk/types.js";
 import { PaperclipClient } from "../client.js";
 import { attachmentTools } from "./attachments.js";
+import { assertPaginationEnvelope } from "../test/helpers/assert-result.js";
 
 const TEST_AUTH = {
   apiKey: "test-jwt",
@@ -29,6 +30,26 @@ function mockFetch(status: number, body: unknown) {
   return { fn, calls };
 }
 
+function mockRawFetch(status: number, bytes: Uint8Array, contentType: string = "text/plain") {
+  const calls: { url: string; init: RequestInit }[] = [];
+  const fn = async (url: string, init: RequestInit): Promise<Response> => {
+    calls.push({ url, init });
+    if (status >= 400) {
+      return new Response("error body", {
+        status,
+        statusText: "Error",
+        headers: new Headers({ "Content-Type": "text/plain" }),
+      });
+    }
+    return new Response(bytes.buffer as ArrayBuffer, {
+      status,
+      statusText: "OK",
+      headers: new Headers({ "Content-Type": contentType }),
+    });
+  };
+  return { fn, calls };
+}
+
 const listAttachments = attachmentTools.find((t) => t.name === "paperclip_list_attachments")!;
 const uploadAttachment = attachmentTools.find((t) => t.name === "paperclip_upload_attachment")!;
 const downloadAttachment = attachmentTools.find((t) => t.name === "paperclip_download_attachment")!;
@@ -39,10 +60,14 @@ describe("paperclip_list_attachments", () => {
     const attachments = [{ id: "att-1", filename: "report.pdf", mimeType: "application/pdf" }];
     const { fn, calls } = mockFetch(200, attachments);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listAttachments.handler({ issueId: "issue-1" }, client);
+    const result = await listAttachments.handler(
+      { issueId: "issue-1", response_format: "json" },
+      client
+    );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1/attachments");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(attachments) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed.items, attachments);
   });
 
   it("throws McpError when issueId is empty string (validation failure, fetch not called)", async () => {
@@ -85,7 +110,8 @@ describe("paperclip_upload_attachment", () => {
       );
       assert.equal(calls[0]!.init.method, "POST");
       assert.ok(calls[0]!.init.body instanceof FormData, "body should be FormData");
-      assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(created) }] });
+      const parsedCreated = JSON.parse(result.content[0]!.text);
+      assert.deepEqual(parsedCreated, created);
     } finally {
       unlinkSync(tmpFile);
     }
@@ -123,18 +149,41 @@ describe("paperclip_upload_attachment", () => {
 });
 
 describe("paperclip_download_attachment", () => {
-  it("calls GET /api/attachments/{attachmentId}/content and returns content", async () => {
-    const content = { data: "base64encodedcontent==" };
-    const { fn, calls } = mockFetch(200, content);
+  it("calls GET /api/attachments/{attachmentId}/content and returns base64 envelope (json format)", async () => {
+    const fileBytes = new Uint8Array([72, 105]); // "Hi"
+    const { fn, calls } = mockRawFetch(200, fileBytes, "text/plain");
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await downloadAttachment.handler({ attachmentId: "att-1" }, client);
+    const result = await downloadAttachment.handler(
+      { attachmentId: "att-1", response_format: "json" },
+      client
+    );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/attachments/att-1/content");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(content) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.equal(parsed.attachmentId, "att-1");
+    assert.equal(parsed.contentType, "text/plain");
+    assert.equal(parsed.size, 2);
+    assert.equal(parsed.contentBase64, Buffer.from(fileBytes).toString("base64"));
+  });
+
+  it("returns markdown summary with contentType, size, and base64 (markdown format)", async () => {
+    const fileBytes = new Uint8Array([104, 101, 108, 108, 111]); // "hello"
+    const { fn } = mockRawFetch(200, fileBytes, "text/plain");
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await downloadAttachment.handler(
+      { attachmentId: "att-2", response_format: "markdown" },
+      client
+    );
+    assert.ok(!result.isError);
+    const text = result.content[0]!.text;
+    assert.ok(text.includes("att-2"), "should include attachment id");
+    assert.ok(text.includes("text/plain"), "should include content-type");
+    assert.ok(text.includes("5 bytes"), "should include size");
+    assert.ok(text.includes(Buffer.from(fileBytes).toString("base64")), "should include base64");
   });
 
   it("throws McpError when attachmentId is empty string (validation failure, fetch not called)", async () => {
-    const { fn, calls } = mockFetch(200, {});
+    const { fn, calls } = mockRawFetch(200, new Uint8Array());
     const client = new PaperclipClient(TEST_AUTH, fn);
     await assert.rejects(
       () => downloadAttachment.handler({ attachmentId: "" }, client),
@@ -147,7 +196,7 @@ describe("paperclip_download_attachment", () => {
   });
 
   it("returns isError response on 404 API error", async () => {
-    const { fn } = mockFetch(404, { message: "Attachment not found" });
+    const { fn } = mockRawFetch(404, new Uint8Array());
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await downloadAttachment.handler({ attachmentId: "missing-att" }, client);
     assert.equal(result.isError, true);
@@ -184,5 +233,35 @@ describe("paperclip_delete_attachment", () => {
     const result = await deleteAttachment.handler({ attachmentId: "missing-att" }, client);
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("404"));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-6] E1/E2/E3 pagination envelope — paperclip_list_attachments
+// ---------------------------------------------------------------------------
+describe("[stage-6] paperclip_list_attachments — pagination envelope", () => {
+  it("E1: default limit=50, offset=0 in envelope", async () => {
+    const items = [{ id: "att-1", filename: "plan.pdf", mimeType: "application/pdf" }];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listAttachments.handler(
+      { issueId: "PAP-1", response_format: "json" },
+      client
+    );
+    assertPaginationEnvelope(result, { total: 1, limit: 50, offset: 0, count: 1 });
+  });
+
+  it("E3: offset past end returns empty items", async () => {
+    const items = [{ id: "att-1", filename: "plan.pdf" }];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listAttachments.handler(
+      { issueId: "PAP-1", response_format: "json", limit: 10, offset: 100 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.count, 0);
+    assert.deepEqual(data.items, []);
   });
 });

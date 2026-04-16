@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { McpError } from "@modelcontextprotocol/sdk/types.js";
 import { PaperclipClient } from "../client.js";
 import { approvalTools } from "./approvals.js";
+import { approvalFixture, largeApprovalList } from "../test/helpers/fixtures.js";
+import { assertPaginationEnvelope } from "../test/helpers/assert-result.js";
 
 const TEST_AUTH = {
   apiKey: "test-jwt",
@@ -40,10 +42,11 @@ describe("paperclip_list_approvals", () => {
     const approvals = [{ id: "appr-1", title: "Hire Engineer", status: "pending" }];
     const { fn, calls } = mockFetch(200, approvals);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listApprovals.handler({}, client);
+    const result = await listApprovals.handler({ response_format: "json" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/approvals");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(approvals) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed.items, approvals);
   });
 
   it("appends status filter when provided", async () => {
@@ -70,10 +73,14 @@ describe("paperclip_get_approval", () => {
     const approval = { id: "appr-1", title: "Hire Engineer", status: "pending" };
     const { fn, calls } = mockFetch(200, approval);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getApproval.handler({ approvalId: "appr-1" }, client);
+    const result = await getApproval.handler(
+      { approvalId: "appr-1", response_format: "json" },
+      client
+    );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/approvals/appr-1");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(approval) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, approval);
   });
 
   it("makes exactly one HTTP call (linked issues are not fetched)", async () => {
@@ -121,7 +128,8 @@ describe("paperclip_create_approval", () => {
     assert.equal(body.type, "hire_agent");
     assert.deepEqual(body.payload, { name: "Alice", role: "engineer" });
     assert.equal(body.title, undefined);
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(created) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, created);
   });
 
   it("includes requestedByAgentId when provided", async () => {
@@ -189,7 +197,8 @@ describe("paperclip_approve", () => {
     const result = await approve.handler({ approvalId: "appr-1" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/approvals/appr-1/approve");
     assert.equal(calls[0]!.init.method, "POST");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsed0 = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed0, updated);
   });
 
   it("throws McpError when approvalId is empty string (validation failure, fetch not called)", async () => {
@@ -224,7 +233,8 @@ describe("paperclip_reject", () => {
     assert.equal(calls[0]!.init.method, "POST");
     const body = JSON.parse(calls[0]!.init.body as string);
     assert.equal(body.reason, "Not ready");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsed1 = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed1, updated);
   });
 
   it("throws McpError when approvalId is empty string (validation failure, fetch not called)", async () => {
@@ -262,7 +272,8 @@ describe("paperclip_request_revision", () => {
     assert.equal(calls[0]!.init.method, "POST");
     const body = JSON.parse(calls[0]!.init.body as string);
     assert.equal(body.feedback, "Need more tests");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsed2 = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed2, updated);
   });
 
   it("throws McpError when approvalId is empty string (validation failure, fetch not called)", async () => {
@@ -300,7 +311,8 @@ describe("paperclip_resubmit_approval", () => {
     assert.equal(calls[0]!.init.method, "POST");
     const body = JSON.parse(calls[0]!.init.body as string);
     assert.equal(body.comment, "Added more tests");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsed3 = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed3, updated);
   });
 
   it("throws McpError when approvalId is empty string (validation failure, fetch not called)", async () => {
@@ -330,10 +342,14 @@ describe("paperclip_list_approval_comments", () => {
     const comments = [{ id: "cmt-1", body: "Looks good" }];
     const { fn, calls } = mockFetch(200, comments);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listComments.handler({ approvalId: "appr-1" }, client);
+    const result = await listComments.handler(
+      { approvalId: "appr-1", response_format: "json" },
+      client
+    );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/approvals/appr-1/comments");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(comments) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed.items, comments);
   });
 
   it("throws McpError when approvalId is empty string (validation failure, fetch not called)", async () => {
@@ -368,7 +384,8 @@ describe("paperclip_add_approval_comment", () => {
     assert.equal(calls[0]!.init.method, "POST");
     const reqBody = JSON.parse(calls[0]!.init.body as string);
     assert.equal(reqBody.body, "Approved!");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(created) }] });
+    const parsedApprComment = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedApprComment, created);
   });
 
   it("throws McpError when body is empty string (validation failure, fetch not called)", async () => {
@@ -409,7 +426,8 @@ describe("paperclip_create_agent_hire", () => {
     assert.equal(body.role, "engineer");
     assert.equal(body.title, "Senior Engineer");
     assert.equal(body.goalId, "goal-1");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(created) }] });
+    const parsedHire = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedHire, created);
   });
 
   it("throws McpError when role is empty string (validation failure, fetch not called)", async () => {
@@ -431,5 +449,400 @@ describe("paperclip_create_agent_hire", () => {
     const result = await createHire.handler({ name: "Bob", role: "qa" }, client);
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("400"));
+  });
+});
+
+// Stage 2 TDD: A4 (enum rejection) + A5 (.strict() rejects unknown fields)
+describe("[stage-2] paperclip_create_approval — A4: ApprovalTypeSchema + A5: strict", () => {
+  it("A4: rejects invalid approval type enum value", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => createApproval.handler({ type: "invalid_type", payload: { foo: "bar" } }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A4: accepts valid approval type hire_agent", async () => {
+    const created = { id: "appr-1", type: "hire_agent" };
+    const { fn } = mockFetch(200, created);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await createApproval.handler(
+      { type: "hire_agent", payload: { name: "Alice" } },
+      client
+    );
+    assert.equal(result.isError, undefined);
+  });
+
+  it("A5: rejects unknown extra field (strict) for create_approval", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        createApproval.handler({ type: "hire_agent", payload: {}, unknownField: "oops" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] D1/D2 truncation + F1/F2 — paperclip_list_approvals
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_list_approvals — truncation + format", () => {
+  it("D1: response >25k chars is truncated with hint", async () => {
+    const big = largeApprovalList(300);
+    const { fn } = mockFetch(200, big);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovals.handler({ limit: 100, response_format: "json" }, client);
+    assert.ok(result.content[0]!.text.length <= 25_000);
+    assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("D2: small response is not truncated", async () => {
+    const small = [approvalFixture()];
+    const { fn } = mockFetch(200, small);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovals.handler({ response_format: "json" }, client);
+    assert.ok(!result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, [approvalFixture()]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovals.handler({}, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("F2: response_format 'json' returns parseable JSON array", async () => {
+    const approvals = [approvalFixture()];
+    const { fn } = mockFetch(200, approvals);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovals.handler({ response_format: "json" }, client);
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed.items, approvals);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] F1/F2 — paperclip_get_approval
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_get_approval — format", () => {
+  it("F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, approvalFixture());
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getApproval.handler({ approvalId: "appr-1" }, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("F2: response_format 'json' returns parseable JSON object", async () => {
+    const approval = approvalFixture();
+    const { fn } = mockFetch(200, approval);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getApproval.handler(
+      { approvalId: "appr-1", response_format: "json" },
+      client
+    );
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, approval);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-6] E1/E2/E3 pagination envelope — list_approvals / list_approval_comments
+// ---------------------------------------------------------------------------
+describe("[stage-6] paperclip_list_approvals — pagination envelope", () => {
+  it("E1: default limit=50, offset=0 in envelope", async () => {
+    const items = Array.from({ length: 3 }, (_, i) => approvalFixture({ id: `appr-${i}` }));
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovals.handler({ response_format: "json" }, client);
+    assertPaginationEnvelope(result, { total: 3, limit: 50, offset: 0, count: 3 });
+  });
+
+  it("E2: explicit limit=2, offset=1 in envelope", async () => {
+    const items = Array.from({ length: 4 }, (_, i) => approvalFixture({ id: `a-${i}` }));
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovals.handler(
+      { response_format: "json", limit: 2, offset: 1 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.total, 4);
+    assert.equal(data.count, 2);
+    assert.equal(data.has_more, true);
+    assert.equal(data.next_offset, 3);
+  });
+
+  it("E3: offset past end returns empty items", async () => {
+    const items = [approvalFixture()];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovals.handler(
+      { response_format: "json", limit: 10, offset: 100 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.count, 0);
+    assert.deepEqual(data.items, []);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-8a] paperclip_list_approval_issues
+// ---------------------------------------------------------------------------
+describe("[stage-8a] paperclip_list_approval_issues — schema (A1–A5)", () => {
+  const listApprovalIssues = approvalTools.find(
+    (t) => t.name === "paperclip_list_approval_issues"
+  )!;
+
+  it("A1: rejects missing approvalId (validation failure, fetch not called)", async () => {
+    assert.ok(listApprovalIssues, "tool must exist");
+    const { fn, calls } = mockFetch(200, []);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => listApprovalIssues.handler({}, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A2: rejects empty approvalId (validation failure, fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, []);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => listApprovalIssues.handler({ approvalId: "" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A3: rejects invalid limit (non-integer, fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, []);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => listApprovalIssues.handler({ approvalId: "appr-1", limit: 1.5 }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A5: rejects unknown extra field (.strict())", async () => {
+    const { fn, calls } = mockFetch(200, []);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => listApprovalIssues.handler({ approvalId: "appr-1", unknownField: "oops" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});
+
+describe("[stage-8a] paperclip_list_approval_issues — happy path (B1–B2)", () => {
+  const listApprovalIssues = approvalTools.find(
+    (t) => t.name === "paperclip_list_approval_issues"
+  )!;
+
+  it("B1: calls GET /api/approvals/{id}/issues with correct URL and method", async () => {
+    const issues = [{ id: "issue-1", title: "Fix bug", status: "todo" }];
+    const { fn, calls } = mockFetch(200, issues);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovalIssues.handler(
+      { approvalId: "appr-1", response_format: "json" },
+      client
+    );
+    assert.equal(calls[0]!.url, "http://localhost:3100/api/approvals/appr-1/issues");
+    assert.equal(calls[0]!.init.method, "GET");
+    assert.ok(!result.isError);
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed.items, issues);
+  });
+
+  it("B2: returns pagination envelope in JSON format", async () => {
+    const issues = [
+      { id: "issue-1", title: "Fix bug", status: "todo" },
+      { id: "issue-2", title: "Add feature", status: "in_progress" },
+    ];
+    const { fn } = mockFetch(200, issues);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovalIssues.handler(
+      { approvalId: "appr-1", response_format: "json", limit: 10, offset: 0 },
+      client
+    );
+    assert.ok(!result.isError);
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.equal(parsed.total, 2);
+    assert.equal(parsed.count, 2);
+    assert.equal(parsed.offset, 0);
+    assert.equal(parsed.limit, 10);
+  });
+});
+
+describe("[stage-8a] paperclip_list_approval_issues — error paths (C1–C3)", () => {
+  const listApprovalIssues = approvalTools.find(
+    (t) => t.name === "paperclip_list_approval_issues"
+  )!;
+
+  it("C1: returns isError on 404", async () => {
+    const { fn } = mockFetch(404, { error: "Approval not found" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovalIssues.handler({ approvalId: "missing" }, client);
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("404"));
+  });
+
+  it("C2: returns isError on 401", async () => {
+    const { fn } = mockFetch(401, { error: "Unauthorized" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovalIssues.handler({ approvalId: "appr-1" }, client);
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("401"));
+  });
+
+  it("C3: returns isError on 500", async () => {
+    const { fn } = mockFetch(500, { error: "Internal Server Error" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovalIssues.handler({ approvalId: "appr-1" }, client);
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("500"));
+  });
+});
+
+describe("[stage-8a] paperclip_list_approval_issues — pagination envelope (E1–E3)", () => {
+  const listApprovalIssues = approvalTools.find(
+    (t) => t.name === "paperclip_list_approval_issues"
+  )!;
+
+  it("E1: default limit=50, offset=0 in envelope", async () => {
+    const items = [{ id: "issue-1", title: "Fix bug" }];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovalIssues.handler(
+      { approvalId: "appr-1", response_format: "json" },
+      client
+    );
+    assertPaginationEnvelope(result, { total: 1, limit: 50, offset: 0, count: 1 });
+  });
+
+  it("E2: explicit limit=2, offset=1 pages correctly", async () => {
+    const items = Array.from({ length: 4 }, (_, i) => ({ id: `issue-${i}`, title: `Issue ${i}` }));
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovalIssues.handler(
+      { approvalId: "appr-1", response_format: "json", limit: 2, offset: 1 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.total, 4);
+    assert.equal(data.count, 2);
+    assert.equal(data.has_more, true);
+    assert.equal(data.next_offset, 3);
+  });
+
+  it("E3: offset past end returns empty items", async () => {
+    const items = [{ id: "issue-1", title: "Fix bug" }];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovalIssues.handler(
+      { approvalId: "appr-1", response_format: "json", limit: 10, offset: 100 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.count, 0);
+    assert.deepEqual(data.items, []);
+  });
+});
+
+describe("[stage-8a] paperclip_list_approval_issues — truncation + format (D1, F1–F2)", () => {
+  const listApprovalIssues = approvalTools.find(
+    (t) => t.name === "paperclip_list_approval_issues"
+  )!;
+
+  it("D1: response >25k chars is truncated with hint", async () => {
+    const big = Array.from({ length: 300 }, (_, i) => ({
+      id: `issue-${i}`,
+      title: `Issue ${i} — ${"x".repeat(200)}`,
+    }));
+    const { fn } = mockFetch(200, big);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovalIssues.handler(
+      { approvalId: "appr-1", limit: 100, response_format: "json" },
+      client
+    );
+    assert.ok(result.content[0]!.text.length <= 25_000);
+    assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, [{ id: "issue-1", title: "Fix bug" }]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovalIssues.handler({ approvalId: "appr-1" }, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("F2: response_format 'json' returns parseable JSON", async () => {
+    const issues = [{ id: "issue-1", title: "Fix bug" }];
+    const { fn } = mockFetch(200, issues);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovalIssues.handler(
+      { approvalId: "appr-1", response_format: "json" },
+      client
+    );
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed.items, issues);
+  });
+});
+
+describe("[stage-6] paperclip_list_approval_comments — pagination envelope", () => {
+  it("E1: default limit=50, offset=0 in envelope", async () => {
+    const items = [{ id: "cmt-1", body: "Looks good", authorId: "user-1" }];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listComments.handler(
+      { approvalId: "appr-1", response_format: "json" },
+      client
+    );
+    assertPaginationEnvelope(result, { total: 1, limit: 50, offset: 0, count: 1 });
+  });
+
+  it("E3: offset past end returns empty items", async () => {
+    const items = [{ id: "cmt-1", body: "Looks good" }];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listComments.handler(
+      { approvalId: "appr-1", response_format: "json", limit: 10, offset: 100 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.count, 0);
+    assert.deepEqual(data.items, []);
   });
 });

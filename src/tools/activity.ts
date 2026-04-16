@@ -1,41 +1,79 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import { validate, NoInput, handleApiError } from "./validation.js";
+import { validate, toJsonSchema, handleApiError, composeDescription } from "./validation.js";
+import {
+  ResponseFormatSchema,
+  PaginationLimitSchema,
+  PaginationOffsetSchema,
+  formatJson,
+  formatGenericList,
+  applyCharLimit,
+  paginate,
+} from "./format.js";
 
-const ReportCostEventInput = z.object({
-  agentId: z.string().describe("ID of the agent that incurred the cost"),
-  provider: z.string().describe("LLM provider name (e.g. anthropic, openai)"),
-  model: z.string().describe("Model name (e.g. claude-sonnet-4-6)"),
-  inputTokens: z.number().int().nonnegative().describe("Number of input tokens consumed"),
-  outputTokens: z.number().int().nonnegative().describe("Number of output tokens generated"),
-  costCents: z.number().nonnegative().describe("Total cost in cents"),
-  occurredAt: z.string().describe("ISO 8601 timestamp of when the cost was incurred"),
-});
+const ReportCostEventInput = z
+  .object({
+    agentId: z.string().describe("ID of the agent that incurred the cost"),
+    provider: z.string().describe("LLM provider name (e.g. anthropic, openai)"),
+    model: z.string().describe("Model name (e.g. claude-sonnet-4-6)"),
+    inputTokens: z.number().int().nonnegative().describe("Number of input tokens consumed"),
+    outputTokens: z.number().int().nonnegative().describe("Number of output tokens generated"),
+    costCents: z.number().nonnegative().describe("Total cost in cents"),
+    occurredAt: z
+      .string()
+      .datetime({
+        message: "Must be a valid ISO 8601 datetime string (e.g. '2026-04-16T12:00:00.000Z')",
+      })
+      .describe("ISO 8601 timestamp of when the cost was incurred"),
+  })
+  .strict();
 
-const GetActivityInput = z.object({
-  agentId: z.string().optional().describe("Filter by agent ID"),
-  entityType: z.string().optional().describe("Filter by entity type (e.g. issue, approval)"),
-  entityId: z.string().optional().describe("Filter by entity ID"),
-});
+const GetActivityInput = z
+  .object({
+    agentId: z.string().optional().describe("Filter by agent ID"),
+    entityType: z.string().optional().describe("Filter by entity type (e.g. issue, approval)"),
+    entityId: z.string().optional().describe("Filter by entity ID"),
+    limit: PaginationLimitSchema.describe("Max events per page (1–100, default 50)"),
+    offset: PaginationOffsetSchema.describe("Number of events to skip (default 0)"),
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
+  })
+  .strict();
+
+const NoInputWithFormat = z
+  .object({
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
+  })
+  .strict();
 
 export const activityTools: ToolDefinition[] = [
   {
     name: "paperclip_get_activity",
-    description:
-      "Get audit trail activity for the current company. Optionally filter by agentId, entityType, or entityId.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        agentId: { type: "string", description: "Filter by agent ID" },
-        entityType: {
-          type: "string",
-          description: "Filter by entity type (e.g. issue, approval)",
-        },
-        entityId: { type: "string", description: "Filter by entity ID" },
+    description: composeDescription({
+      summary: "Get the audit trail activity feed for the current company.",
+      args: [
+        '- agentId: string (optional) — Filter to a specific agent (example: "agt_abc123")',
+        '- entityType: string (optional) — Filter by entity kind (example: "issue")',
+        '- entityId: string (optional) — Filter to a specific entity (example: "PAP-42")',
+        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
+      ],
+      returns:
+        "Pagination envelope { items: ActivityEvent[], total, count, offset, limit, has_more, next_offset }. Each item: id, agentId, entityType, entityId, action, occurredAt, metadata.",
+      examples: {
+        useWhen:
+          "auditing what an agent did on a specific issue or reviewing recent company actions",
+        dontUseWhen: "you need issue comments — use paperclip_list_comments instead",
       },
-      required: [],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 403: permission denied → verify PAPERCLIP_COMPANY_ID is correct",
+      ],
+    }),
+    inputSchema: toJsonSchema(GetActivityInput),
+    annotations: { title: "Get company activity feed", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const input = validate(GetActivityInput, args);
@@ -45,107 +83,164 @@ export const activityTools: ToolDefinition[] = [
         if (input.entityId) params.set("entityId", input.entityId);
         const qs = params.toString();
         const path = `/api/companies/${client.companyId}/activity${qs ? `?${qs}` : ""}`;
-        const data = await client.get<unknown>(path);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const all = await client.get<unknown[]>(path);
+        const envelope = paginate(all, { limit: input.limit, offset: input.offset });
+        const fmt = input.response_format ?? "markdown";
+        const text =
+          fmt === "json"
+            ? formatJson(envelope)
+            : formatGenericList(envelope.items, "Activity", envelope);
+        const hint =
+          "Response too large. Filter by agentId, entityType, or entityId, or use limit/offset.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_get_activity", resource: "activity" });
       }
     },
   },
   {
     name: "paperclip_get_cost_summary",
-    description: "Get a cost summary for the current company across all agents and projects.",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      required: [],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    description: composeDescription({
+      summary:
+        "Get a rolled-up cost summary for the current company across all agents and projects.",
+      args: [
+        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
+      ],
+      returns:
+        "Object with total cost in cents, breakdown by period, and per-agent/per-project aggregates.",
+      examples: {
+        useWhen: "checking overall spend before requesting a budget override approval",
+        dontUseWhen:
+          "you need per-agent costs — use paperclip_get_costs_by_agent for a per-agent breakdown",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 403: permission denied → verify PAPERCLIP_COMPANY_ID is correct",
+      ],
+    }),
+    inputSchema: toJsonSchema(NoInputWithFormat),
+    annotations: { title: "Get company cost summary", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        validate(NoInput, args);
+        const { response_format: fmt } = validate(NoInputWithFormat, args);
         const data = await client.get<unknown>(`/api/companies/${client.companyId}/costs/summary`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text =
+          (fmt ?? "markdown") === "json"
+            ? formatJson(data)
+            : formatGenericList([data], "Cost Summary");
+        const hint =
+          "Cost summary response too large; this is unusual. The company may have an exceptional number of cost entries.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_get_cost_summary" });
       }
     },
   },
   {
     name: "paperclip_get_costs_by_agent",
-    description: "Get costs broken down by agent for the current company.",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      required: [],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    description: composeDescription({
+      summary: "Get LLM token costs broken down by agent for the current company.",
+      args: [
+        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
+      ],
+      returns: "Array of per-agent cost records: agentId, agentName, totalCents, tokenCounts.",
+      examples: {
+        useWhen: "identifying which agent is consuming the most budget this period",
+        dontUseWhen: "you need project-level costs — use paperclip_get_costs_by_project instead",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 403: permission denied → verify PAPERCLIP_COMPANY_ID is correct",
+      ],
+    }),
+    inputSchema: toJsonSchema(NoInputWithFormat),
+    annotations: { title: "Get costs by agent", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        validate(NoInput, args);
+        const { response_format: fmt } = validate(NoInputWithFormat, args);
         const data = await client.get<unknown>(`/api/companies/${client.companyId}/costs/by-agent`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text =
+          (fmt ?? "markdown") === "json"
+            ? formatJson(data)
+            : formatGenericList(data, "Costs by Agent");
+        const hint =
+          "Cost-by-agent response too large; this is unusual. The company may have an exceptional number of agents or cost entries.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_get_costs_by_agent" });
       }
     },
   },
   {
     name: "paperclip_get_costs_by_project",
-    description: "Get costs broken down by project for the current company.",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      required: [],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    description: composeDescription({
+      summary: "Get LLM token costs broken down by project for the current company.",
+      args: [
+        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
+      ],
+      returns:
+        "Array of per-project cost records: projectId, projectName, totalCents, tokenCounts.",
+      examples: {
+        useWhen: "comparing spend across projects to prioritise budget allocation",
+        dontUseWhen: "you need agent-level costs — use paperclip_get_costs_by_agent instead",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 403: permission denied → verify PAPERCLIP_COMPANY_ID is correct",
+      ],
+    }),
+    inputSchema: toJsonSchema(NoInputWithFormat),
+    annotations: { title: "Get costs by project", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        validate(NoInput, args);
+        const { response_format: fmt } = validate(NoInputWithFormat, args);
         const data = await client.get<unknown>(
           `/api/companies/${client.companyId}/costs/by-project`
         );
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text =
+          (fmt ?? "markdown") === "json"
+            ? formatJson(data)
+            : formatGenericList(data, "Costs by Project");
+        const hint =
+          "Cost-by-project response too large; this is unusual. The company may have an exceptional number of projects or cost entries.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_get_costs_by_project" });
       }
     },
   },
   {
     name: "paperclip_report_cost_event",
-    description:
-      "Report an agent's token usage and cost to Paperclip for budget tracking and spend analytics. Calls POST /api/companies/{companyId}/cost-events.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        agentId: { type: "string", description: "ID of the agent that incurred the cost" },
-        provider: { type: "string", description: "LLM provider name (e.g. anthropic, openai)" },
-        model: { type: "string", description: "Model name (e.g. claude-sonnet-4-6)" },
-        inputTokens: {
-          type: "number",
-          description: "Number of input tokens consumed",
-        },
-        outputTokens: {
-          type: "number",
-          description: "Number of output tokens generated",
-        },
-        costCents: { type: "number", description: "Total cost in cents" },
-        occurredAt: {
-          type: "string",
-          description: "ISO 8601 timestamp of when the cost was incurred",
-        },
-      },
-      required: [
-        "agentId",
-        "provider",
-        "model",
-        "inputTokens",
-        "outputTokens",
-        "costCents",
-        "occurredAt",
+    description: composeDescription({
+      summary: "Report an agent's token usage and cost event to Paperclip for budget tracking.",
+      args: [
+        '- agentId: string — ID of the agent that incurred the cost (example: "agt_abc123")',
+        '- provider: string — LLM provider name (example: "anthropic")',
+        '- model: string — Model identifier (example: "claude-sonnet-4-6")',
+        "- inputTokens: integer — Number of input tokens consumed",
+        "- outputTokens: integer — Number of output tokens generated",
+        "- costCents: number — Total cost in cents (non-negative)",
+        '- occurredAt: string — ISO 8601 timestamp (example: "2026-04-16T12:00:00.000Z")',
       ],
+      returns:
+        "Returns the created cost event record: id, agentId, provider, model, costCents, occurredAt.",
+      examples: {
+        useWhen: "recording a completed LLM API call for spend analytics and budget enforcement",
+        dontUseWhen:
+          "you want a cost summary — use paperclip_get_cost_summary or paperclip_get_costs_by_agent",
+      },
+      errors: [
+        "- 400: validation failure → check costCents ≥ 0, occurredAt is valid ISO 8601, tokens are integers",
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+      ],
+    }),
+    inputSchema: toJsonSchema(ReportCostEventInput),
+    annotations: {
+      title: "Report agent cost event",
+      readOnlyHint: false,
+      destructiveHint: false,
+      openWorldHint: false,
     },
-    annotations: { readOnlyHint: false, openWorldHint: false },
     async handler(args, client) {
       try {
         const input = validate(ReportCostEventInput, args);
@@ -153,9 +248,12 @@ export const activityTools: ToolDefinition[] = [
           `/api/companies/${client.companyId}/cost-events`,
           input
         );
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_report_cost_event" });
       }
     },
   },

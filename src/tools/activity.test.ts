@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { McpError } from "@modelcontextprotocol/sdk/types.js";
 import { PaperclipClient } from "../client.js";
 import { activityTools } from "./activity.js";
+import { activityFixture, largeActivityList } from "../test/helpers/fixtures.js";
+import { assertPaginationEnvelope } from "../test/helpers/assert-result.js";
 
 const TEST_AUTH = {
   apiKey: "test-jwt",
@@ -35,10 +37,11 @@ describe("paperclip_get_activity", () => {
     const activity = [{ id: "act-1", type: "issue.created" }];
     const { fn, calls } = mockFetch(200, activity);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getActivity.handler({}, client);
+    const result = await getActivity.handler({ response_format: "json" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/activity");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(activity) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed.items, activity);
   });
 
   it("appends query params when filters are provided", async () => {
@@ -68,10 +71,11 @@ describe("paperclip_get_cost_summary", () => {
     const summary = { total: 1234, currency: "usd" };
     const { fn, calls } = mockFetch(200, summary);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getCostSummary.handler({}, client);
+    const result = await getCostSummary.handler({ response_format: "json" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/costs/summary");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(summary) }] });
+    const parsedSummary = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedSummary, summary);
   });
 
   it("throws McpError when args is not an object (validation failure, fetch not called)", async () => {
@@ -101,10 +105,11 @@ describe("paperclip_get_costs_by_agent", () => {
     const breakdown = [{ agentId: "agent-1", total: 500 }];
     const { fn, calls } = mockFetch(200, breakdown);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getCostsByAgent.handler({}, client);
+    const result = await getCostsByAgent.handler({ response_format: "json" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/costs/by-agent");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(breakdown) }] });
+    const parsedByAgent = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedByAgent, breakdown);
   });
 
   it("throws McpError when args is not an object (validation failure, fetch not called)", async () => {
@@ -134,12 +139,11 @@ describe("paperclip_get_costs_by_project", () => {
     const breakdown = [{ projectId: "proj-1", total: 800 }];
     const { fn, calls } = mockFetch(200, breakdown);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getCostsByProject.handler({}, client);
+    const result = await getCostsByProject.handler({ response_format: "json" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/costs/by-project");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, {
-      content: [{ type: "text", text: JSON.stringify(breakdown) }],
-    });
+    const parsedByProject = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedByProject, breakdown);
   });
 
   it("throws McpError when args is not an object (validation failure, fetch not called)", async () => {
@@ -183,7 +187,8 @@ describe("paperclip_report_cost_event", () => {
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/cost-events");
     assert.equal(calls[0]!.init.method, "POST");
     assert.deepEqual(JSON.parse(calls[0]!.init.body as string), validInput);
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(event) }] });
+    const parsedEvent = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedEvent, event);
   });
 
   it("returns isError response on 422 validation error", async () => {
@@ -205,5 +210,202 @@ describe("paperclip_report_cost_event", () => {
       }
     );
     assert.equal(calls.length, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] D1/F1/F2 — paperclip_get_activity
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_get_activity — truncation + format", () => {
+  it("[stage-5] D1: response >25k chars is truncated with actionable hint", async () => {
+    const big = largeActivityList(500);
+    const { fn } = mockFetch(200, big);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getActivity.handler({ limit: 100, response_format: "json" }, client);
+    assert.ok(result.content[0]!.text.length < 26_000);
+    assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("[stage-5] D2: small response is not truncated", async () => {
+    const small = [activityFixture()];
+    const { fn } = mockFetch(200, small);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getActivity.handler({ response_format: "json" }, client);
+    assert.ok(!result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("[stage-5] F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, [activityFixture()]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getActivity.handler({}, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("[stage-5] F2: response_format 'json' returns parseable JSON array", async () => {
+    const events = [activityFixture()];
+    const { fn } = mockFetch(200, events);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getActivity.handler({ response_format: "json" }, client);
+    assert.doesNotThrow(() => JSON.parse(result.content[0]!.text));
+    assert.deepEqual(JSON.parse(result.content[0]!.text).items, events);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] F1/F2 — paperclip_get_cost_summary
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_get_cost_summary — format", () => {
+  it("[stage-5] F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, { total: 1234, currency: "usd" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getCostSummary.handler({}, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("[stage-5] F2: response_format 'json' returns valid JSON", async () => {
+    const summary = { total: 1234, currency: "usd" };
+    const { fn } = mockFetch(200, summary);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getCostSummary.handler({ response_format: "json" }, client);
+    assert.doesNotThrow(() => JSON.parse(result.content[0]!.text));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] F1/F2 — paperclip_get_costs_by_agent
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_get_costs_by_agent — format", () => {
+  it("[stage-5] F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, [{ agentId: "agent-1", total: 500 }]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getCostsByAgent.handler({}, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("[stage-5] F2: response_format 'json' returns valid JSON", async () => {
+    const breakdown = [{ agentId: "agent-1", total: 500 }];
+    const { fn } = mockFetch(200, breakdown);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getCostsByAgent.handler({ response_format: "json" }, client);
+    assert.doesNotThrow(() => JSON.parse(result.content[0]!.text));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] F1/F2 — paperclip_get_costs_by_project
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_get_costs_by_project — format", () => {
+  it("[stage-5] F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, [{ projectId: "proj-1", total: 800 }]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getCostsByProject.handler({}, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("[stage-5] F2: response_format 'json' returns valid JSON", async () => {
+    const breakdown = [{ projectId: "proj-1", total: 800 }];
+    const { fn } = mockFetch(200, breakdown);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getCostsByProject.handler({ response_format: "json" }, client);
+    assert.doesNotThrow(() => JSON.parse(result.content[0]!.text));
+  });
+});
+
+// Stage 2 TDD: occurredAt ISO 8601 format + A5 (.strict() rejects unknown fields)
+describe("[stage-2] paperclip_report_cost_event — occurredAt ISO 8601 + A5: strict", () => {
+  const validBase = {
+    agentId: "agent-1",
+    provider: "anthropic",
+    model: "claude-sonnet-4-6",
+    inputTokens: 1000,
+    outputTokens: 200,
+    costCents: 5,
+  };
+
+  it("A4: rejects invalid ISO 8601 date string for occurredAt", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => reportCostEvent.handler({ ...validBase, occurredAt: "not-a-date" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A4: accepts valid ISO 8601 datetime for occurredAt", async () => {
+    const { fn } = mockFetch(200, { id: "cost-1" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await reportCostEvent.handler(
+      { ...validBase, occurredAt: "2026-04-16T12:00:00.000Z" },
+      client
+    );
+    assert.equal(result.isError, undefined);
+  });
+
+  it("A5: rejects unknown extra field (strict) for report_cost_event", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        reportCostEvent.handler(
+          { ...validBase, occurredAt: "2026-04-16T12:00:00.000Z", unknownField: "oops" },
+          client
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-6] E1/E2/E3 pagination envelope — paperclip_get_activity
+// ---------------------------------------------------------------------------
+describe("[stage-6] paperclip_get_activity — pagination envelope", () => {
+  it("E1: default limit=50, offset=0 in envelope", async () => {
+    const items = Array.from({ length: 3 }, (_, i) => activityFixture({ id: `evt-${i}` }));
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getActivity.handler({ response_format: "json" }, client);
+    assertPaginationEnvelope(result, { total: 3, limit: 50, offset: 0, count: 3 });
+  });
+
+  it("E2: explicit limit=2, offset=1 in envelope", async () => {
+    const items = Array.from({ length: 4 }, (_, i) => activityFixture({ id: `e-${i}` }));
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getActivity.handler(
+      { response_format: "json", limit: 2, offset: 1 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.total, 4);
+    assert.equal(data.count, 2);
+    assert.equal(data.has_more, true);
+    assert.equal(data.next_offset, 3);
+  });
+
+  it("E3: offset past end returns empty items", async () => {
+    const items = [activityFixture()];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getActivity.handler(
+      { response_format: "json", limit: 10, offset: 100 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.count, 0);
+    assert.deepEqual(data.items, []);
   });
 });

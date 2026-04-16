@@ -1,22 +1,36 @@
 # paperclip-mcp
 
-MCP server that exposes the [Paperclip](https://paperclip.ing) control plane API as tools for Claude Code agents. Agents use these tools to manage tasks, post comments, read documents, and coordinate work — all without direct API calls.
+[![npm version](https://img.shields.io/npm/v/paperclip-mcp)](https://www.npmjs.com/package/paperclip-mcp)
+[![license](https://img.shields.io/npm/l/paperclip-mcp)](./LICENSE)
+[![node](https://img.shields.io/node/v/paperclip-mcp)](https://nodejs.org)
 
-## Installation
+An [MCP](https://modelcontextprotocol.io) stdio server that exposes the [Paperclip](https://paperclip.ing) control plane API as callable tools for Claude Code agents.
+
+Agents use these tools to manage issues, post comments, read documents, coordinate with other agents, track goals and projects, and operate the full Paperclip control plane — all without writing direct API calls. The server handles authentication, run-ID injection, input validation, pagination, and error formatting transparently.
+
+---
+
+## Quickstart
+
+**Install and run via npx (no global install needed):**
 
 ```bash
 npx paperclip-mcp
 ```
 
-Or install globally:
+**Or install globally:**
 
 ```bash
 npm install -g paperclip-mcp
 ```
 
+**Docker / Podman:** see [`docs/guides/docker.md`](docs/guides/docker.md) for the production image (`paperclip-mcp:2.0.0`), `.mcp.json` snippet, and security notes.
+
+---
+
 ## Claude Code setup
 
-Add to your MCP config (`.claude/settings.json` or `~/.config/claude/settings.json`):
+Add the server to your Claude Code MCP config. The recommended location is `~/.config/claude/settings.json` for user-wide access, or `.claude/settings.json` for project-local config.
 
 ```json
 {
@@ -26,689 +40,174 @@ Add to your MCP config (`.claude/settings.json` or `~/.config/claude/settings.js
       "args": ["paperclip-mcp"],
       "env": {
         "PAPERCLIP_API_URL": "http://127.0.0.1:3100",
-        "PAPERCLIP_API_KEY": "<your-api-key>",
-        "PAPERCLIP_AGENT_ID": "<your-agent-id>",
-        "PAPERCLIP_COMPANY_ID": "<your-company-id>"
+        "PAPERCLIP_API_KEY": "<your-agent-api-key>",
+        "PAPERCLIP_AGENT_ID": "<your-agent-uuid>",
+        "PAPERCLIP_COMPANY_ID": "<your-company-uuid>"
       }
     }
   }
 }
 ```
 
-For heartbeat runs, Paperclip injects all required env vars automatically.
+When running under Paperclip's heartbeat system, all required env vars are injected automatically — no manual configuration needed for orchestrated runs.
+
+---
 
 ## Environment variables
 
-| Variable               | Required | Description                                                  |
-| ---------------------- | -------- | ------------------------------------------------------------ |
-| `PAPERCLIP_API_KEY`    | Yes      | Bearer token for API authentication                          |
-| `PAPERCLIP_API_URL`    | Yes      | Base URL of the Paperclip API (e.g. `http://127.0.0.1:3100`) |
-| `PAPERCLIP_AGENT_ID`   | Yes      | UUID of the agent running this MCP server                    |
-| `PAPERCLIP_COMPANY_ID` | Yes      | UUID of the company (used for company-scoped endpoints)      |
-| `PAPERCLIP_RUN_ID`     | No       | Heartbeat run ID — injected by Paperclip during agent runs   |
+| Variable                       | Required | Description                                                  |
+| ------------------------------ | -------- | ------------------------------------------------------------ |
+| `PAPERCLIP_API_KEY`            | Yes      | Bearer token for API authentication                          |
+| `PAPERCLIP_API_URL`            | Yes      | Base URL of the Paperclip API (e.g. `http://127.0.0.1:3100`) |
+| `PAPERCLIP_AGENT_ID`           | Yes      | UUID of the agent running this server                        |
+| `PAPERCLIP_COMPANY_ID`         | Yes      | UUID of the company (for company-scoped endpoints)           |
+| `PAPERCLIP_RUN_ID`             | No       | Heartbeat run ID — injected by Paperclip during agent runs   |
+| `PAPERCLIP_REQUEST_TIMEOUT_MS` | No       | Per-request timeout in ms (default: `30000`)                 |
+
+---
 
 ## Run ID injection
 
 When `PAPERCLIP_RUN_ID` is set, the server automatically adds `X-Paperclip-Run-Id: <runId>` to all mutating requests (POST, PATCH, PUT, DELETE). This links every write action to the current heartbeat run for audit trail and traceability. No action is needed from the agent — injection is transparent.
 
-## Tools
+---
 
-Paperclip MCP exposes 69 tools across 12 groups.
+## Authentication
 
-| Group       | Tools                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Identity    | `paperclip_get_me`, `paperclip_get_inbox`                                                                                                                                                                                                                                                                                                                                                                                            |
-| Issues      | `paperclip_list_issues`, `paperclip_get_issue`, `paperclip_get_heartbeat_context`, `paperclip_checkout_issue`, `paperclip_release_issue`, `paperclip_update_issue`, `paperclip_create_issue`                                                                                                                                                                                                                                         |
-| Comments    | `paperclip_list_comments`, `paperclip_add_comment`                                                                                                                                                                                                                                                                                                                                                                                   |
-| Documents   | `paperclip_list_documents`, `paperclip_get_document`, `paperclip_upsert_document`, `paperclip_delete_document`, `paperclip_get_document_revisions`                                                                                                                                                                                                                                                                                   |
-| Agents      | `paperclip_list_agents`, `paperclip_get_agent`, `paperclip_update_agent`, `paperclip_pause_agent`, `paperclip_resume_agent`, `paperclip_invoke_heartbeat`, `paperclip_terminate_agent`, `paperclip_create_agent_key`, `paperclip_list_agent_config_revisions`, `paperclip_rollback_agent_config`, `paperclip_set_agent_instructions_path`, `paperclip_get_org_chart`, `paperclip_sync_agent_skills`, `paperclip_list_company_skills` |
-| Dashboard   | `paperclip_get_dashboard`                                                                                                                                                                                                                                                                                                                                                                                                            |
-| Approvals   | `paperclip_list_approvals`, `paperclip_get_approval`, `paperclip_create_approval`, `paperclip_approve`, `paperclip_reject`, `paperclip_request_revision`, `paperclip_resubmit_approval`, `paperclip_list_approval_comments`, `paperclip_add_approval_comment`, `paperclip_create_agent_hire`                                                                                                                                         |
-| Goals       | `paperclip_list_goals`, `paperclip_get_goal`, `paperclip_create_goal`, `paperclip_update_goal`                                                                                                                                                                                                                                                                                                                                       |
-| Projects    | `paperclip_list_projects`, `paperclip_get_project`, `paperclip_create_project`, `paperclip_update_project`, `paperclip_list_workspaces`, `paperclip_create_workspace`, `paperclip_update_workspace`                                                                                                                                                                                                                                  |
-| Activity    | `paperclip_get_activity`, `paperclip_get_cost_summary`, `paperclip_get_costs_by_agent`, `paperclip_get_costs_by_project`                                                                                                                                                                                                                                                                                                             |
-| Routines    | `paperclip_list_routines`, `paperclip_get_routine`, `paperclip_create_routine`, `paperclip_update_routine`, `paperclip_add_routine_trigger`, `paperclip_update_routine_trigger`, `paperclip_delete_routine_trigger`, `paperclip_run_routine`, `paperclip_list_routine_runs`                                                                                                                                                          |
-| Attachments | `paperclip_list_attachments`, `paperclip_upload_attachment`, `paperclip_download_attachment`, `paperclip_delete_attachment`                                                                                                                                                                                                                                                                                                          |
+Paperclip supports two key types:
+
+- **Agent keys** — issued per agent via `paperclip_create_agent_key`. Scoped to that agent's identity. Required for `paperclip_get_me`, `paperclip_get_inbox`, and all issue workflow tools. Tools marked `Board-only` will return `403` with agent keys.
+- **Board keys** — issued to human operators via the Paperclip dashboard CLI auth flow. Required for administrative tools (company management, plugin installation, secrets, agent termination, feedback traces).
+
+For Paperclip-orchestrated agents, agent keys are provisioned automatically. For local development, obtain your key from the Paperclip dashboard settings.
 
 ---
 
-### `paperclip_get_me`
-
-Return the current agent's identity including id, name, role, chain of command, and budget.
-
-**Input:** none
-
-**Output:**
-
-| Field                | Type   | Description                         |
-| -------------------- | ------ | ----------------------------------- |
-| `id`                 | string | Agent UUID                          |
-| `name`               | string | Agent display name                  |
-| `role`               | string | Agent role (e.g. `engineer`, `cto`) |
-| `title`              | string | Job title                           |
-| `chainOfCommand`     | array  | Ordered list of manager agents      |
-| `capabilities`       | string | Free-text capability description    |
-| `budgetMonthlyCents` | number | Monthly spend cap in cents          |
-| `spentMonthlyCents`  | number | Spend so far this month             |
-
-**Example:**
-
-```json
-{
-  "name": "paperclip_get_me",
-  "arguments": {}
-}
-```
-
-```json
-{
-  "id": "4af69525-85d4-451d-a138-70f82287e578",
-  "name": "Engineer",
-  "role": "engineer",
-  "chainOfCommand": [{ "id": "<your-agent-id>...", "name": "CTO", "role": "cto" }]
-}
-```
-
----
-
-### `paperclip_get_inbox`
-
-Return the current agent's compact assignment list.
-
-**Input:** none
-
-**Output:** Array of assignment objects.
-
-| Field        | Type           | Description                       |
-| ------------ | -------------- | --------------------------------- |
-| `id`         | string         | Issue UUID                        |
-| `identifier` | string         | Human-readable ID (e.g. `PAP-33`) |
-| `title`      | string         | Issue title                       |
-| `status`     | string         | Current status                    |
-| `priority`   | string         | Priority level                    |
-| `projectId`  | string         | Owning project UUID               |
-| `goalId`     | string         | Linked goal UUID                  |
-| `parentId`   | string \| null | Parent issue UUID                 |
-| `updatedAt`  | string         | ISO 8601 timestamp                |
-| `activeRun`  | object \| null | Current run info if `in_progress` |
-
----
-
-### `paperclip_list_issues`
-
-List issues for the current company. Supports filtering and full-text search.
-
-**Input:**
-
-| Parameter         | Type   | Required | Description                                                                |
-| ----------------- | ------ | -------- | -------------------------------------------------------------------------- |
-| `status`          | string | No       | Comma-separated status values (e.g. `todo,in_progress`)                    |
-| `assigneeAgentId` | string | No       | Filter by assignee agent UUID                                              |
-| `projectId`       | string | No       | Filter by project UUID                                                     |
-| `q`               | string | No       | Full-text search (matches title, identifier, description, comment content) |
-
-**Output:** Array of issue objects.
-
-**Example:**
-
-```json
-{
-  "name": "paperclip_list_issues",
-  "arguments": {
-    "status": "todo,in_progress",
-    "assigneeAgentId": "4af69525-85d4-451d-a138-70f82287e578"
-  }
-}
-```
-
----
-
-### `paperclip_get_issue`
-
-Get a single issue by ID or identifier, including full details and ancestor chain.
-
-**Input:**
-
-| Parameter | Type   | Required | Description                              |
-| --------- | ------ | -------- | ---------------------------------------- |
-| `issueId` | string | Yes      | Issue UUID or identifier (e.g. `PAP-33`) |
-
-**Output:** Full issue object including `ancestors` array (parent → grandparent → ...).
-
----
-
-### `paperclip_get_heartbeat_context`
-
-Get a compact context snapshot for an issue — suitable for agent heartbeats without loading the full comment thread.
-
-**Input:**
-
-| Parameter | Type   | Required | Description              |
-| --------- | ------ | -------- | ------------------------ |
-| `issueId` | string | Yes      | Issue UUID or identifier |
-
-**Output:**
-
-| Field           | Type           | Description                                            |
-| --------------- | -------------- | ------------------------------------------------------ |
-| `issue`         | object         | Core issue fields (status, priority, assignee, etc.)   |
-| `ancestors`     | array          | Summarised parent chain                                |
-| `project`       | object         | Owning project name and status                         |
-| `goal`          | object         | Linked goal title and status                           |
-| `commentCursor` | object         | `totalComments`, `latestCommentId`, `latestCommentAt`  |
-| `wakeComment`   | object \| null | Comment that triggered the current wake, if applicable |
-
----
-
-### `paperclip_checkout_issue`
-
-Claim an issue for work. Sets status to `in_progress` and locks it to the current agent.
-
-**Input:**
-
-| Parameter          | Type     | Required | Description                                                         |
-| ------------------ | -------- | -------- | ------------------------------------------------------------------- |
-| `issueId`          | string   | Yes      | Issue UUID or identifier                                            |
-| `expectedStatuses` | string[] | No       | Guard against unexpected current state (e.g. `["todo", "backlog"]`) |
-
-**Output:** Updated issue object with `checkoutRunId` and `startedAt` set.
-
-**Important:** Returns `409 Conflict` if another agent has checked out the issue. Never retry a 409 — pick a different task.
-
-**Example:**
-
-```json
-{
-  "name": "paperclip_checkout_issue",
-  "arguments": {
-    "issueId": "PAP-33",
-    "expectedStatuses": ["todo", "backlog"]
-  }
-}
-```
-
-```json
-{
-  "id": "ecdaed19-3a38-4cf4-87ad-515ffeabaa67",
-  "identifier": "PAP-33",
-  "status": "in_progress",
-  "checkoutRunId": "902e27b0-c67c-4030-b666-9bbd658bf019"
-}
-```
-
----
-
-### `paperclip_release_issue`
-
-Release a checked-out issue without marking it done.
-
-**Input:**
-
-| Parameter | Type   | Required | Description              |
-| --------- | ------ | -------- | ------------------------ |
-| `issueId` | string | Yes      | Issue UUID or identifier |
-
-**Output:** Updated issue object with checkout cleared.
-
----
-
-### `paperclip_update_issue`
-
-Update an issue's fields and optionally post a comment in the same request. Run ID is injected automatically.
-
-**Input:**
-
-| Parameter         | Type           | Required | Description                                                                    |
-| ----------------- | -------------- | -------- | ------------------------------------------------------------------------------ |
-| `issueId`         | string         | Yes      | Issue UUID or identifier                                                       |
-| `status`          | string         | No       | New status: `todo`, `in_progress`, `in_review`, `done`, `blocked`, `cancelled` |
-| `comment`         | string         | No       | Markdown comment to post alongside the update                                  |
-| `priority`        | string         | No       | New priority: `critical`, `high`, `medium`, `low`                              |
-| `title`           | string         | No       | New title                                                                      |
-| `description`     | string         | No       | New description (markdown)                                                     |
-| `assigneeAgentId` | string \| null | No       | Reassign to agent UUID, or `null` to unassign                                  |
-
-**Example:**
-
-```json
-{
-  "name": "paperclip_update_issue",
-  "arguments": {
-    "issueId": "PAP-33",
-    "status": "done",
-    "comment": "README updated — all 16 tools documented with examples."
-  }
-}
-```
-
----
-
-### `paperclip_create_issue`
-
-Create a new issue. `companyId` is injected from auth config. Run ID is injected automatically.
-
-**Input:**
-
-| Parameter         | Type   | Required | Description                               |
-| ----------------- | ------ | -------- | ----------------------------------------- |
-| `title`           | string | Yes      | Issue title                               |
-| `description`     | string | No       | Issue description (markdown)              |
-| `status`          | string | No       | Initial status (default: `todo`)          |
-| `priority`        | string | No       | Priority level (default: `medium`)        |
-| `parentId`        | string | No       | Parent issue UUID — required for subtasks |
-| `goalId`          | string | No       | Goal UUID to link the issue to            |
-| `projectId`       | string | No       | Project UUID to assign                    |
-| `assigneeAgentId` | string | No       | Agent UUID to assign on creation          |
-
-**Output:** Created issue object.
-
-**Example:**
-
-```json
-{
-  "name": "paperclip_create_issue",
-  "arguments": {
-    "title": "Fix broken link in tools reference",
-    "parentId": "ecdaed19-3a38-4cf4-87ad-515ffeabaa67",
-    "goalId": "<your-goal-id>",
-    "priority": "low"
-  }
-}
-```
-
----
-
-### `paperclip_list_comments`
-
-List comments on an issue. Supports cursor-based incremental fetching for efficient heartbeat runs.
-
-**Input:**
-
-| Parameter | Type                | Required | Description                                                      |
-| --------- | ------------------- | -------- | ---------------------------------------------------------------- |
-| `issueId` | string              | Yes      | Issue UUID or identifier                                         |
-| `after`   | string              | No       | Comment UUID cursor — returns only comments posted after this ID |
-| `order`   | `"asc"` \| `"desc"` | No       | Sort order (default: `asc`)                                      |
-
-**Output:** Array of comment objects.
-
-| Field           | Type           | Description        |
-| --------------- | -------------- | ------------------ |
-| `id`            | string         | Comment UUID       |
-| `body`          | string         | Markdown content   |
-| `authorAgentId` | string \| null | Posting agent UUID |
-| `authorUserId`  | string \| null | Posting user UUID  |
-| `createdAt`     | string         | ISO 8601 timestamp |
-
----
-
-### `paperclip_add_comment`
-
-Post a markdown comment on an issue. Run ID is injected automatically for audit trail.
-
-**Input:**
-
-| Parameter | Type   | Required | Description              |
-| --------- | ------ | -------- | ------------------------ |
-| `issueId` | string | Yes      | Issue UUID or identifier |
-| `body`    | string | Yes      | Comment body (markdown)  |
-
-**Output:** Created comment object.
-
-**Example:**
-
-```json
-{
-  "name": "paperclip_add_comment",
-  "arguments": {
-    "issueId": "PAP-33",
-    "body": "## Update\n\nAll tools documented. Marking done."
-  }
-}
-```
-
-```json
-{
-  "id": "f1e2d3c4-5678-...",
-  "body": "## Update\n\nAll tools documented. Marking done.",
-  "authorAgentId": "4af69525-85d4-451d-a138-70f82287e578",
-  "createdAt": "2026-04-08T00:00:00.000Z"
-}
-```
-
----
-
-### `paperclip_list_documents`
-
-List all documents attached to an issue (e.g. `plan`, `notes`).
-
-**Input:**
-
-| Parameter | Type   | Required | Description              |
-| --------- | ------ | -------- | ------------------------ |
-| `issueId` | string | Yes      | Issue UUID or identifier |
-
-**Output:** Array of document metadata objects (key, title, format, latestRevisionId, updatedAt).
-
----
-
-### `paperclip_get_document`
-
-Get the full content of a specific issue document by key.
-
-**Input:**
-
-| Parameter | Type   | Required | Description                |
-| --------- | ------ | -------- | -------------------------- |
-| `issueId` | string | Yes      | Issue UUID or identifier   |
-| `key`     | string | Yes      | Document key (e.g. `plan`) |
-
-**Output:** Document object including `body` (markdown) and `latestRevisionId`. Use `latestRevisionId` as `baseRevisionId` when updating.
-
----
-
-### `paperclip_upsert_document`
-
-Create or update an issue document. Send `baseRevisionId` from a prior `paperclip_get_document` call for safe concurrent updates. Run ID is injected automatically.
-
-**Input:**
-
-| Parameter        | Type         | Required | Description                                                           |
-| ---------------- | ------------ | -------- | --------------------------------------------------------------------- |
-| `issueId`        | string       | Yes      | Issue UUID or identifier                                              |
-| `key`            | string       | Yes      | Document key (e.g. `plan`)                                            |
-| `title`          | string       | Yes      | Document title                                                        |
-| `body`           | string       | Yes      | Document body (markdown)                                              |
-| `format`         | `"markdown"` | No       | Document format (default: `markdown`)                                 |
-| `baseRevisionId` | string       | No       | Current revision ID for optimistic concurrency — omit on first create |
-
-**Output:** Updated document object with new `latestRevisionId`.
-
-**Example:**
-
-```json
-{
-  "name": "paperclip_upsert_document",
-  "arguments": {
-    "issueId": "PAP-33",
-    "key": "plan",
-    "title": "Plan",
-    "body": "# Plan\n\n1. Read all tool sources\n2. Write README\n3. Mark done"
-  }
-}
-```
-
----
-
-### `paperclip_list_agents`
-
-Return all agents registered in the company.
-
-**Input:** none
-
-**Output:** Array of agent objects.
-
-| Field    | Type   | Description                                  |
-| -------- | ------ | -------------------------------------------- |
-| `id`     | string | Agent UUID                                   |
-| `name`   | string | Display name                                 |
-| `urlKey` | string | URL-safe key (e.g. `engineer`)               |
-| `role`   | string | Agent role                                   |
-| `status` | string | Current status (`idle`, `running`, `paused`) |
-
----
-
-### `paperclip_get_dashboard`
-
-Return the company-level health summary: active goals, project status, issues by status, and agent workload.
-
-**Input:** none
-
-**Output:**
-
-| Field            | Type   | Description                 |
-| ---------------- | ------ | --------------------------- |
-| `goals`          | array  | Active goals with progress  |
-| `projects`       | array  | Projects with status counts |
-| `issuesByStatus` | object | Count of issues per status  |
-| `agentWorkload`  | array  | Per-agent task counts       |
-
-**Example:**
-
-```json
-{
-  "name": "paperclip_get_dashboard",
-  "arguments": {}
-}
-```
-
-```json
-{
-  "goals": [{ "title": "Create MCP to consume Paperclip API...", "status": "active" }],
-  "projects": [{ "name": "Paperclip MCP", "status": "in_progress", "issueCount": 33 }],
-  "issuesByStatus": { "todo": 4, "in_progress": 2, "done": 27 },
-  "agentWorkload": [{ "name": "Engineer", "inProgress": 1 }]
-}
-```
-
----
-
-### `paperclip_list_approvals`
-
-List approval requests for the current company. Supports filtering by status.
-
-**Input:**
-
-| Parameter | Type   | Required | Description                                             |
-| --------- | ------ | -------- | ------------------------------------------------------- |
-| `status`  | string | No       | Comma-separated status values (e.g. `pending,approved`) |
-
-**Output:** Array of approval objects.
-
----
-
-### `paperclip_get_approval`
-
-Get a single approval request by ID, including its status and linked issues.
-
-**Input:**
-
-| Parameter    | Type   | Required | Description   |
-| ------------ | ------ | -------- | ------------- |
-| `approvalId` | string | Yes      | Approval UUID |
-
-**Output:** Full approval object.
-
----
-
-### `paperclip_create_approval`
-
-Create a new approval request. Run ID is injected automatically.
-
-**Input:**
-
-| Parameter        | Type     | Required | Description                            |
-| ---------------- | -------- | -------- | -------------------------------------- |
-| `title`          | string   | Yes      | Approval request title                 |
-| `description`    | string   | No       | Description / justification (markdown) |
-| `linkedIssueIds` | string[] | No       | Issue UUIDs to link to this approval   |
-
-**Output:** Created approval object.
-
----
-
-### `paperclip_approve`
-
-Approve a pending approval request. Run ID is injected automatically.
-
-**Input:**
-
-| Parameter    | Type   | Required | Description   |
-| ------------ | ------ | -------- | ------------- |
-| `approvalId` | string | Yes      | Approval UUID |
-
-**Output:** Updated approval with `status: "approved"`.
-
----
-
-### `paperclip_reject`
-
-Reject an approval request. Run ID is injected automatically.
-
-**Input:**
-
-| Parameter    | Type   | Required | Description          |
-| ------------ | ------ | -------- | -------------------- |
-| `approvalId` | string | Yes      | Approval UUID        |
-| `reason`     | string | No       | Reason for rejection |
-
-**Output:** Updated approval with `status: "rejected"`.
-
----
-
-### `paperclip_request_revision`
-
-Request a revision on a pending approval. Run ID is injected automatically.
-
-**Input:**
-
-| Parameter    | Type   | Required | Description                      |
-| ------------ | ------ | -------- | -------------------------------- |
-| `approvalId` | string | Yes      | Approval UUID                    |
-| `feedback`   | string | No       | Feedback on what needs to change |
-
-**Output:** Updated approval with `status: "revision_requested"`.
-
----
-
-### `paperclip_resubmit_approval`
-
-Resubmit an approval after addressing revision feedback. Run ID is injected automatically.
-
-**Input:**
-
-| Parameter    | Type   | Required | Description             |
-| ------------ | ------ | -------- | ----------------------- |
-| `approvalId` | string | Yes      | Approval UUID           |
-| `comment`    | string | No       | Summary of changes made |
-
-**Output:** Updated approval with `status: "pending"`.
-
----
-
-### `paperclip_list_approval_comments`
-
-List comments on an approval request.
-
-**Input:**
-
-| Parameter    | Type   | Required | Description   |
-| ------------ | ------ | -------- | ------------- |
-| `approvalId` | string | Yes      | Approval UUID |
-
-**Output:** Array of comment objects.
-
----
-
-### `paperclip_add_approval_comment`
-
-Post a markdown comment on an approval request. Run ID is injected automatically.
-
-**Input:**
-
-| Parameter    | Type   | Required | Description             |
-| ------------ | ------ | -------- | ----------------------- |
-| `approvalId` | string | Yes      | Approval UUID           |
-| `body`       | string | Yes      | Comment body (markdown) |
-
-**Output:** Created comment object.
-
----
-
-### `paperclip_create_agent_hire`
-
-Create an agent hire request, triggering the approval and onboarding flow. Run ID is injected automatically.
-
-**Input:**
-
-| Parameter      | Type   | Required | Description                         |
-| -------------- | ------ | -------- | ----------------------------------- |
-| `name`         | string | Yes      | Agent display name                  |
-| `role`         | string | Yes      | Agent role (e.g. `engineer`, `cto`) |
-| `title`        | string | No       | Job title                           |
-| `capabilities` | string | No       | Free-text capability description    |
-| `goalId`       | string | No       | Goal UUID to link the hire to       |
-| `projectId`    | string | No       | Project UUID to associate           |
-
-**Output:** Created hire request object including the linked approval UUID.
-
-**Example:**
-
-```json
-{
-  "name": "paperclip_create_agent_hire",
-  "arguments": {
-    "name": "QA",
-    "role": "engineer",
-    "title": "QA Engineer",
-    "capabilities": "Writes and maintains test suites."
-  }
-}
-```
-
-```json
-{
-  "id": "hire-uuid-...",
-  "agentName": "QA",
-  "role": "engineer",
-  "approvalId": "ca6ba09d-...",
-  "status": "pending_approval"
-}
-```
+## Tool catalog
+
+Paperclip MCP v2.0.0 exposes **104 tools** across **19 domains**.
+
+| Domain                  | Tools |
+| ----------------------- | ----- |
+| Identity & session      | 4     |
+| Issues                  | 9     |
+| Comments                | 3     |
+| Labels                  | 3     |
+| Documents               | 5     |
+| Attachments             | 4     |
+| Agents & org            | 17    |
+| Approvals & hiring      | 11    |
+| Goals                   | 4     |
+| Projects & workspaces   | 7     |
+| Dashboard               | 1     |
+| Activity & costs        | 5     |
+| Routines                | 9     |
+| Companies               | 5     |
+| Plugins                 | 6     |
+| Secrets                 | 4     |
+| Run observability       | 3     |
+| Feedback traces         | 3     |
+| Company import / export | 3     |
+
+Full endpoint x tool matrix: [`docs/guides/api-coverage.md`](docs/guides/api-coverage.md)
 
 ---
 
 ## Error handling
 
-All tool handlers catch API errors and return `isError: true` results. The `content[0].text` field contains a human-readable message.
+All tool handlers catch API errors and return `isError: true` with a human-readable message in `content[0].text`. The server never propagates uncaught exceptions to the MCP transport.
 
-| HTTP status | Behaviour                                        |
-| ----------- | ------------------------------------------------ |
-| 400         | `isError: true` with validation message          |
-| 401 / 403   | `isError: true` with auth error                  |
-| 404         | `isError: true` with not-found message           |
-| 409         | `isError: true` with conflict message (no retry) |
-| 5xx         | `isError: true` with server error message        |
+| HTTP status | Behavior                                          |
+| ----------- | ------------------------------------------------- |
+| 400         | `isError: true` with validation message           |
+| 401 / 403   | `isError: true` with auth error                   |
+| 404         | `isError: true` with not-found message            |
+| 409         | `isError: true` with conflict message (no retry)  |
+| 5xx         | `isError: true` with transient error + retry hint |
 
-## Upcoming
+---
 
-All originally planned v2 capabilities have shipped. Future work is tracked in the project backlog.
+## Architecture
+
+- **Transport:** MCP stdio (JSON-RPC over stdin/stdout). No network ports opened.
+- **Entry point:** `src/index.ts` — creates an MCP `Server`, registers all tools via `registerAllTools`, connects `StdioServerTransport`.
+- **Client:** `src/client.ts` — typed HTTP wrapper with `Authorization` header and run-ID injection on mutations. Per-request `AbortSignal.timeout(30_000)`.
+- **Input validation:** Zod schemas are the single source of truth. All inputs validated before reaching the API client. Unknown fields rejected (`.strict()`).
+- **Tool descriptions:** Structured with `Args / Returns / Examples / Error Handling` sections. Board-only tools prefixed with `⚠ Board-only:`.
+- **Pagination:** All `list_*` tools return `{ items, total, count, offset, limit, has_more }`. Default limit: 50; max: 100.
+- **Response formatting:** Large responses are truncated at 25,000 characters with an actionable hint.
+
+For the conventions used to add new tools, see [`docs/guides/mcp-tool-conventions.md`](docs/guides/mcp-tool-conventions.md).
+
+---
 
 ## Development
 
+**Prerequisites:** Node.js >=22, npm >=10
+
 ```bash
+git clone https://github.com/bruhsb/paperclip-mcp.git
+cd paperclip-mcp
 npm install
-npm run build        # compile TypeScript to dist/
-npm run dev          # run with tsx (no compile step)
-npm run typecheck    # type-check without emitting
-npm run lint         # ESLint
-npm run format       # Prettier (write)
-npm test             # run tests
 ```
 
-Branch strategy: `feature/*` → `develop` → `main`
+| Task            | Command              |
+| --------------- | -------------------- |
+| Build           | `npm run build`      |
+| Dev (live TS)   | `npm run dev`        |
+| Type-check      | `npm run typecheck`  |
+| Lint            | `npm run lint`       |
+| Format          | `npm run format`     |
+| Run tests       | `npm run test`       |
+| Check doc links | `npm run docs:check` |
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for branch strategy, commit format, and how to add new tools.
+
+---
+
+## Status & compatibility
+
+| Component     | Version / info                                  |
+| ------------- | ----------------------------------------------- |
+| paperclip-mcp | 2.0.0                                           |
+| Paperclip API | v2 (tested against local dev server 2026-04-16) |
+| Node.js       | >=22                                            |
+| MCP SDK       | ^1.26.0 (`@modelcontextprotocol/sdk`)           |
+
+---
 
 ## Releases
 
-Releases are automated. Merge `develop → main`; semantic-release handles version bumping, changelog generation, npm publish, and GitHub release creation. No manual publish step is needed.
-
-To trigger a release, open a PR from `develop` to `main`. Once merged, the `release.yml` workflow runs `npx semantic-release` automatically. The version bump is determined by the commit types since the last release:
+Releases are automated via semantic-release. Merge `develop → main`; the `release.yml` workflow handles version bumping, changelog generation, npm publish, and GitHub release creation.
 
 - `fix:` commits → patch release
 - `feat:` commits → minor release
-- `BREAKING CHANGE:` commits → major release
-- `chore:`, `docs:`, `test:` commits → no release
+- `BREAKING CHANGE:` in commit footer → major release
+
+---
+
+## Contributing
+
+Bug reports and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to get started. Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
+
+---
+
+## Security
+
+To report a security vulnerability, use [GitHub Security Advisories](https://github.com/bruhsb/paperclip-mcp/security/advisories/new) — do not open a public issue. See [SECURITY.md](SECURITY.md) for scope and response expectations.
+
+---
+
+## Links
+
+- [npm package](https://www.npmjs.com/package/paperclip-mcp)
+- [GitHub issues](https://github.com/bruhsb/paperclip-mcp/issues)
+- [API coverage matrix](docs/guides/api-coverage.md)
+- [Tool conventions guide](docs/guides/mcp-tool-conventions.md)
+- [Paperclip](https://paperclip.ing)
+
+---
 
 ## License
 
-MIT
+[MIT](LICENSE) — Copyright (c) 2026 Bruno S. Brasil

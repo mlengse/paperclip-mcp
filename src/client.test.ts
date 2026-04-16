@@ -136,3 +136,203 @@ describe("PaperclipClient.delete", () => {
     assert.equal(result, undefined);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Stage 7 — AbortSignal.timeout tests
+// ---------------------------------------------------------------------------
+
+describe("[stage-7] PaperclipClient — AbortSignal timeout", () => {
+  it("passes a signal in fetch init for GET requests", async () => {
+    const calls: { url: string; init: RequestInit }[] = [];
+    const fn = async (url: string, init: RequestInit): Promise<Response> => {
+      calls.push({ url, init });
+      return new Response(JSON.stringify({}), {
+        status: 200,
+        headers: new Headers({ "Content-Type": "application/json" }),
+      });
+    };
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await client.get("/api/agents/me");
+    const getSignal = calls[0]!.init.signal;
+    assert.ok(getSignal != null, "Expected signal to be present");
+    assert.equal(
+      typeof (getSignal as AbortSignal).aborted,
+      "boolean",
+      "Expected AbortSignal-like object"
+    );
+    assert.equal(
+      typeof (getSignal as AbortSignal).addEventListener,
+      "function",
+      "Expected signal.addEventListener"
+    );
+  });
+
+  it("passes a signal in fetch init for POST requests", async () => {
+    const calls: { url: string; init: RequestInit }[] = [];
+    const fn = async (url: string, init: RequestInit): Promise<Response> => {
+      calls.push({ url, init });
+      return new Response(JSON.stringify({}), {
+        status: 200,
+        headers: new Headers({ "Content-Type": "application/json" }),
+      });
+    };
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await client.post("/api/issues", { title: "test" });
+    const postSignal = calls[0]!.init.signal;
+    assert.ok(postSignal != null, "Expected signal to be present");
+    assert.equal(
+      typeof (postSignal as AbortSignal).aborted,
+      "boolean",
+      "Expected AbortSignal-like object"
+    );
+    assert.equal(
+      typeof (postSignal as AbortSignal).addEventListener,
+      "function",
+      "Expected signal.addEventListener"
+    );
+  });
+
+  it("passes a signal in fetch init for PATCH requests", async () => {
+    const calls: { url: string; init: RequestInit }[] = [];
+    const fn = async (url: string, init: RequestInit): Promise<Response> => {
+      calls.push({ url, init });
+      return new Response(JSON.stringify({}), {
+        status: 200,
+        headers: new Headers({ "Content-Type": "application/json" }),
+      });
+    };
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await client.patch("/api/issues/1", { status: "done" });
+    const patchSignal = calls[0]!.init.signal;
+    assert.ok(patchSignal != null, "Expected signal to be present");
+    assert.equal(
+      typeof (patchSignal as AbortSignal).aborted,
+      "boolean",
+      "Expected AbortSignal-like object"
+    );
+    assert.equal(
+      typeof (patchSignal as AbortSignal).addEventListener,
+      "function",
+      "Expected signal.addEventListener"
+    );
+  });
+
+  it("passes a signal in fetch init for DELETE requests", async () => {
+    const calls: { url: string; init: RequestInit }[] = [];
+    const fn = async (url: string, init: RequestInit): Promise<Response> => {
+      calls.push({ url, init });
+      return new Response(null, { status: 204 });
+    };
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await client.delete("/api/attachments/1");
+    const deleteSignal = calls[0]!.init.signal;
+    assert.ok(deleteSignal != null, "Expected signal to be present");
+    assert.equal(
+      typeof (deleteSignal as AbortSignal).aborted,
+      "boolean",
+      "Expected AbortSignal-like object"
+    );
+    assert.equal(
+      typeof (deleteSignal as AbortSignal).addEventListener,
+      "function",
+      "Expected signal.addEventListener"
+    );
+  });
+
+  it("uses default 30s timeout when PAPERCLIP_REQUEST_TIMEOUT_MS is not set", async () => {
+    const savedEnv = process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"];
+    delete process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"];
+    const calls: { url: string; init: RequestInit }[] = [];
+    const fn = async (url: string, init: RequestInit): Promise<Response> => {
+      calls.push({ url, init });
+      return new Response(JSON.stringify({}), {
+        status: 200,
+        headers: new Headers({ "Content-Type": "application/json" }),
+      });
+    };
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await client.get("/api/agents/me");
+    // AbortSignal from timeout(30000) — signal is not aborted yet
+    const signal = calls[0]!.init.signal as AbortSignal;
+    assert.ok(signal != null, "Expected signal to be present");
+    assert.equal(typeof signal.aborted, "boolean", "Expected AbortSignal-like object");
+    assert.equal(signal.aborted, false);
+    if (savedEnv !== undefined) process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"] = savedEnv;
+  });
+
+  it("[stage-7] falls back to DEFAULT_TIMEOUT_MS when env var is non-numeric", () => {
+    const original = process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"];
+    process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"] = "abc";
+    try {
+      const client = new PaperclipClient(TEST_AUTH);
+      assert.equal(client.timeoutMs, 30_000, "non-numeric env var must fall back to 30_000ms");
+    } finally {
+      if (original === undefined) delete process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"];
+      else process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"] = original;
+    }
+  });
+
+  it("[stage-7] respects PAPERCLIP_REQUEST_TIMEOUT_MS env var when numeric", () => {
+    const original = process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"];
+    process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"] = "5000";
+    try {
+      const client = new PaperclipClient(TEST_AUTH);
+      assert.equal(client.timeoutMs, 5000, "valid numeric env var must be used as timeout");
+    } finally {
+      if (original === undefined) delete process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"];
+      else process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"] = original;
+    }
+  });
+
+  it("[stage-7] passes a signal in fetch init for PUT requests", async () => {
+    const calls: { url: string; init: RequestInit }[] = [];
+    const fn = async (url: string, init: RequestInit): Promise<Response> => {
+      calls.push({ url, init });
+      return new Response(JSON.stringify({}), {
+        status: 200,
+        headers: new Headers({ "Content-Type": "application/json" }),
+      });
+    };
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await client.put("/api/agents/agent-1/instructions", { path: "/agents/eng.md" });
+    const putSignal = calls[0]!.init.signal;
+    assert.ok(putSignal != null, "Expected signal to be present");
+    assert.equal(
+      typeof (putSignal as AbortSignal).aborted,
+      "boolean",
+      "Expected AbortSignal-like object"
+    );
+    assert.equal(
+      typeof (putSignal as AbortSignal).addEventListener,
+      "function",
+      "Expected signal.addEventListener"
+    );
+  });
+
+  it("[stage-7] passes a signal in fetch init for postForm requests", async () => {
+    const calls: { url: string; init: RequestInit }[] = [];
+    const fn = async (url: string, init: RequestInit): Promise<Response> => {
+      calls.push({ url, init });
+      return new Response(JSON.stringify({ url: "https://example.com/file" }), {
+        status: 200,
+        headers: new Headers({ "Content-Type": "application/json" }),
+      });
+    };
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const form = new FormData();
+    form.append("file", new Blob(["content"], { type: "text/plain" }), "test.txt");
+    await client.postForm("/api/attachments", form);
+    const formSignal = calls[0]!.init.signal;
+    assert.ok(formSignal != null, "Expected signal to be present");
+    assert.equal(
+      typeof (formSignal as AbortSignal).aborted,
+      "boolean",
+      "Expected AbortSignal-like object"
+    );
+    assert.equal(
+      typeof (formSignal as AbortSignal).addEventListener,
+      "function",
+      "Expected signal.addEventListener"
+    );
+  });
+});

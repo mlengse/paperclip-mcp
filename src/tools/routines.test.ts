@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { McpError } from "@modelcontextprotocol/sdk/types.js";
 import { PaperclipClient } from "../client.js";
 import { routineTools } from "./routines.js";
+import { routineFixture, largeRoutineList, largeRoutineRunList } from "../test/helpers/fixtures.js";
+import { assertPaginationEnvelope } from "../test/helpers/assert-result.js";
 
 const TEST_AUTH = {
   apiKey: "test-jwt",
@@ -41,10 +43,11 @@ describe("paperclip_list_routines", () => {
     const routines = [{ id: "routine-1", name: "Daily Sync", agentId: "agent-1" }];
     const { fn, calls } = mockFetch(200, routines);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listRoutines.handler({}, client);
+    const result = await listRoutines.handler({ response_format: "json" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/routines");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(routines) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed.items, routines);
   });
 
   it("throws McpError when args is not an object (validation failure, fetch not called)", async () => {
@@ -74,10 +77,14 @@ describe("paperclip_get_routine", () => {
     const routine = { id: "routine-1", name: "Daily Sync", triggers: [] };
     const { fn, calls } = mockFetch(200, routine);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getRoutine.handler({ routineId: "routine-1" }, client);
+    const result = await getRoutine.handler(
+      { routineId: "routine-1", response_format: "json" },
+      client
+    );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/routines/routine-1");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(routine) }] });
+    const parsedRoutine = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedRoutine, routine);
   });
 
   it("throws McpError when routineId is empty string (validation failure, fetch not called)", async () => {
@@ -104,27 +111,28 @@ describe("paperclip_get_routine", () => {
 
 describe("paperclip_create_routine", () => {
   it("calls POST /api/companies/{id}/routines with required and optional fields", async () => {
-    const created = { id: "routine-new", name: "Weekly Report", agentId: "agent-1" };
+    const created = { id: "routine-new", title: "Weekly Report", assigneeAgentId: "agent-1" };
     const { fn, calls } = mockFetch(200, created);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await createRoutine.handler(
-      { agentId: "agent-1", name: "Weekly Report", concurrencyPolicy: "forbid" },
+      { assigneeAgentId: "agent-1", title: "Weekly Report", concurrencyPolicy: "forbid" },
       client
     );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/routines");
     assert.equal(calls[0]!.init.method, "POST");
     const body = JSON.parse(calls[0]!.init.body as string);
-    assert.equal(body.agentId, "agent-1");
-    assert.equal(body.name, "Weekly Report");
+    assert.equal(body.assigneeAgentId, "agent-1");
+    assert.equal(body.title, "Weekly Report");
     assert.equal(body.concurrencyPolicy, "forbid");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(created) }] });
+    const parsedCreated = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedCreated, created);
   });
 
-  it("throws McpError when name is empty string (validation failure, fetch not called)", async () => {
+  it("throws McpError when title is empty string (validation failure, fetch not called)", async () => {
     const { fn, calls } = mockFetch(200, {});
     const client = new PaperclipClient(TEST_AUTH, fn);
     await assert.rejects(
-      () => createRoutine.handler({ agentId: "agent-1", name: "" }, client),
+      () => createRoutine.handler({ assigneeAgentId: "agent-1", title: "" }, client),
       (err: unknown) => {
         assert.ok(err instanceof McpError);
         return true;
@@ -137,7 +145,7 @@ describe("paperclip_create_routine", () => {
     const { fn } = mockFetch(400, { message: "Bad request" });
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await createRoutine.handler(
-      { agentId: "agent-1", name: "Valid Routine" },
+      { assigneeAgentId: "agent-1", title: "Valid Routine" },
       client
     );
     assert.equal(result.isError, true);
@@ -147,27 +155,28 @@ describe("paperclip_create_routine", () => {
 
 describe("paperclip_update_routine", () => {
   it("calls PATCH /api/routines/{id} with only provided fields", async () => {
-    const updated = { id: "routine-1", name: "Renamed Routine", catchUpPolicy: "run_once" };
+    const updated = { id: "routine-1", title: "Renamed Routine", catchUpPolicy: "run_once" };
     const { fn, calls } = mockFetch(200, updated);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await updateRoutine.handler(
-      { routineId: "routine-1", name: "Renamed Routine", catchUpPolicy: "run_once" },
+      { routineId: "routine-1", title: "Renamed Routine", catchUpPolicy: "run_once" },
       client
     );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/routines/routine-1");
     assert.equal(calls[0]!.init.method, "PATCH");
     const body = JSON.parse(calls[0]!.init.body as string);
-    assert.equal(body.name, "Renamed Routine");
+    assert.equal(body.title, "Renamed Routine");
     assert.equal(body.catchUpPolicy, "run_once");
     assert.ok(!("routineId" in body), "routineId must not be in PATCH body");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsedUpdated = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedUpdated, updated);
   });
 
   it("throws McpError when routineId is empty string (validation failure, fetch not called)", async () => {
     const { fn, calls } = mockFetch(200, {});
     const client = new PaperclipClient(TEST_AUTH, fn);
     await assert.rejects(
-      () => updateRoutine.handler({ routineId: "", name: "New Name" }, client),
+      () => updateRoutine.handler({ routineId: "", title: "New Name" }, client),
       (err: unknown) => {
         assert.ok(err instanceof McpError);
         return true;
@@ -179,35 +188,36 @@ describe("paperclip_update_routine", () => {
   it("returns isError response on 404 API error", async () => {
     const { fn } = mockFetch(404, { message: "Routine not found" });
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await updateRoutine.handler({ routineId: "missing", name: "X" }, client);
+    const result = await updateRoutine.handler({ routineId: "missing", title: "X" }, client);
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("404"));
   });
 });
 
 describe("paperclip_add_routine_trigger", () => {
-  it("calls POST /api/routines/{id}/triggers with type and config", async () => {
-    const trigger = { id: "trig-1", routineId: "routine-1", type: "schedule" };
+  it("calls POST /api/routines/{id}/triggers with kind and cronExpression", async () => {
+    const trigger = { id: "trig-1", routineId: "routine-1", kind: "schedule" };
     const { fn, calls } = mockFetch(200, trigger);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await addTrigger.handler(
-      { routineId: "routine-1", type: "schedule", config: { cron: "0 9 * * 1" } },
+      { routineId: "routine-1", kind: "schedule", cronExpression: "0 9 * * 1" },
       client
     );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/routines/routine-1/triggers");
     assert.equal(calls[0]!.init.method, "POST");
     const body = JSON.parse(calls[0]!.init.body as string);
-    assert.equal(body.type, "schedule");
-    assert.deepEqual(body.config, { cron: "0 9 * * 1" });
+    assert.equal(body.kind, "schedule");
+    assert.equal(body.cronExpression, "0 9 * * 1");
     assert.ok(!("routineId" in body), "routineId must not be in POST body");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(trigger) }] });
+    const parsedTrigger = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedTrigger, trigger);
   });
 
-  it("throws McpError when type is invalid enum value (validation failure, fetch not called)", async () => {
+  it("throws McpError when kind is invalid enum value (validation failure, fetch not called)", async () => {
     const { fn, calls } = mockFetch(200, {});
     const client = new PaperclipClient(TEST_AUTH, fn);
     await assert.rejects(
-      () => addTrigger.handler({ routineId: "routine-1", type: "invalid-type" as never }, client),
+      () => addTrigger.handler({ routineId: "routine-1", kind: "invalid-type" as never }, client),
       (err: unknown) => {
         assert.ok(err instanceof McpError);
         return true;
@@ -219,7 +229,7 @@ describe("paperclip_add_routine_trigger", () => {
   it("returns isError response on 400 API error", async () => {
     const { fn } = mockFetch(400, { message: "Invalid trigger config" });
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await addTrigger.handler({ routineId: "routine-1", type: "schedule" }, client);
+    const result = await addTrigger.handler({ routineId: "routine-1", kind: "schedule" }, client);
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("400"));
   });
@@ -227,16 +237,17 @@ describe("paperclip_add_routine_trigger", () => {
 
 describe("paperclip_update_routine_trigger", () => {
   it("calls PATCH /api/routine-triggers/{id} with only provided fields", async () => {
-    const updated = { id: "trig-1", type: "webhook", config: {} };
+    const updated = { id: "trig-1", kind: "webhook" };
     const { fn, calls } = mockFetch(200, updated);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await updateTrigger.handler({ triggerId: "trig-1", type: "webhook" }, client);
+    const result = await updateTrigger.handler({ triggerId: "trig-1", kind: "webhook" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/routine-triggers/trig-1");
     assert.equal(calls[0]!.init.method, "PATCH");
     const body = JSON.parse(calls[0]!.init.body as string);
-    assert.equal(body.type, "webhook");
+    assert.equal(body.kind, "webhook");
     assert.ok(!("triggerId" in body), "triggerId must not be in PATCH body");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsedTrigUpdated = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedTrigUpdated, updated);
   });
 
   it("throws McpError when triggerId is empty string (validation failure, fetch not called)", async () => {
@@ -255,7 +266,7 @@ describe("paperclip_update_routine_trigger", () => {
   it("returns isError response on 404 API error", async () => {
     const { fn } = mockFetch(404, { message: "Trigger not found" });
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await updateTrigger.handler({ triggerId: "missing-trig", type: "api" }, client);
+    const result = await updateTrigger.handler({ triggerId: "missing-trig", kind: "api" }, client);
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("404"));
   });
@@ -294,14 +305,30 @@ describe("paperclip_delete_routine_trigger", () => {
 });
 
 describe("paperclip_run_routine", () => {
-  it("calls POST /api/routines/{id}/run and returns run data", async () => {
+  it("calls POST /api/routines/{id}/run with optional agentId and returns run data", async () => {
+    const run = { id: "run-1", routineId: "routine-1", status: "running" };
+    const { fn, calls } = mockFetch(200, run);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await runRoutine.handler({ routineId: "routine-1", agentId: "agent-1" }, client);
+    assert.equal(calls[0]!.url, "http://localhost:3100/api/routines/routine-1/run");
+    assert.equal(calls[0]!.init.method, "POST");
+    const body = JSON.parse(calls[0]!.init.body as string);
+    assert.equal(body.agentId, "agent-1");
+    const parsedRun = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedRun, run);
+  });
+
+  it("calls POST /api/routines/{id}/run without agentId when not provided", async () => {
     const run = { id: "run-1", routineId: "routine-1", status: "running" };
     const { fn, calls } = mockFetch(200, run);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await runRoutine.handler({ routineId: "routine-1" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/routines/routine-1/run");
     assert.equal(calls[0]!.init.method, "POST");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(run) }] });
+    const body = JSON.parse(calls[0]!.init.body as string);
+    assert.ok(!("agentId" in body), "agentId must not be in body when not provided");
+    const parsedRun = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedRun, run);
   });
 
   it("throws McpError when routineId is empty string (validation failure, fetch not called)", async () => {
@@ -334,10 +361,14 @@ describe("paperclip_list_routine_runs", () => {
     ];
     const { fn, calls } = mockFetch(200, runs);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listRuns.handler({ routineId: "routine-1" }, client);
+    const result = await listRuns.handler(
+      { routineId: "routine-1", response_format: "json" },
+      client
+    );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/routines/routine-1/runs");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(runs) }] });
+    const parsedRuns = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedRuns.items, runs);
   });
 
   it("throws McpError when routineId is empty string (validation failure, fetch not called)", async () => {
@@ -359,5 +390,333 @@ describe("paperclip_list_routine_runs", () => {
     const result = await listRuns.handler({ routineId: "missing-routine" }, client);
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("404"));
+  });
+});
+
+// Stage 2 TDD: A4 (enum rejection) + A5 (.strict() rejects unknown fields)
+describe("[stage-2] paperclip_add_routine_trigger — A4: RoutineTriggerTypeSchema + A5: strict", () => {
+  it("A4: rejects invalid trigger kind enum value", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => addTrigger.handler({ routineId: "r-1", kind: "cron" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A4: accepts valid trigger kind schedule", async () => {
+    const created = { id: "trig-1", kind: "schedule" };
+    const { fn } = mockFetch(200, created);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await addTrigger.handler(
+      { routineId: "r-1", kind: "schedule", cronExpression: "0 * * * *" },
+      client
+    );
+    assert.equal(result.isError, undefined);
+  });
+
+  it("A5: rejects unknown extra field (strict) for add_routine_trigger", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => addTrigger.handler({ routineId: "r-1", kind: "api", unknownField: "oops" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});
+
+describe("[stage-2] paperclip_add_routine_trigger — cron format validator", () => {
+  it("rejects invalid cron expression (too few fields)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        addTrigger.handler({ routineId: "r-1", kind: "schedule", cronExpression: "*/5" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("accepts valid 5-field cron expression", async () => {
+    const created = { id: "trig-1" };
+    const { fn } = mockFetch(200, created);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await addTrigger.handler(
+      { routineId: "r-1", kind: "schedule", cronExpression: "*/5 * * * *" },
+      client
+    );
+    assert.equal(result.isError, undefined);
+  });
+});
+
+describe("[stage-2] paperclip_add_routine_trigger — A5: strict rejection", () => {
+  it("A5: rejects unknown extra field (strict) for add_routine_trigger", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        addTrigger.handler(
+          { routineId: "r-1", kind: "schedule", cronExpression: "* * * * *", unknownField: "x" },
+          client
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});
+
+describe("[stage-2] paperclip_update_routine_trigger — A4: cron + A5: strict rejection", () => {
+  it("A4: rejects invalid cron format", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        updateTrigger.handler(
+          { triggerId: "t-1", cronExpression: "* * * *" }, // 4 fields, invalid
+          client
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A5: rejects unknown extra field (strict) for update_routine_trigger", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        updateTrigger.handler(
+          { triggerId: "t-1", cronExpression: "* * * * *", unknownField: "x" },
+          client
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] D1/F1/F2 — paperclip_list_routines
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_list_routines — truncation + format", () => {
+  it("[stage-5] D1: response >25k chars is truncated with actionable hint", async () => {
+    const big = largeRoutineList(300);
+    const { fn } = mockFetch(200, big);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listRoutines.handler({ limit: 100, response_format: "json" }, client);
+    assert.ok(result.content[0]!.text.length < 26_000);
+    assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("[stage-5] D2: small response is not truncated", async () => {
+    const small = [routineFixture()];
+    const { fn } = mockFetch(200, small);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listRoutines.handler({ response_format: "json" }, client);
+    assert.ok(!result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("[stage-5] F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, [routineFixture()]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listRoutines.handler({}, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("[stage-5] F2: response_format 'json' returns parseable JSON array", async () => {
+    const routines = [routineFixture()];
+    const { fn } = mockFetch(200, routines);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listRoutines.handler({ response_format: "json" }, client);
+    assert.doesNotThrow(() => JSON.parse(result.content[0]!.text));
+    assert.deepEqual(JSON.parse(result.content[0]!.text).items, routines);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] D1/F1/F2 — paperclip_get_routine
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_get_routine — truncation + format", () => {
+  it("[stage-5] D1: oversized routine response is truncated with actionable hint", async () => {
+    const big = { id: "routine-1", name: "Big Routine", log: "x".repeat(30_000) };
+    const { fn } = mockFetch(200, big);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getRoutine.handler(
+      { routineId: "routine-1", response_format: "json" },
+      client
+    );
+    assert.ok(result.content[0]!.text.length < 26_000);
+    assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("[stage-5] D2: normal routine is not truncated", async () => {
+    const routine = routineFixture();
+    const { fn } = mockFetch(200, routine);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getRoutine.handler(
+      { routineId: "routine-1", response_format: "json" },
+      client
+    );
+    assert.ok(!result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("[stage-5] F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, routineFixture());
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getRoutine.handler({ routineId: "routine-1" }, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("[stage-5] F2: response_format 'json' returns valid JSON", async () => {
+    const routine = routineFixture();
+    const { fn } = mockFetch(200, routine);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getRoutine.handler(
+      { routineId: "routine-1", response_format: "json" },
+      client
+    );
+    assert.doesNotThrow(() => JSON.parse(result.content[0]!.text));
+    assert.deepEqual(JSON.parse(result.content[0]!.text), routine);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] D1/F1/F2 — paperclip_list_routine_runs
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_list_routine_runs — truncation + format", () => {
+  it("[stage-5] D1: response >25k chars is truncated with actionable hint", async () => {
+    const big = largeRoutineRunList(500);
+    const { fn } = mockFetch(200, big);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listRuns.handler(
+      { routineId: "routine-1", limit: 100, response_format: "json" },
+      client
+    );
+    assert.ok(result.content[0]!.text.length < 26_000);
+    assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("[stage-5] D2: small run list is not truncated", async () => {
+    const small = [{ id: "run-1", routineId: "routine-1", status: "completed" }];
+    const { fn } = mockFetch(200, small);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listRuns.handler(
+      { routineId: "routine-1", response_format: "json" },
+      client
+    );
+    assert.ok(!result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("[stage-5] F1: defaults to markdown output", async () => {
+    const runs = [{ id: "run-1", routineId: "routine-1", status: "completed" }];
+    const { fn } = mockFetch(200, runs);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listRuns.handler({ routineId: "routine-1" }, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("[stage-5] F2: response_format 'json' returns parseable JSON array", async () => {
+    const runs = [{ id: "run-1", routineId: "routine-1", status: "completed" }];
+    const { fn } = mockFetch(200, runs);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listRuns.handler(
+      { routineId: "routine-1", response_format: "json" },
+      client
+    );
+    assert.doesNotThrow(() => JSON.parse(result.content[0]!.text));
+    assert.deepEqual(JSON.parse(result.content[0]!.text).items, runs);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-6] E1/E2/E3 pagination envelope — list_routines / list_routine_runs
+// ---------------------------------------------------------------------------
+describe("[stage-6] paperclip_list_routines — pagination envelope", () => {
+  it("E1: default limit=50, offset=0 in envelope", async () => {
+    const items = Array.from({ length: 3 }, (_, i) => routineFixture({ id: `routine-${i}` }));
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listRoutines.handler({ response_format: "json" }, client);
+    assertPaginationEnvelope(result, { total: 3, limit: 50, offset: 0, count: 3 });
+  });
+
+  it("E2: explicit limit=2, offset=1 in envelope", async () => {
+    const items = Array.from({ length: 4 }, (_, i) => routineFixture({ id: `r-${i}` }));
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listRoutines.handler(
+      { response_format: "json", limit: 2, offset: 1 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.total, 4);
+    assert.equal(data.count, 2);
+    assert.equal(data.has_more, true);
+    assert.equal(data.next_offset, 3);
+  });
+
+  it("E3: offset past end returns empty items", async () => {
+    const items = [routineFixture()];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listRoutines.handler(
+      { response_format: "json", limit: 10, offset: 100 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.count, 0);
+    assert.deepEqual(data.items, []);
+  });
+});
+
+describe("[stage-6] paperclip_list_routine_runs — pagination envelope", () => {
+  it("E1: default limit=50, offset=0 in envelope", async () => {
+    const items = [{ id: "run-1", routineId: "routine-1", status: "completed" }];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listRuns.handler(
+      { routineId: "routine-1", response_format: "json" },
+      client
+    );
+    assertPaginationEnvelope(result, { total: 1, limit: 50, offset: 0, count: 1 });
+  });
+
+  it("E3: offset past end returns empty items", async () => {
+    const items = [{ id: "run-1", status: "completed" }];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listRuns.handler(
+      { routineId: "routine-1", response_format: "json", limit: 10, offset: 100 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.count, 0);
+    assert.deepEqual(data.items, []);
   });
 });

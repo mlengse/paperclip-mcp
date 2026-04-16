@@ -19,6 +19,12 @@ import { activityTools } from "./activity.js";
 import { routineTools } from "./routines.js";
 import { attachmentTools } from "./attachments.js";
 import { labelTools } from "./labels.js";
+import { companyTools } from "./company.js";
+import { pluginTools } from "./plugins.js";
+import { secretTools } from "./secrets.js";
+import { runTools } from "./runs.js";
+import { feedbackTools } from "./feedback.js";
+import { companyImportTools } from "./company-import.js";
 export { validate as validateInput } from "./validation.js";
 
 export type ToolResult = {
@@ -27,24 +33,34 @@ export type ToolResult = {
 };
 
 export interface ToolAnnotations {
+  title?: string;
   readOnlyHint?: boolean;
   destructiveHint?: boolean;
   idempotentHint?: boolean;
   openWorldHint?: boolean;
-  /** Set to true when the underlying API endpoint requires board (human-user) authentication.
-   *  Agent callers will always receive HTTP 403 from these endpoints. */
-  boardOnlyHint?: boolean;
 }
 
 export interface ToolDefinition {
   name: string;
   description: string;
+  /**
+   * JSON Schema object produced eagerly via `toJsonSchema(ZodSchema)` in each tool module.
+   *
+   * The Zod schema is the actual source of truth for runtime validation (see `validate()` in
+   * validation.ts); this field is the pre-computed client-facing schema sent to MCP clients.
+   *
+   * Deviation from stage plan: the plan specified `inputSchema: z.ZodTypeAny` with conversion
+   * at registration time. Eager module-load conversion is simpler for a stdio server that loads
+   * 103 tools once and never reloads. Stage 2+ should continue to work directly on the
+   * module-local Zod schema variables (e.g. `const ListIssuesSchema = z.object({...})`),
+   * not on `ToolDefinition.inputSchema`.
+   */
   inputSchema: Record<string, unknown>;
   annotations?: ToolAnnotations;
   handler: (args: unknown, client: PaperclipClient) => Promise<ToolResult>;
 }
 
-const ALL_TOOLS: ToolDefinition[] = [
+export const ALL_TOOLS: ToolDefinition[] = [
   ...identityTools,
   ...issueTools,
   ...commentTools,
@@ -58,11 +74,27 @@ const ALL_TOOLS: ToolDefinition[] = [
   ...routineTools,
   ...attachmentTools,
   ...labelTools,
+  ...companyTools,
+  ...pluginTools,
+  ...secretTools,
+  ...runTools,
+  ...feedbackTools,
+  ...companyImportTools,
 ];
 
 export function registerAllTools(server: Server): void {
   const client = new PaperclipClient();
   const toolMap = new Map(ALL_TOOLS.map((t) => [t.name, t]));
+
+  if (toolMap.size !== ALL_TOOLS.length) {
+    const seen = new Set<string>();
+    const duplicates: string[] = [];
+    for (const tool of ALL_TOOLS) {
+      if (seen.has(tool.name)) duplicates.push(tool.name);
+      else seen.add(tool.name);
+    }
+    throw new Error(`Duplicate tool names detected at registration: ${duplicates.join(", ")}`);
+  }
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: ALL_TOOLS.map(({ name, description, inputSchema, annotations }) => ({
@@ -74,10 +106,21 @@ export function registerAllTools(server: Server): void {
   }));
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const tool = toolMap.get(request.params.name);
+    const toolName = request.params.name;
+    const tool = toolMap.get(toolName);
     if (!tool) {
-      throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${request.params.name}`);
+      throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${toolName}`);
     }
-    return tool.handler(request.params.arguments ?? {}, client);
+    try {
+      return await tool.handler(request.params.arguments ?? {}, client);
+    } catch (err) {
+      if (err instanceof McpError) throw err;
+      const message = err instanceof Error ? err.message : String(err);
+      process.stderr.write(`Paperclip MCP unhandled error in ${toolName}: ${message}\n`);
+      return {
+        isError: true,
+        content: [{ type: "text", text: `Paperclip MCP error in ${toolName}: ${message}` }],
+      };
+    }
   });
 }

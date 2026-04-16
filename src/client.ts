@@ -1,15 +1,24 @@
 import { getAuthConfig, type PaperclipAuth } from "./auth.js";
 import { PaperclipApiError } from "./errors.js";
+import { DEFAULT_TIMEOUT_MS } from "./constants.js";
 
 export type FetchFn = (url: string, init: RequestInit) => Promise<Response>;
 
 export class PaperclipClient {
   private auth: PaperclipAuth;
   private fetchFn: FetchFn;
+  private _timeoutMs: number;
+
+  get timeoutMs(): number {
+    return this._timeoutMs;
+  }
 
   constructor(auth?: PaperclipAuth, fetchFn?: FetchFn) {
     this.auth = auth ?? getAuthConfig();
     this.fetchFn = fetchFn ?? ((url, init) => fetch(url, init));
+    const envTimeout = process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"];
+    const parsed = envTimeout ? parseInt(envTimeout, 10) : NaN;
+    this._timeoutMs = Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_TIMEOUT_MS;
   }
 
   get companyId(): string {
@@ -36,6 +45,7 @@ export class PaperclipClient {
     const response = await this.fetchFn(`${this.auth.apiUrl}${path}`, {
       method: "GET",
       headers: this.buildHeaders(),
+      signal: AbortSignal.timeout(this.timeoutMs),
     });
     return this.handleResponse<T>(response);
   }
@@ -45,6 +55,7 @@ export class PaperclipClient {
       method: "POST",
       headers: this.buildHeaders(runId),
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(this.timeoutMs),
     });
     return this.handleResponse<T>(response);
   }
@@ -54,6 +65,7 @@ export class PaperclipClient {
       method: "PATCH",
       headers: this.buildHeaders(runId),
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(this.timeoutMs),
     });
     return this.handleResponse<T>(response);
   }
@@ -63,6 +75,7 @@ export class PaperclipClient {
       method: "PUT",
       headers: this.buildHeaders(runId),
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(this.timeoutMs),
     });
     return this.handleResponse<T>(response);
   }
@@ -79,6 +92,7 @@ export class PaperclipClient {
       method: "POST",
       headers,
       body: form,
+      signal: AbortSignal.timeout(this.timeoutMs),
     });
     return this.handleResponse<T>(response);
   }
@@ -87,8 +101,24 @@ export class PaperclipClient {
     const response = await this.fetchFn(`${this.auth.apiUrl}${path}`, {
       method: "DELETE",
       headers: this.buildHeaders(runId),
+      signal: AbortSignal.timeout(this.timeoutMs),
     });
     return this.handleResponse<T>(response);
+  }
+
+  async getRaw(path: string): Promise<{ contentType: string; bytes: Uint8Array; status: number }> {
+    const response = await this.fetchFn(`${this.auth.apiUrl}${path}`, {
+      method: "GET",
+      headers: this.buildHeaders(),
+      signal: AbortSignal.timeout(this.timeoutMs),
+    });
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new PaperclipApiError(response.status, response.statusText, body);
+    }
+    const contentType = response.headers.get("content-type") ?? "application/octet-stream";
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    return { contentType, bytes, status: response.status };
   }
 
   private async handleResponse<T>(response: Response): Promise<T> {
