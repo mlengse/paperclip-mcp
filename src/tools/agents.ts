@@ -1,6 +1,12 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import { validate, toJsonSchema, NoInput, handleApiError } from "./validation.js";
+import {
+  validate,
+  toJsonSchema,
+  NoInput,
+  handleApiError,
+  composeDescription,
+} from "./validation.js";
 
 const AgentIdInput = z
   .object({
@@ -161,7 +167,19 @@ const SyncAgentSkillsInput = z
 export const agentTools: ToolDefinition[] = [
   {
     name: "paperclip_list_agents",
-    description: "Return the list of agents in the company (id, name, urlKey, role, status).",
+    description: composeDescription({
+      summary: "List all agents in the current company.",
+      returns: "Array of agent records: id, name, urlKey, role, status.",
+      examples: {
+        useWhen:
+          "resolving an agent name to a UUID before assigning an issue or invoking a heartbeat",
+        dontUseWhen: "you need full agent details — use paperclip_get_agent with the resolved ID",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 403: permission denied → verify PAPERCLIP_COMPANY_ID is correct",
+      ],
+    }),
     inputSchema: toJsonSchema(NoInput),
     annotations: { title: "List company agents", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
@@ -176,7 +194,21 @@ export const agentTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_get_agent",
-    description: "Get full details for a single agent by ID.",
+    description: composeDescription({
+      summary: "Get full details for a single agent by UUID.",
+      args: ['- agentId: string — Agent UUID (example: "agt_abc123")'],
+      returns:
+        "Agent object: id, name, urlKey, role, title, status, capabilities, runtimeConfig, adapterConfig, permissions, budget.",
+      examples: {
+        useWhen:
+          "reading an agent's current config before updating it or checking its heartbeat settings",
+        dontUseWhen: "you need a list of agents — use paperclip_list_agents to discover IDs first",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: agent not found → verify ID with paperclip_list_agents",
+      ],
+    }),
     inputSchema: toJsonSchema(AgentIdInput),
     annotations: { title: "Get agent by ID", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
@@ -193,8 +225,36 @@ export const agentTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_update_agent",
-    description:
-      "Update an agent's name, title, capabilities, status, heartbeat/runtime config, or adapter config. Run ID header is injected automatically. For permissions, use paperclip_update_agent_permissions.",
+    description: composeDescription({
+      summary:
+        "Update an agent's name, title, capabilities, status, heartbeat, runtime, or adapter config.",
+      args: [
+        '- agentId: string — Agent UUID (example: "agt_abc123")',
+        "- name: string (optional) — New display name",
+        "- title: string (optional) — New job title",
+        "- capabilities: string (optional) — Updated capability description",
+        "- status: string (optional) — New status (e.g. active, paused)",
+        "- runtimeConfig.heartbeat.enabled: boolean (optional) — Enable/disable scheduled heartbeats",
+        "- runtimeConfig.heartbeat.intervalSec: integer (optional) — Heartbeat interval in seconds",
+        "- runtimeConfig.heartbeat.cooldownSec: integer (optional) — Min seconds between runs",
+        "- runtimeConfig.heartbeat.maxConcurrentRuns: integer (optional) — Max concurrent runs",
+        "- adapterConfig.model: string (optional) — LLM model identifier",
+        "- adapterConfig.maxTurnsPerRun: integer (optional) — Max LLM turns per run",
+        "- adapterConfig.timeoutSec: integer (optional) — Hard timeout in seconds",
+        "- adapterConfig.instructionsFilePath: string (optional) — Path to AGENTS.md",
+      ],
+      returns: "Returns the updated agent object with all fields.",
+      examples: {
+        useWhen: "adjusting an agent's heartbeat interval or updating its capabilities description",
+        dontUseWhen:
+          "you need to update permissions — use paperclip_update_agent_permissions (board-only) instead",
+      },
+      errors: [
+        "- 400: validation failure → check field types and enum values",
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: agent not found → verify ID with paperclip_list_agents",
+      ],
+    }),
     inputSchema: toJsonSchema(UpdateAgentInput),
     annotations: {
       title: "Update agent configuration",
@@ -218,8 +278,27 @@ export const agentTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_update_agent_permissions",
-    description:
-      "⚠ Board-only: Update an agent's permissions (canAssignTasks, canCreateAgents). Both fields are required — the API enforces this. Run ID header is injected automatically.",
+    description: composeDescription({
+      summary:
+        "Update an agent's governance permissions (canAssignTasks, canCreateAgents). Both fields required.",
+      args: [
+        '- agentId: string — Agent UUID (example: "agt_abc123")',
+        "- canAssignTasks: boolean — Allow this agent to assign tasks to other agents",
+        "- canCreateAgents: boolean — Allow this agent to create new agents (reserved for CEO by governance policy)",
+      ],
+      returns: "Returns the updated permissions object: agentId, canAssignTasks, canCreateAgents.",
+      examples: {
+        useWhen: "granting or revoking an agent's ability to assign tasks after a board decision",
+        dontUseWhen: "you need to update config fields — use paperclip_update_agent instead",
+      },
+      errors: [
+        "- 400: both canAssignTasks and canCreateAgents are required → supply both even if one is unchanged",
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 403: permission denied → this tool requires a board (human) API key",
+        "- 404: agent not found → verify ID with paperclip_list_agents",
+      ],
+      boardOnly: true,
+    }),
     inputSchema: toJsonSchema(UpdateAgentPermissionsInput),
     annotations: {
       title: "Update agent permissions",
@@ -245,7 +324,20 @@ export const agentTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_pause_agent",
-    description: "Pause an agent, preventing it from starting new heartbeat runs.",
+    description: composeDescription({
+      summary: "Pause an agent, preventing it from starting new heartbeat runs.",
+      args: ['- agentId: string — Agent UUID (example: "agt_abc123")'],
+      returns: "Returns the updated agent object with status set to paused.",
+      examples: {
+        useWhen: "temporarily stopping a runaway or misconfigured agent during incident response",
+        dontUseWhen:
+          "you want to permanently stop an agent — use paperclip_terminate_agent (board-only, irreversible)",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: agent not found → verify ID with paperclip_list_agents",
+      ],
+    }),
     inputSchema: toJsonSchema(AgentIdInput),
     annotations: { title: "Pause agent", idempotentHint: true, openWorldHint: false },
     async handler(args, client) {
@@ -260,7 +352,21 @@ export const agentTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_resume_agent",
-    description: "Resume a paused agent, allowing it to start new heartbeat runs.",
+    description: composeDescription({
+      summary: "Resume a paused agent, allowing it to start new heartbeat runs.",
+      args: ['- agentId: string — Agent UUID (example: "agt_abc123")'],
+      returns: "Returns the updated agent object with status set to active.",
+      examples: {
+        useWhen: "re-enabling an agent after pausing it for maintenance or incident response",
+        dontUseWhen:
+          "the agent is not paused — check current status with paperclip_get_agent first",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: agent not found → verify ID with paperclip_list_agents",
+        "- 422: agent is not in a paused state → check current status with paperclip_get_agent",
+      ],
+    }),
     inputSchema: toJsonSchema(AgentIdInput),
     annotations: { title: "Resume paused agent", idempotentHint: true, openWorldHint: false },
     async handler(args, client) {
@@ -275,8 +381,22 @@ export const agentTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_invoke_heartbeat",
-    description:
-      "Manually trigger a heartbeat run for an agent. Run ID header is injected automatically.",
+    description: composeDescription({
+      summary: "Manually trigger an on-demand heartbeat run for an agent.",
+      args: ['- agentId: string — Agent UUID (example: "agt_abc123")'],
+      returns: "Returns the created heartbeat run record: runId, agentId, status, startedAt.",
+      examples: {
+        useWhen:
+          "waking an agent to process an urgent task without waiting for its next scheduled heartbeat",
+        dontUseWhen:
+          "the agent has heartbeat disabled or wakeOnDemand:false — update config with paperclip_update_agent first",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: agent not found → verify ID with paperclip_list_agents",
+        "- 409: agent is already running a heartbeat → wait for it to finish",
+      ],
+    }),
     inputSchema: toJsonSchema(AgentIdInput),
     annotations: {
       title: "Invoke agent heartbeat manually",
@@ -295,8 +415,21 @@ export const agentTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_terminate_agent",
-    description:
-      "⚠ Board-only: Permanently deactivate an agent. WARNING: This action is irreversible. The agent cannot be reactivated after termination. Run ID header is injected automatically.",
+    description: composeDescription({
+      summary: "Permanently deactivate an agent. This action is irreversible.",
+      args: ['- agentId: string — Agent UUID (example: "agt_abc123")'],
+      returns: "Returns the terminated agent record with status set to terminated.",
+      examples: {
+        useWhen: "decommissioning an agent that is no longer needed (requires board API key)",
+        dontUseWhen: "you want a temporary stop — use paperclip_pause_agent instead (reversible)",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 403: permission denied → this tool requires a board (human) API key",
+        "- 404: agent not found → verify ID with paperclip_list_agents",
+      ],
+      boardOnly: true,
+    }),
     inputSchema: toJsonSchema(AgentIdInput),
     annotations: {
       title: "Terminate agent permanently",
@@ -315,8 +448,29 @@ export const agentTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_create_agent_key",
-    description:
-      "⚠ Board-only: Create a long-lived API key for an agent. Returns the key value — store it securely, it will not be shown again. Run ID header is injected automatically.",
+    description: composeDescription({
+      summary:
+        "Create a long-lived API key for an agent. The key value is shown only once — store it securely.",
+      args: [
+        '- agentId: string — Agent UUID (example: "agt_abc123")',
+        '- name: string (optional) — Key label for identification (example: "prod-key")',
+        '- expiresAt: string (optional) — ISO 8601 expiry datetime (example: "2027-01-01T00:00:00.000Z")',
+      ],
+      returns:
+        "Returns the created key record: id, name, key (plaintext, shown once), agentId, expiresAt.",
+      examples: {
+        useWhen:
+          "provisioning a new API key after onboarding an agent or rotating a compromised key",
+        dontUseWhen:
+          "the agent already has a valid key — list existing keys via paperclip_get_agent first",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 403: permission denied → this tool requires a board (human) API key",
+        "- 404: agent not found → verify ID with paperclip_list_agents",
+      ],
+      boardOnly: true,
+    }),
     inputSchema: toJsonSchema(CreateAgentKeyInput),
     annotations: { title: "Create agent API key", destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
@@ -334,7 +488,20 @@ export const agentTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_list_agent_config_revisions",
-    description: "List config revision history for an agent.",
+    description: composeDescription({
+      summary: "List the config revision history for an agent.",
+      args: ['- agentId: string — Agent UUID (example: "agt_abc123")'],
+      returns: "Array of revision records: revisionId, changedAt, changedByAgentId, summary.",
+      examples: {
+        useWhen: "auditing recent config changes or finding a revisionId to roll back to",
+        dontUseWhen:
+          "you want to roll back — use paperclip_rollback_agent_config with the target revisionId",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: agent not found → verify ID with paperclip_list_agents",
+      ],
+    }),
     inputSchema: toJsonSchema(AgentIdInput),
     annotations: {
       title: "List agent config revisions",
@@ -353,8 +520,25 @@ export const agentTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_rollback_agent_config",
-    description:
-      "⚠ Board-only: Rollback an agent's config to a previous revision. Run ID header is injected automatically.",
+    description: composeDescription({
+      summary: "Roll back an agent's config to a specific previous revision.",
+      args: [
+        '- agentId: string — Agent UUID (example: "agt_abc123")',
+        '- revisionId: string — Config revision UUID to restore (example: "rev_xyz789")',
+      ],
+      returns: "Returns the agent object with config restored to the specified revision.",
+      examples: {
+        useWhen:
+          "reverting a bad config change that broke an agent's heartbeat (requires board API key)",
+        dontUseWhen: "you want to make targeted edits — use paperclip_update_agent instead",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 403: permission denied → this tool requires a board (human) API key",
+        "- 404: agent or revision not found → list revisions with paperclip_list_agent_config_revisions",
+      ],
+      boardOnly: true,
+    }),
     inputSchema: toJsonSchema(ConfigRevisionInput),
     annotations: {
       title: "Rollback agent config revision",
@@ -375,8 +559,27 @@ export const agentTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_set_agent_instructions_path",
-    description:
-      "⚠ Board-only: Set or clear the AGENTS.md instructions file path for an agent. Send null to clear. Run ID header is injected automatically.",
+    description: composeDescription({
+      summary: "Set or clear the AGENTS.md instructions file path for an agent.",
+      args: [
+        '- agentId: string — Agent UUID (example: "agt_abc123")',
+        '- path: string | null — Absolute path to the AGENTS.md file; null to clear (example: "/home/user/.agents/engineer/AGENTS.md")',
+        "- adapterConfigKey: string (optional) — Override adapter config key for non-standard adapters",
+      ],
+      returns: "Returns the updated agent record with the new instructionsFilePath value.",
+      examples: {
+        useWhen:
+          "onboarding a new agent by pointing it at its role-specific AGENTS.md (requires board API key)",
+        dontUseWhen:
+          "you want to update other adapter settings — use paperclip_update_agent for other adapterConfig fields",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 403: permission denied → this tool requires a board (human) API key",
+        "- 404: agent not found → verify ID with paperclip_list_agents",
+      ],
+      boardOnly: true,
+    }),
     inputSchema: toJsonSchema(SetInstructionsPathInput),
     annotations: {
       title: "Set agent instructions file path",
@@ -397,7 +600,18 @@ export const agentTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_get_org_chart",
-    description: "Get the full company agent hierarchy (org chart).",
+    description: composeDescription({
+      summary: "Get the full company agent hierarchy as an org chart.",
+      returns: "Nested tree structure of agent nodes: id, name, role, reportsTo, directReports[].",
+      examples: {
+        useWhen: "understanding the chain of command before escalating to a senior agent or CEO",
+        dontUseWhen: "you need a flat agent list — use paperclip_list_agents instead",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 403: permission denied → verify PAPERCLIP_COMPANY_ID is correct",
+      ],
+    }),
     inputSchema: toJsonSchema(NoInput),
     annotations: { title: "Get company org chart", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
@@ -412,8 +626,25 @@ export const agentTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_sync_agent_skills",
-    description:
-      "Sync the desired skill set for an agent, adding or removing skills as needed. Run ID header is injected automatically.",
+    description: composeDescription({
+      summary:
+        "Sync an agent's installed skills to match the desired list, adding or removing as needed.",
+      args: [
+        '- agentId: string — Agent UUID (example: "agt_abc123")',
+        '- desiredSkills: string[] — Skill names to install; skills not in this list are removed (example: ["paperclip-hire-agent"])',
+      ],
+      returns: "Returns the sync result: added[], removed[], current[] skill lists.",
+      examples: {
+        useWhen: "onboarding a new agent or updating its skill set after a role change",
+        dontUseWhen:
+          "you only want to check installed skills — use paperclip_get_agent and inspect adapterConfig.paperclipSkillSync",
+      },
+      errors: [
+        "- 400: validation failure → check desiredSkills is a non-empty array of valid skill names",
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: agent not found → verify ID with paperclip_list_agents",
+      ],
+    }),
     inputSchema: toJsonSchema(SyncAgentSkillsInput),
     annotations: { title: "Sync agent skills", destructiveHint: true, openWorldHint: false },
     async handler(args, client) {
@@ -430,7 +661,19 @@ export const agentTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_list_company_skills",
-    description: "List all skills installed in the company.",
+    description: composeDescription({
+      summary: "List all skills installed at the company level.",
+      returns: "Array of skill records: id, name, version, description, installedAt.",
+      examples: {
+        useWhen: "checking which skills are available before syncing them to an agent",
+        dontUseWhen:
+          "you need an agent's current skill set — use paperclip_get_agent and check adapterConfig",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 403: permission denied → verify PAPERCLIP_COMPANY_ID is correct",
+      ],
+    }),
     inputSchema: toJsonSchema(NoInput),
     annotations: { title: "List company skills", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
