@@ -98,12 +98,122 @@ export function validate<T>(schema: z.ZodType<T>, args: unknown): T {
   return result.data;
 }
 
-export function handleApiError(err: unknown): ToolResult {
-  if (err instanceof PaperclipApiError) {
-    const text = `Paperclip API error ${err.status} ${err.statusText}: ${JSON.stringify(err.body)}`;
-    return { isError: true, content: [{ type: "text", text }] };
+// ---------------------------------------------------------------------------
+// handleApiError — Stage 7: LLM-actionable error messages
+// ---------------------------------------------------------------------------
+
+/** Optional context passed by each tool handler to produce actionable error text. */
+export interface ApiErrorContext {
+  /** Tool name, e.g. "paperclip_list_issues". Included in every message. */
+  tool: string;
+  /**
+   * Singular resource noun, e.g. "issue", "agent". Used to construct
+   * recovery hints like "verify with paperclip_list_issues".
+   */
+  resource?: string;
+  /**
+   * Per-tool additional guidance appended to the message.
+   * Example: 500 on list_comments with `after` cursor → known Paperclip API bug hint.
+   */
+  hint?: string;
+}
+
+/** Default timeout shown in AbortError messages when ctx is unavailable. */
+const DEFAULT_TIMEOUT_MS = 30_000;
+
+function makeError(text: string): ToolResult {
+  return { isError: true, content: [{ type: "text", text }] };
+}
+
+/**
+ * Convert any caught error into an LLM-actionable { isError: true } ToolResult.
+ *
+ * Dispatch logic:
+ *  - PaperclipApiError  → status-coded message with recovery hint
+ *  - DOMException (AbortError) → timeout message
+ *  - TypeError ("fetch failed") → network-unreachable message
+ *  - anything else → unexpected-error message
+ *
+ * Never re-throws. All errors become { isError: true } responses.
+ */
+export function handleApiError(err: unknown, ctx?: ApiErrorContext): ToolResult {
+  // McpError (from validate()) is a protocol-level error — let it propagate
+  // to the MCP framework which translates it into a JSON-RPC error response.
+  if (err instanceof McpError) {
+    throw err;
   }
-  throw err;
+
+  const tool = ctx?.tool ?? "unknown tool";
+  const resource = ctx?.resource;
+  const hint = ctx?.hint;
+
+  function withHint(msg: string): string {
+    return hint ? `${msg} (Hint: ${hint})` : msg;
+  }
+
+  // ── PaperclipApiError ───────────────────────────────────────────────────
+  if (err instanceof PaperclipApiError) {
+    const { status, statusText, body } = err;
+    const bodyMessage =
+      typeof body === "object" && body !== null && "message" in body
+        ? String((body as Record<string, unknown>)["message"])
+        : typeof body === "string"
+          ? body
+          : statusText;
+
+    let msg: string;
+
+    if (status === 400) {
+      msg = `400 Bad request in ${tool}: ${bodyMessage}. Check the input parameters and try again.`;
+    } else if (status === 401) {
+      msg = `401 Authentication failed for ${tool}. Check PAPERCLIP_API_KEY is valid and not expired.`;
+    } else if (status === 403) {
+      msg = `403 Permission denied for ${tool}. This endpoint may require a board (human-user) API key.`;
+    } else if (status === 404) {
+      const listTool = resource ? `paperclip_list_${resource}s` : undefined;
+      const getTool = resource ? `paperclip_get_${resource}` : undefined;
+      const siblings = [listTool, getTool].filter(Boolean).join(" or ");
+      const recovery = siblings
+        ? `Verify the ID with ${siblings}.`
+        : "Verify the ID is correct and you have access.";
+      msg = `404 Not found in ${tool}: the ${resource ?? "resource"} ID may not exist or you don't have access. ${recovery}`;
+    } else if (status === 409) {
+      const refreshTool = resource ? `paperclip_get_${resource}` : undefined;
+      const refreshHint = refreshTool ? ` Do not retry — refresh state with ${refreshTool}.` : "";
+      msg = `409 Conflict in ${tool}: ${bodyMessage}.${refreshHint}`;
+    } else if (status === 422) {
+      msg = `422 Validation failure in ${tool}: ${bodyMessage}. Check the submitted values.`;
+    } else if (status === 429) {
+      msg = `429 Rate limited on ${tool}. Wait a few seconds before retrying.`;
+    } else if (status >= 500) {
+      msg = `Paperclip API server error (${status}) in ${tool}. This is usually transient; retry in a few seconds.`;
+    } else {
+      msg = `Paperclip API error ${status} ${statusText} in ${tool}: ${JSON.stringify(body)}`;
+    }
+
+    return makeError(withHint(msg));
+  }
+
+  // ── AbortError (timeout via AbortSignal.timeout) ─────────────────────────
+  if (err instanceof DOMException && err.name === "AbortError") {
+    return makeError(
+      withHint(
+        `Request timeout in ${tool}. The Paperclip API took longer than ${DEFAULT_TIMEOUT_MS}ms. Retry, or check PAPERCLIP_API_URL connectivity.`
+      )
+    );
+  }
+
+  // ── Network error (fetch failed) ─────────────────────────────────────────
+  if (err instanceof TypeError && err.message.toLowerCase().includes("fetch")) {
+    return makeError(
+      withHint(
+        `Network error in ${tool}: could not reach Paperclip API. Check PAPERCLIP_API_URL is reachable.`
+      )
+    );
+  }
+
+  // ── Unknown error ─────────────────────────────────────────────────────────
+  return makeError(withHint(`Unexpected error in ${tool}: ${String(err)}`));
 }
 
 // Common input schemas reused across tool modules
