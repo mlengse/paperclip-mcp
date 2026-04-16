@@ -1176,3 +1176,28 @@ describe("[stage-6] paperclip_list_issues — pagination envelope", () => {
     assert.deepEqual(data.items, []);
   });
 });
+
+// ---------------------------------------------------------------------------
+// [stage-7] C4/C5: AbortError + network error handling — per module
+// ---------------------------------------------------------------------------
+describe("[stage-7] paperclip_list_issues — C4/C5 timeout + network errors", () => {
+  it("C4: AbortError → isError with timeout text", async () => {
+    const fn = async () => {
+      throw new DOMException("Aborted", "AbortError");
+    };
+    const client = new PaperclipClient(TEST_AUTH, fn as unknown as typeof fetch);
+    const result = await listIssues.handler({ response_format: "json" }, client);
+    assert.equal(result.isError, true);
+    assert.match(result.content[0]!.text.toLowerCase(), /timeout/);
+  });
+
+  it("C5: network TypeError → isError with network text", async () => {
+    const fn = async () => {
+      throw new TypeError("fetch failed");
+    };
+    const client = new PaperclipClient(TEST_AUTH, fn as unknown as typeof fetch);
+    const result = await listIssues.handler({ response_format: "json" }, client);
+    assert.equal(result.isError, true);
+    assert.match(result.content[0]!.text.toLowerCase(), /network|reach/);
+  });
+});
