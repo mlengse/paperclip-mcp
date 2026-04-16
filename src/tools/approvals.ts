@@ -7,6 +7,7 @@ import {
   ApprovalTypeSchema,
   composeDescription,
 } from "./validation.js";
+import { ResponseFormatSchema, formatJson, formatGenericList, applyCharLimit } from "./format.js";
 
 const ApprovalIdInput = z
   .object({
@@ -17,6 +18,18 @@ const ApprovalIdInput = z
 const ListApprovalsInput = z
   .object({
     status: z.string().optional().describe("Filter by status (e.g. 'pending,approved')"),
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
+  })
+  .strict();
+
+const GetApprovalInput = z
+  .object({
+    approvalId: z.string().min(1).describe("Approval UUID"),
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
   })
   .strict();
 
@@ -103,7 +116,10 @@ export const approvalTools: ToolDefinition[] = [
         const qs = params.toString();
         const path = `/api/companies/${client.companyId}/approvals${qs ? `?${qs}` : ""}`;
         const data = await client.get<unknown>(path);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const fmt = input.response_format ?? "markdown";
+        const text = fmt === "json" ? formatJson(data) : formatGenericList(data, "Approvals");
+        const hint = "Response too large. Filter by status to narrow results.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -128,13 +144,16 @@ export const approvalTools: ToolDefinition[] = [
         "- 404: approval not found → verify ID with paperclip_list_approvals",
       ],
     }),
-    inputSchema: toJsonSchema(ApprovalIdInput),
+    inputSchema: toJsonSchema(GetApprovalInput),
     annotations: { title: "Get approval request by ID", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { approvalId } = validate(ApprovalIdInput, args);
+        const { approvalId, response_format: fmt } = validate(GetApprovalInput, args);
         const data = await client.get<unknown>(`/api/approvals/${approvalId}`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text =
+          (fmt ?? "markdown") === "json" ? formatJson(data) : formatGenericList([data], "Approval");
+        const hint = "Response too large.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -173,7 +192,10 @@ export const approvalTools: ToolDefinition[] = [
           `/api/companies/${client.companyId}/approvals`,
           body
         );
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -205,7 +227,10 @@ export const approvalTools: ToolDefinition[] = [
       try {
         const { approvalId } = validate(ApprovalIdInput, args);
         const data = await client.post<unknown>(`/api/approvals/${approvalId}/approve`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -241,7 +266,10 @@ export const approvalTools: ToolDefinition[] = [
         const body: Record<string, unknown> = {};
         if (reason !== undefined) body.reason = reason;
         const data = await client.post<unknown>(`/api/approvals/${approvalId}/reject`, body);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -285,7 +313,10 @@ export const approvalTools: ToolDefinition[] = [
           `/api/approvals/${approvalId}/request-revision`,
           body
         );
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -323,7 +354,10 @@ export const approvalTools: ToolDefinition[] = [
         const body: Record<string, unknown> = {};
         if (comment !== undefined) body.comment = comment;
         const data = await client.post<unknown>(`/api/approvals/${approvalId}/resubmit`, body);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -355,7 +389,10 @@ export const approvalTools: ToolDefinition[] = [
       try {
         const { approvalId } = validate(ApprovalIdInput, args);
         const data = await client.get<unknown>(`/api/approvals/${approvalId}/comments`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -391,7 +428,10 @@ export const approvalTools: ToolDefinition[] = [
       try {
         const { approvalId, body } = validate(ApprovalCommentInput, args);
         const data = await client.post<unknown>(`/api/approvals/${approvalId}/comments`, { body });
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -440,7 +480,10 @@ export const approvalTools: ToolDefinition[] = [
           `/api/companies/${client.companyId}/agent-hires`,
           body
         );
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
         return handleApiError(err);
       }

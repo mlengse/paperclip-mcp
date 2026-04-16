@@ -35,10 +35,11 @@ describe("paperclip_get_activity", () => {
     const activity = [{ id: "act-1", type: "issue.created" }];
     const { fn, calls } = mockFetch(200, activity);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getActivity.handler({}, client);
+    const result = await getActivity.handler({ response_format: "json" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/activity");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(activity) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, activity);
   });
 
   it("appends query params when filters are provided", async () => {
@@ -68,10 +69,11 @@ describe("paperclip_get_cost_summary", () => {
     const summary = { total: 1234, currency: "usd" };
     const { fn, calls } = mockFetch(200, summary);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getCostSummary.handler({}, client);
+    const result = await getCostSummary.handler({ response_format: "json" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/costs/summary");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(summary) }] });
+    const parsedSummary = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedSummary, summary);
   });
 
   it("throws McpError when args is not an object (validation failure, fetch not called)", async () => {
@@ -101,10 +103,11 @@ describe("paperclip_get_costs_by_agent", () => {
     const breakdown = [{ agentId: "agent-1", total: 500 }];
     const { fn, calls } = mockFetch(200, breakdown);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getCostsByAgent.handler({}, client);
+    const result = await getCostsByAgent.handler({ response_format: "json" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/costs/by-agent");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(breakdown) }] });
+    const parsedByAgent = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedByAgent, breakdown);
   });
 
   it("throws McpError when args is not an object (validation failure, fetch not called)", async () => {
@@ -134,12 +137,11 @@ describe("paperclip_get_costs_by_project", () => {
     const breakdown = [{ projectId: "proj-1", total: 800 }];
     const { fn, calls } = mockFetch(200, breakdown);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getCostsByProject.handler({}, client);
+    const result = await getCostsByProject.handler({ response_format: "json" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/costs/by-project");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, {
-      content: [{ type: "text", text: JSON.stringify(breakdown) }],
-    });
+    const parsedByProject = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedByProject, breakdown);
   });
 
   it("throws McpError when args is not an object (validation failure, fetch not called)", async () => {
@@ -183,7 +185,8 @@ describe("paperclip_report_cost_event", () => {
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/cost-events");
     assert.equal(calls[0]!.init.method, "POST");
     assert.deepEqual(JSON.parse(calls[0]!.init.body as string), validInput);
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(event) }] });
+    const parsedEvent = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedEvent, event);
   });
 
   it("returns isError response on 422 validation error", async () => {

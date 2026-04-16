@@ -3,16 +3,33 @@ import type { ToolDefinition } from "./index.js";
 import {
   validate,
   toJsonSchema,
-  NoInput,
   handleApiError,
   RoutineTriggerTypeSchema,
   composeDescription,
 } from "./validation.js";
+import { ResponseFormatSchema, formatJson, formatGenericList, applyCharLimit } from "./format.js";
 
 // Basic 5-field cron regex: five whitespace-separated tokens
 const CRON_REGEX = /^(\S+\s+){4}\S+$/;
 
+const ListRoutinesInput = z
+  .object({
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
+  })
+  .strict();
+
 const RoutineIdInput = z
+  .object({
+    routineId: z.string().min(1).describe("Routine UUID"),
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
+  })
+  .strict();
+
+const RoutineIdMutateInput = z
   .object({
     routineId: z.string().min(1).describe("Routine UUID"),
   })
@@ -103,13 +120,16 @@ export const routineTools: ToolDefinition[] = [
         "- 403: permission denied → verify PAPERCLIP_COMPANY_ID is correct",
       ],
     }),
-    inputSchema: toJsonSchema(NoInput),
+    inputSchema: toJsonSchema(ListRoutinesInput),
     annotations: { title: "List company routines", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        validate(NoInput, args);
+        const { response_format: fmt } = validate(ListRoutinesInput, args);
         const data = await client.get<unknown>(`/api/companies/${client.companyId}/routines`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text =
+          (fmt ?? "markdown") === "json" ? formatJson(data) : formatGenericList(data, "Routines");
+        const hint = "Response too large.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -119,7 +139,10 @@ export const routineTools: ToolDefinition[] = [
     name: "paperclip_get_routine",
     description: composeDescription({
       summary: "Get a single routine by UUID, including its triggers and recent runs.",
-      args: ['- routineId: string — Routine UUID (example: "rtn_abc123")'],
+      args: [
+        '- routineId: string — Routine UUID (example: "rtn_abc123")',
+        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
+      ],
       returns:
         "Routine object: id, name, agentId, triggers[], recentRuns[], concurrencyPolicy, catchUpPolicy.",
       examples: {
@@ -135,9 +158,12 @@ export const routineTools: ToolDefinition[] = [
     annotations: { title: "Get routine by ID", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { routineId } = validate(RoutineIdInput, args);
+        const { routineId, response_format: fmt } = validate(RoutineIdInput, args);
         const data = await client.get<unknown>(`/api/routines/${routineId}`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text =
+          (fmt ?? "markdown") === "json" ? formatJson(data) : formatGenericList([data], "Routine");
+        const hint = "Response too large.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -180,7 +206,10 @@ export const routineTools: ToolDefinition[] = [
           `/api/companies/${client.companyId}/routines`,
           body
         );
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -223,7 +252,10 @@ export const routineTools: ToolDefinition[] = [
           if (v !== undefined) body[k] = v;
         }
         const data = await client.patch<unknown>(`/api/routines/${routineId}`, body);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -259,7 +291,10 @@ export const routineTools: ToolDefinition[] = [
         const body: Record<string, unknown> = { type };
         if (config !== undefined) body.config = config;
         const data = await client.post<unknown>(`/api/routines/${routineId}/triggers`, body);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -299,7 +334,10 @@ export const routineTools: ToolDefinition[] = [
         if (rest.type !== undefined) body.type = rest.type;
         if (rest.config !== undefined) body.config = rest.config;
         const data = await client.patch<unknown>(`/api/routine-triggers/${triggerId}`, body);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -330,7 +368,10 @@ export const routineTools: ToolDefinition[] = [
       try {
         const { triggerId } = validate(TriggerIdInput, args);
         const data = await client.delete<unknown>(`/api/routine-triggers/${triggerId}`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -352,13 +393,16 @@ export const routineTools: ToolDefinition[] = [
         "- 409: concurrency policy forbids concurrent run → wait for the active run to finish",
       ],
     }),
-    inputSchema: toJsonSchema(RoutineIdInput),
+    inputSchema: toJsonSchema(RoutineIdMutateInput),
     annotations: { title: "Run routine now", destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { routineId } = validate(RoutineIdInput, args);
+        const { routineId } = validate(RoutineIdMutateInput, args);
         const data = await client.post<unknown>(`/api/routines/${routineId}/run`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -368,7 +412,10 @@ export const routineTools: ToolDefinition[] = [
     name: "paperclip_list_routine_runs",
     description: composeDescription({
       summary: "List historical runs for a routine, ordered most-recent first.",
-      args: ['- routineId: string — Routine UUID (example: "rtn_abc123")'],
+      args: [
+        '- routineId: string — Routine UUID (example: "rtn_abc123")',
+        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
+      ],
       returns: "Array of run objects: id, routineId, status, startedAt, finishedAt, triggerId.",
       examples: {
         useWhen: "auditing whether a scheduled routine has been firing and completing successfully",
@@ -384,9 +431,14 @@ export const routineTools: ToolDefinition[] = [
     annotations: { title: "List routine run history", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { routineId } = validate(RoutineIdInput, args);
+        const { routineId, response_format: fmt } = validate(RoutineIdInput, args);
         const data = await client.get<unknown>(`/api/routines/${routineId}/runs`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text =
+          (fmt ?? "markdown") === "json"
+            ? formatJson(data)
+            : formatGenericList(data, "Routine Runs");
+        const hint = "Response too large.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }

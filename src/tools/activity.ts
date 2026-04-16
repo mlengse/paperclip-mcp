@@ -1,12 +1,7 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import {
-  validate,
-  toJsonSchema,
-  NoInput,
-  handleApiError,
-  composeDescription,
-} from "./validation.js";
+import { validate, toJsonSchema, handleApiError, composeDescription } from "./validation.js";
+import { ResponseFormatSchema, formatJson, formatGenericList, applyCharLimit } from "./format.js";
 
 const ReportCostEventInput = z
   .object({
@@ -30,6 +25,17 @@ const GetActivityInput = z
     agentId: z.string().optional().describe("Filter by agent ID"),
     entityType: z.string().optional().describe("Filter by entity type (e.g. issue, approval)"),
     entityId: z.string().optional().describe("Filter by entity ID"),
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
+  })
+  .strict();
+
+const NoInputWithFormat = z
+  .object({
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
   })
   .strict();
 
@@ -42,6 +48,7 @@ export const activityTools: ToolDefinition[] = [
         '- agentId: string (optional) — Filter to a specific agent (example: "agt_abc123")',
         '- entityType: string (optional) — Filter by entity kind (example: "issue")',
         '- entityId: string (optional) — Filter to a specific entity (example: "PAP-42")',
+        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
       ],
       returns:
         "Array of activity events: id, agentId, entityType, entityId, action, occurredAt, metadata.",
@@ -67,7 +74,10 @@ export const activityTools: ToolDefinition[] = [
         const qs = params.toString();
         const path = `/api/companies/${client.companyId}/activity${qs ? `?${qs}` : ""}`;
         const data = await client.get<unknown>(path);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const fmt = input.response_format ?? "markdown";
+        const text = fmt === "json" ? formatJson(data) : formatGenericList(data, "Activity");
+        const hint = "Response too large. Filter by agentId, entityType, or entityId.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -78,6 +88,9 @@ export const activityTools: ToolDefinition[] = [
     description: composeDescription({
       summary:
         "Get a rolled-up cost summary for the current company across all agents and projects.",
+      args: [
+        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
+      ],
       returns:
         "Object with total cost in cents, breakdown by period, and per-agent/per-project aggregates.",
       examples: {
@@ -90,13 +103,18 @@ export const activityTools: ToolDefinition[] = [
         "- 403: permission denied → verify PAPERCLIP_COMPANY_ID is correct",
       ],
     }),
-    inputSchema: toJsonSchema(NoInput),
+    inputSchema: toJsonSchema(NoInputWithFormat),
     annotations: { title: "Get company cost summary", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        validate(NoInput, args);
+        const { response_format: fmt } = validate(NoInputWithFormat, args);
         const data = await client.get<unknown>(`/api/companies/${client.companyId}/costs/summary`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text =
+          (fmt ?? "markdown") === "json"
+            ? formatJson(data)
+            : formatGenericList([data], "Cost Summary");
+        const hint = "Response too large.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -106,6 +124,9 @@ export const activityTools: ToolDefinition[] = [
     name: "paperclip_get_costs_by_agent",
     description: composeDescription({
       summary: "Get LLM token costs broken down by agent for the current company.",
+      args: [
+        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
+      ],
       returns: "Array of per-agent cost records: agentId, agentName, totalCents, tokenCounts.",
       examples: {
         useWhen: "identifying which agent is consuming the most budget this period",
@@ -116,13 +137,18 @@ export const activityTools: ToolDefinition[] = [
         "- 403: permission denied → verify PAPERCLIP_COMPANY_ID is correct",
       ],
     }),
-    inputSchema: toJsonSchema(NoInput),
+    inputSchema: toJsonSchema(NoInputWithFormat),
     annotations: { title: "Get costs by agent", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        validate(NoInput, args);
+        const { response_format: fmt } = validate(NoInputWithFormat, args);
         const data = await client.get<unknown>(`/api/companies/${client.companyId}/costs/by-agent`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text =
+          (fmt ?? "markdown") === "json"
+            ? formatJson(data)
+            : formatGenericList(data, "Costs by Agent");
+        const hint = "Response too large.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -132,6 +158,9 @@ export const activityTools: ToolDefinition[] = [
     name: "paperclip_get_costs_by_project",
     description: composeDescription({
       summary: "Get LLM token costs broken down by project for the current company.",
+      args: [
+        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
+      ],
       returns:
         "Array of per-project cost records: projectId, projectName, totalCents, tokenCounts.",
       examples: {
@@ -143,15 +172,20 @@ export const activityTools: ToolDefinition[] = [
         "- 403: permission denied → verify PAPERCLIP_COMPANY_ID is correct",
       ],
     }),
-    inputSchema: toJsonSchema(NoInput),
+    inputSchema: toJsonSchema(NoInputWithFormat),
     annotations: { title: "Get costs by project", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        validate(NoInput, args);
+        const { response_format: fmt } = validate(NoInputWithFormat, args);
         const data = await client.get<unknown>(
           `/api/companies/${client.companyId}/costs/by-project`
         );
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text =
+          (fmt ?? "markdown") === "json"
+            ? formatJson(data)
+            : formatGenericList(data, "Costs by Project");
+        const hint = "Response too large.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -196,7 +230,10 @@ export const activityTools: ToolDefinition[] = [
           `/api/companies/${client.companyId}/cost-events`,
           input
         );
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
         return handleApiError(err);
       }

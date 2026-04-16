@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
 import { validate, toJsonSchema, handleApiError, composeDescription } from "./validation.js";
+import { ResponseFormatSchema, formatJson, formatGenericList, applyCharLimit } from "./format.js";
 
 const ListCommentsInput = z
   .object({
@@ -13,6 +14,9 @@ const ListCommentsInput = z
           "Note: the server-side `after` param is broken (returns 500); this tool implements a client-side workaround."
       ),
     order: z.enum(["asc", "desc"]).optional().describe("Sort order (default: asc)"),
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
   })
   .strict();
 
@@ -44,6 +48,7 @@ export const commentTools: ToolDefinition[] = [
         '- issueId: string — Issue ID or identifier (example: "PAP-42")',
         "- after: string (optional) — Comment UUID cursor; returns only comments after this ID (client-side workaround active — server after param returns 500)",
         '- order: "asc" | "desc" (optional) — Sort order (default: asc)',
+        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
       ],
       returns:
         "Array of comment objects: id, body, authorId, authorType, createdAt. When `after` is set, response includes _note about the client-side workaround.",
@@ -62,6 +67,7 @@ export const commentTools: ToolDefinition[] = [
     async handler(args, client) {
       try {
         const input = validate(ListCommentsInput, args);
+        const fmt = input.response_format ?? "markdown";
 
         if (input.after) {
           // Client-side workaround: server-side `after` cursor returns HTTP 500.
@@ -76,7 +82,10 @@ export const commentTools: ToolDefinition[] = [
               "Fetched up to 500 comments and filtered locally.",
             comments: filtered,
           };
-          return { content: [{ type: "text", text: JSON.stringify(result) }] };
+          const text =
+            fmt === "json" ? formatJson(result) : formatGenericList(filtered, "Comments");
+          const hint = "Response too large. Use the `after` cursor to fetch fewer comments.";
+          return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
         }
 
         const params = new URLSearchParams();
@@ -84,7 +93,9 @@ export const commentTools: ToolDefinition[] = [
         const qs = params.toString();
         const path = `/api/issues/${input.issueId}/comments${qs ? `?${qs}` : ""}`;
         const data = await client.get<unknown>(path);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text = fmt === "json" ? formatJson(data) : formatGenericList(data, "Comments");
+        const hint = "Response too large. Use the `after` cursor to fetch fewer comments.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -117,7 +128,10 @@ export const commentTools: ToolDefinition[] = [
       try {
         const { issueId, body } = validate(AddCommentInput, args);
         const data = await client.post<unknown>(`/api/issues/${issueId}/comments`, { body });
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -148,7 +162,10 @@ export const commentTools: ToolDefinition[] = [
       try {
         const { issueId, commentId } = validate(GetCommentInput, args);
         const data = await client.get<unknown>(`/api/issues/${issueId}/comments/${commentId}`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
         return handleApiError(err);
       }

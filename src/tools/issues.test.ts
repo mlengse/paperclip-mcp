@@ -37,7 +37,7 @@ describe("paperclip_list_issues", () => {
   it("calls GET /api/companies/{id}/issues with no filters", async () => {
     const { fn, calls } = mockFetch(200, []);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listIssues.handler({}, client);
+    const result = await listIssues.handler({ response_format: "json" }, client);
     assert.equal(calls.length, 1);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/issues");
     assert.equal(calls[0]!.init.method, "GET");
@@ -75,7 +75,10 @@ describe("paperclip_list_issues", () => {
     const allIssues = Array.from({ length: 10 }, (_, i) => ({ id: `issue-${i}` }));
     const { fn } = mockFetch(200, allIssues);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listIssues.handler({ limit: 5, offset: 0 }, client);
+    const result = await listIssues.handler(
+      { limit: 5, offset: 0, response_format: "json" },
+      client
+    );
     const parsed = JSON.parse(result.content[0]!.text);
     assert.equal(parsed.total, 10);
     assert.equal(parsed.limit, 5);
@@ -88,7 +91,10 @@ describe("paperclip_list_issues", () => {
     const allIssues = Array.from({ length: 10 }, (_, i) => ({ id: `issue-${i}` }));
     const { fn } = mockFetch(200, allIssues);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listIssues.handler({ limit: 5, offset: 5 }, client);
+    const result = await listIssues.handler(
+      { limit: 5, offset: 5, response_format: "json" },
+      client
+    );
     const parsed = JSON.parse(result.content[0]!.text);
     assert.equal(parsed.total, 10);
     assert.equal(parsed.issues.length, 5);
@@ -99,7 +105,10 @@ describe("paperclip_list_issues", () => {
     const allIssues = Array.from({ length: 3 }, (_, i) => ({ id: `issue-${i}` }));
     const { fn } = mockFetch(200, allIssues);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listIssues.handler({ limit: 5, offset: 10 }, client);
+    const result = await listIssues.handler(
+      { limit: 5, offset: 10, response_format: "json" },
+      client
+    );
     const parsed = JSON.parse(result.content[0]!.text);
     assert.equal(parsed.total, 3);
     assert.deepEqual(parsed.issues, []);
@@ -135,7 +144,7 @@ describe("paperclip_list_issues", () => {
     const allIssues = Array.from({ length: 60 }, (_, i) => ({ id: `issue-${i}` }));
     const { fn } = mockFetch(200, allIssues);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listIssues.handler({}, client);
+    const result = await listIssues.handler({ response_format: "json" }, client);
     const parsed = JSON.parse(result.content[0]!.text);
     assert.equal(parsed.total, 60);
     assert.equal(parsed.limit, 50);
@@ -149,11 +158,10 @@ describe("paperclip_get_issue", () => {
     const issue = { id: "issue-1", title: "My issue", status: "todo" };
     const { fn, calls } = mockFetch(200, issue);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getIssue.handler({ issueId: "issue-1" }, client);
+    const result = await getIssue.handler({ issueId: "issue-1", response_format: "json" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1");
-    assert.deepEqual(result, {
-      content: [{ type: "text", text: JSON.stringify(issue) }],
-    });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, issue);
   });
 
   it("throws McpError when issueId is empty string (validation failure, fetch not called)", async () => {
@@ -1032,10 +1040,21 @@ describe("[stage-5] paperclip_list_issues — truncation + format", () => {
   });
 
   it("D1: markdown mode response >25k is also truncated", async () => {
-    const big = largeIssueList(500);
-    const { fn } = mockFetch(200, big);
+    // Build 100 issues with very long titles (~300 chars each) → ~30k markdown after formatting
+    const bigItems = Array.from({ length: 100 }, (_, i) => ({
+      id: `issue-${i}`,
+      identifier: `PAP-${i}`,
+      title: `Issue ${i} — ${"x".repeat(280)}`,
+      status: "todo",
+      priority: "high",
+      assigneeAgentId: "agent-very-long-id-here",
+      projectId: "project-very-long-id-here",
+      updatedAt: "2026-04-15T14:00:00.000Z",
+    }));
+    const { fn } = mockFetch(200, bigItems);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listIssues.handler({ response_format: "markdown" }, client);
+    // limit=100 (max) so all 100 items go to the formatter
+    const result = await listIssues.handler({ response_format: "markdown", limit: 100 }, client);
     assert.ok(result.content[0]!.text.length < 26_000);
     assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
   });

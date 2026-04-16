@@ -6,7 +6,7 @@ import { CHARACTER_LIMIT } from "../constants.js";
 // ---------------------------------------------------------------------------
 export type ResponseFormat = "markdown" | "json";
 
-export const ResponseFormatSchema = z.enum(["markdown", "json"]);
+export const ResponseFormatSchema = z.enum(["markdown", "json"]).optional().default("markdown");
 
 // ---------------------------------------------------------------------------
 // JSON formatter
@@ -26,9 +26,10 @@ export function formatJson(data: unknown): string {
  * Design decision: 200-char buffer for the hint itself, so the total stays
  * comfortably under CHARACTER_LIMIT after appending the hint block.
  */
-export function applyCharLimit(text: string, hint: string): string {
-  if (text.length <= CHARACTER_LIMIT) return text;
-  const truncated = text.slice(0, CHARACTER_LIMIT - 200);
+export function applyCharLimit(text: string | undefined | null, hint: string): string {
+  const safe = text ?? "";
+  if (safe.length <= CHARACTER_LIMIT) return safe;
+  const truncated = safe.slice(0, CHARACTER_LIMIT - 200);
   return `${truncated}\n\n---\n[Truncated: ${hint}]`;
 }
 
@@ -141,8 +142,9 @@ export function formatDashboard(data: unknown): string {
   const d = (data ?? {}) as DashboardRecord;
   const sections: string[] = [];
 
-  // Goals section
-  const goals = d.goals ?? [];
+  // Goals section — be defensive: goals may be a number (legacy fixtures) or array
+  const rawGoals = d.goals;
+  const goals = Array.isArray(rawGoals) ? rawGoals : [];
   sections.push(`## Goals (${goals.length})`);
   if (goals.length === 0) {
     sections.push("_No goals._");
@@ -152,8 +154,9 @@ export function formatDashboard(data: unknown): string {
     );
   }
 
-  // Projects section
-  const projects = d.projects ?? [];
+  // Projects section — be defensive
+  const rawProjects = d.projects;
+  const projects = Array.isArray(rawProjects) ? rawProjects : [];
   sections.push(`\n## Projects (${projects.length})`);
   if (projects.length === 0) {
     sections.push("_No projects._");
@@ -163,8 +166,12 @@ export function formatDashboard(data: unknown): string {
     );
   }
 
-  // Issues by status
-  const byStatus = d.issuesByStatus ?? {};
+  // Issues by status — be defensive; issuesByStatus may be a number or missing
+  const rawByStatus = d.issuesByStatus;
+  const byStatus =
+    rawByStatus && typeof rawByStatus === "object" && !Array.isArray(rawByStatus)
+      ? rawByStatus
+      : {};
   const statusKeys = Object.keys(byStatus);
   sections.push(`\n## Issues by Status`);
   if (statusKeys.length === 0) {
@@ -173,8 +180,9 @@ export function formatDashboard(data: unknown): string {
     sections.push(statusKeys.map((k) => `- **${k}**: ${byStatus[k]}`).join("\n"));
   }
 
-  // Agent workload
-  const workload = d.agentWorkload ?? [];
+  // Agent workload — be defensive
+  const rawWorkload = d.agentWorkload;
+  const workload = Array.isArray(rawWorkload) ? rawWorkload : [];
   sections.push(`\n## Agent Workload`);
   if (workload.length === 0) {
     sections.push("_No workload data._");

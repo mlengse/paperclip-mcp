@@ -10,6 +10,13 @@ import {
   composeDescription,
 } from "./validation.js";
 import { PaperclipApiError } from "../errors.js";
+import {
+  ResponseFormatSchema,
+  formatJson,
+  formatIssueList,
+  formatSingleIssue,
+  applyCharLimit,
+} from "./format.js";
 
 const ISSUES_MAX_LIMIT = 100;
 const ISSUES_DEFAULT_LIMIT = 50;
@@ -42,10 +49,22 @@ const ListIssuesInput = z
       .default(0)
       .optional()
       .describe("Number of issues to skip before returning results (default 0)"),
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
   })
   .strict();
 
 const IssueIdInput = IssueIdSchema.strict();
+
+const GetIssueInput = z
+  .object({
+    issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-42)"),
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
+  })
+  .strict();
 
 // Some MCP clients serialize array parameters as a JSON-encoded string.
 // This preprocess normalizes both forms before Zod validates the array.
@@ -172,11 +191,12 @@ export const issueTools: ToolDefinition[] = [
         const limit = input.limit ?? ISSUES_DEFAULT_LIMIT;
         const offset = input.offset ?? 0;
         const issues = all.slice(offset, offset + limit);
-        return {
-          content: [
-            { type: "text", text: JSON.stringify({ issues, total: all.length, limit, offset }) },
-          ],
-        };
+        const envelope = { total: all.length, limit, offset };
+        const fmt = input.response_format ?? "markdown";
+        const text =
+          fmt === "json" ? formatJson({ issues, ...envelope }) : formatIssueList(issues, envelope);
+        const hint = "Use filters (projectId, status, assigneeAgentId, offset) to narrow results.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -186,7 +206,10 @@ export const issueTools: ToolDefinition[] = [
     name: "paperclip_get_issue",
     description: composeDescription({
       summary: "Get a single issue by ID, including full details and ancestor chain.",
-      args: ['- issueId: string — Issue ID or identifier (example: "PAP-42")'],
+      args: [
+        '- issueId: string — Issue ID or identifier (example: "PAP-42")',
+        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
+      ],
       returns:
         "Issue object: id, identifier, title, description, status, priority, assigneeAgentId, projectId, goalId, parentId, labelIds, executionRunId, ancestors, createdAt, updatedAt.",
       examples: {
@@ -199,13 +222,15 @@ export const issueTools: ToolDefinition[] = [
         "- 404: issue not found → verify ID with paperclip_list_issues",
       ],
     }),
-    inputSchema: toJsonSchema(IssueIdInput),
+    inputSchema: toJsonSchema(GetIssueInput),
     annotations: { title: "Get issue by ID", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { issueId } = validate(IssueIdInput, args);
+        const { issueId, response_format: fmt } = validate(GetIssueInput, args);
         const data = await client.get<unknown>(`/api/issues/${issueId}`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text = (fmt ?? "markdown") === "json" ? formatJson(data) : formatSingleIssue(data);
+        const hint = "Entity response too large. This entity may have oversized fields.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -235,7 +260,9 @@ export const issueTools: ToolDefinition[] = [
       try {
         const { issueId } = validate(IssueIdInput, args);
         const data = await client.get<unknown>(`/api/issues/${issueId}/heartbeat-context`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text = JSON.stringify(data);
+        const hint = "Entity response too large. This entity may have oversized fields.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -275,10 +302,13 @@ export const issueTools: ToolDefinition[] = [
         const body: Record<string, unknown> = { agentId: client.agentId };
         if (expectedStatuses) body["expectedStatuses"] = expectedStatuses;
 
+        const writeHint = "Server response too large; the operation likely succeeded.";
         let conflictErr: PaperclipApiError | undefined;
         try {
           const data = await client.post<unknown>(`/api/issues/${issueId}/checkout`, body);
-          return { content: [{ type: "text", text: JSON.stringify(data) }] };
+          return {
+            content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), writeHint) }],
+          };
         } catch (err) {
           if (!(err instanceof PaperclipApiError) || err.status !== 409) throw err;
           conflictErr = err;
@@ -325,7 +355,9 @@ export const issueTools: ToolDefinition[] = [
         // Lock is confirmed cleared — retry checkout once.
         try {
           const data = await client.post<unknown>(`/api/issues/${issueId}/checkout`, body);
-          return { content: [{ type: "text", text: JSON.stringify(data) }] };
+          return {
+            content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), writeHint) }],
+          };
         } catch {
           throw conflictErr;
         }
@@ -359,7 +391,11 @@ export const issueTools: ToolDefinition[] = [
       try {
         const { issueId } = validate(IssueIdInput, args);
         const data = await client.post<unknown>(`/api/issues/${issueId}/release`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text = applyCharLimit(
+          JSON.stringify(data),
+          "Server response too large; the operation likely succeeded."
+        );
+        return { content: [{ type: "text", text }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -414,7 +450,11 @@ export const issueTools: ToolDefinition[] = [
           if (v !== undefined) body[k] = v;
         }
         const data = await client.patch<unknown>(`/api/issues/${issueId}`, body);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text = applyCharLimit(
+          JSON.stringify(data),
+          "Server response too large; the operation likely succeeded."
+        );
+        return { content: [{ type: "text", text }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -468,7 +508,11 @@ export const issueTools: ToolDefinition[] = [
         if (input.inheritExecutionWorkspaceFromIssueId !== undefined)
           body["inheritExecutionWorkspaceFromIssueId"] = input.inheritExecutionWorkspaceFromIssueId;
         const data = await client.post<unknown>(`/api/companies/${client.companyId}/issues`, body);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text = applyCharLimit(
+          JSON.stringify(data),
+          "Server response too large; the operation likely succeeded."
+        );
+        return { content: [{ type: "text", text }] };
       } catch (err) {
         return handleApiError(err);
       }

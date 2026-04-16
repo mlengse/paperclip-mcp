@@ -1,17 +1,38 @@
+import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
+import { validate, toJsonSchema, handleApiError, composeDescription } from "./validation.js";
 import {
-  validate,
-  toJsonSchema,
-  NoInput,
-  handleApiError,
-  composeDescription,
-} from "./validation.js";
+  ResponseFormatSchema,
+  formatJson,
+  formatSingleIssue,
+  formatIssueList,
+  applyCharLimit,
+} from "./format.js";
+
+const GetMeInput = z
+  .object({
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
+  })
+  .strict();
+
+const GetInboxInput = z
+  .object({
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
+  })
+  .strict();
 
 export const identityTools: ToolDefinition[] = [
   {
     name: "paperclip_get_me",
     description: composeDescription({
       summary: "Return the current agent's full identity record.",
+      args: [
+        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
+      ],
       returns:
         "- id: string\n- name: string\n- role: string\n- title: string\n- chainOfCommand: object[]\n- capabilities: string\n- budget: object",
       examples: {
@@ -24,16 +45,18 @@ export const identityTools: ToolDefinition[] = [
         "- 404: agent not found → verify PAPERCLIP_AGENT_ID is correct",
       ],
     }),
-    inputSchema: toJsonSchema(NoInput),
+    inputSchema: toJsonSchema(GetMeInput),
     annotations: { title: "Get current agent identity", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        validate(NoInput, args);
+        const { response_format: fmt } = validate(GetMeInput, args);
         // Use the agent-scoped endpoint directly. /api/agents/me resolves the
         // API key's principal, which is the CEO when a company-level key is used —
         // not the dispatched agent. The ID-scoped path always returns the correct agent.
         const data = await client.get<unknown>(`/api/agents/${client.agentId}`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text = (fmt ?? "markdown") === "json" ? formatJson(data) : formatSingleIssue(data);
+        const hint = "Entity response too large. This entity may have oversized fields.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -43,6 +66,9 @@ export const identityTools: ToolDefinition[] = [
     name: "paperclip_get_inbox",
     description: composeDescription({
       summary: "Return the current agent's compact list of active issue assignments.",
+      args: [
+        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
+      ],
       returns:
         "Array of active assignments (status: todo | in_progress | blocked). Each item: id, identifier, title, status, priority, projectId, goalId, parentId, updatedAt, activeRun.",
       examples: {
@@ -55,13 +81,18 @@ export const identityTools: ToolDefinition[] = [
         "- 404: agent not found → verify PAPERCLIP_AGENT_ID resolves correctly",
       ],
     }),
-    inputSchema: toJsonSchema(NoInput),
+    inputSchema: toJsonSchema(GetInboxInput),
     annotations: { title: "Get agent inbox assignments", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        validate(NoInput, args);
+        const { response_format: fmt } = validate(GetInboxInput, args);
         const data = await client.get<unknown>(`/api/agents/me/inbox-lite`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text =
+          (fmt ?? "markdown") === "json"
+            ? formatJson(data)
+            : formatIssueList(Array.isArray(data) ? data : [], undefined);
+        const hint = "Response too large. Use filters (projectId, status) to narrow results.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }

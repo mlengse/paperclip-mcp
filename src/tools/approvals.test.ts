@@ -40,10 +40,11 @@ describe("paperclip_list_approvals", () => {
     const approvals = [{ id: "appr-1", title: "Hire Engineer", status: "pending" }];
     const { fn, calls } = mockFetch(200, approvals);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listApprovals.handler({}, client);
+    const result = await listApprovals.handler({ response_format: "json" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/approvals");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(approvals) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, approvals);
   });
 
   it("appends status filter when provided", async () => {
@@ -70,10 +71,14 @@ describe("paperclip_get_approval", () => {
     const approval = { id: "appr-1", title: "Hire Engineer", status: "pending" };
     const { fn, calls } = mockFetch(200, approval);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getApproval.handler({ approvalId: "appr-1" }, client);
+    const result = await getApproval.handler(
+      { approvalId: "appr-1", response_format: "json" },
+      client
+    );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/approvals/appr-1");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(approval) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, approval);
   });
 
   it("makes exactly one HTTP call (linked issues are not fetched)", async () => {
@@ -121,7 +126,8 @@ describe("paperclip_create_approval", () => {
     assert.equal(body.type, "hire_agent");
     assert.deepEqual(body.payload, { name: "Alice", role: "engineer" });
     assert.equal(body.title, undefined);
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(created) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, created);
   });
 
   it("includes requestedByAgentId when provided", async () => {
@@ -189,7 +195,8 @@ describe("paperclip_approve", () => {
     const result = await approve.handler({ approvalId: "appr-1" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/approvals/appr-1/approve");
     assert.equal(calls[0]!.init.method, "POST");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsed0 = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed0, updated);
   });
 
   it("throws McpError when approvalId is empty string (validation failure, fetch not called)", async () => {
@@ -224,7 +231,8 @@ describe("paperclip_reject", () => {
     assert.equal(calls[0]!.init.method, "POST");
     const body = JSON.parse(calls[0]!.init.body as string);
     assert.equal(body.reason, "Not ready");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsed1 = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed1, updated);
   });
 
   it("throws McpError when approvalId is empty string (validation failure, fetch not called)", async () => {
@@ -262,7 +270,8 @@ describe("paperclip_request_revision", () => {
     assert.equal(calls[0]!.init.method, "POST");
     const body = JSON.parse(calls[0]!.init.body as string);
     assert.equal(body.feedback, "Need more tests");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsed2 = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed2, updated);
   });
 
   it("throws McpError when approvalId is empty string (validation failure, fetch not called)", async () => {
@@ -300,7 +309,8 @@ describe("paperclip_resubmit_approval", () => {
     assert.equal(calls[0]!.init.method, "POST");
     const body = JSON.parse(calls[0]!.init.body as string);
     assert.equal(body.comment, "Added more tests");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsed3 = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed3, updated);
   });
 
   it("throws McpError when approvalId is empty string (validation failure, fetch not called)", async () => {
@@ -333,7 +343,8 @@ describe("paperclip_list_approval_comments", () => {
     const result = await listComments.handler({ approvalId: "appr-1" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/approvals/appr-1/comments");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(comments) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, comments);
   });
 
   it("throws McpError when approvalId is empty string (validation failure, fetch not called)", async () => {
@@ -409,7 +420,8 @@ describe("paperclip_create_agent_hire", () => {
     assert.equal(body.role, "engineer");
     assert.equal(body.title, "Senior Engineer");
     assert.equal(body.goalId, "goal-1");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(created) }] });
+    const parsedHire = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedHire, created);
   });
 
   it("throws McpError when role is empty string (validation failure, fetch not called)", async () => {

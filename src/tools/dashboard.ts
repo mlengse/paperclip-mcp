@@ -1,11 +1,15 @@
+import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import {
-  validate,
-  toJsonSchema,
-  NoInput,
-  handleApiError,
-  composeDescription,
-} from "./validation.js";
+import { validate, toJsonSchema, handleApiError, composeDescription } from "./validation.js";
+import { ResponseFormatSchema, formatJson, formatDashboard, applyCharLimit } from "./format.js";
+
+const GetDashboardInput = z
+  .object({
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
+  })
+  .strict();
 
 export const dashboardTools: ToolDefinition[] = [
   {
@@ -13,6 +17,9 @@ export const dashboardTools: ToolDefinition[] = [
     description: composeDescription({
       summary:
         "Return the company-level health summary including goals, projects, issues, and agent workload.",
+      args: [
+        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
+      ],
       returns:
         "Object with: goals (array), projects (array), issuesByStatus (object: counts per status), agentWorkload (array: agent name + active issue count).",
       examples: {
@@ -25,13 +32,15 @@ export const dashboardTools: ToolDefinition[] = [
         "- 403: permission denied → verify PAPERCLIP_COMPANY_ID is correct",
       ],
     }),
-    inputSchema: toJsonSchema(NoInput),
+    inputSchema: toJsonSchema(GetDashboardInput),
     annotations: { title: "Get company dashboard", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        validate(NoInput, args);
+        const { response_format: fmt } = validate(GetDashboardInput, args);
         const data = await client.get<unknown>(`/api/companies/${client.companyId}/dashboard`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text = (fmt ?? "markdown") === "json" ? formatJson(data) : formatDashboard(data);
+        const hint = "Response too large. Use filters (agentId, projectId) to narrow results.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }

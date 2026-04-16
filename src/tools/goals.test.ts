@@ -34,10 +34,11 @@ describe("paperclip_list_goals", () => {
     const goals = [{ id: "goal-1", title: "Ship V1", status: "active" }];
     const { fn, calls } = mockFetch(200, goals);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listGoals.handler({}, client);
+    const result = await listGoals.handler({ response_format: "json" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/goals");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(goals) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, goals);
   });
 
   it("throws McpError when args is not an object (validation failure, fetch not called)", async () => {
@@ -67,10 +68,11 @@ describe("paperclip_get_goal", () => {
     const goal = { id: "goal-1", title: "Ship V1", status: "active" };
     const { fn, calls } = mockFetch(200, goal);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getGoal.handler({ goalId: "goal-1" }, client);
+    const result = await getGoal.handler({ goalId: "goal-1", response_format: "json" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/goals/goal-1");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(goal) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, goal);
   });
 
   it("throws McpError when goalId is empty string (validation failure, fetch not called)", async () => {
@@ -110,7 +112,8 @@ describe("paperclip_create_goal", () => {
     assert.equal(body.title, "New Goal");
     assert.equal(body.status, "active");
     assert.equal(body.level, "company");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(created) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, created);
   });
 
   it("throws McpError when title is empty string (validation failure, fetch not called)", async () => {
@@ -150,7 +153,8 @@ describe("paperclip_update_goal", () => {
     assert.equal(body.title, "Renamed Goal");
     assert.equal(body.status, "completed");
     assert.ok(!("goalId" in body), "goalId must not be in PATCH body");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, updated);
   });
 
   it("throws McpError when goalId is missing (validation failure, fetch not called)", async () => {

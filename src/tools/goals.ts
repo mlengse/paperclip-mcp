@@ -1,16 +1,22 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import {
-  validate,
-  toJsonSchema,
-  handleApiError,
-  NoInput,
-  composeDescription,
-} from "./validation.js";
+import { validate, toJsonSchema, handleApiError, composeDescription } from "./validation.js";
+import { ResponseFormatSchema, formatJson, formatGenericList, applyCharLimit } from "./format.js";
+
+const ListGoalsInput = z
+  .object({
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
+  })
+  .strict();
 
 const GoalIdInput = z
   .object({
     goalId: z.string().min(1).describe("Goal UUID"),
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
   })
   .strict();
 
@@ -38,6 +44,9 @@ export const goalTools: ToolDefinition[] = [
     name: "paperclip_list_goals",
     description: composeDescription({
       summary: "List all goals for the current company.",
+      args: [
+        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
+      ],
       returns: "Array of goal objects: id, title, status, level, parentId, createdAt.",
       examples: {
         useWhen: "finding the goalId to link when creating a new issue or project",
@@ -48,13 +57,16 @@ export const goalTools: ToolDefinition[] = [
         "- 403: permission denied → verify PAPERCLIP_COMPANY_ID is correct",
       ],
     }),
-    inputSchema: toJsonSchema(NoInput),
+    inputSchema: toJsonSchema(ListGoalsInput),
     annotations: { title: "List company goals", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        validate(NoInput, args);
+        const { response_format: fmt } = validate(ListGoalsInput, args);
         const data = await client.get<unknown>(`/api/companies/${client.companyId}/goals`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text =
+          (fmt ?? "markdown") === "json" ? formatJson(data) : formatGenericList(data, "Goals");
+        const hint = "Response too large. Try filtering by project or status.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -64,7 +76,10 @@ export const goalTools: ToolDefinition[] = [
     name: "paperclip_get_goal",
     description: composeDescription({
       summary: "Get a single goal by UUID, including its status and linked projects.",
-      args: ['- goalId: string — Goal UUID (example: "gol_abc123")'],
+      args: [
+        '- goalId: string — Goal UUID (example: "gol_abc123")',
+        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
+      ],
       returns:
         "Goal object: id, title, description, status, level, parentId, linkedProjects[], createdAt.",
       examples: {
@@ -81,9 +96,12 @@ export const goalTools: ToolDefinition[] = [
     annotations: { title: "Get goal by ID", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { goalId } = validate(GoalIdInput, args);
+        const { goalId, response_format: fmt } = validate(GoalIdInput, args);
         const data = await client.get<unknown>(`/api/goals/${goalId}`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text =
+          (fmt ?? "markdown") === "json" ? formatJson(data) : formatGenericList([data], "Goal");
+        const hint = "Response too large.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -123,7 +141,10 @@ export const goalTools: ToolDefinition[] = [
         if (input.level !== undefined) body.level = input.level;
         if (input.parentId !== undefined) body.parentId = input.parentId;
         const data = await client.post<unknown>(`/api/companies/${client.companyId}/goals`, body);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -164,7 +185,10 @@ export const goalTools: ToolDefinition[] = [
           if (v !== undefined) body[k] = v;
         }
         const data = await client.patch<unknown>(`/api/goals/${goalId}`, body);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
         return handleApiError(err);
       }

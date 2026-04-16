@@ -31,13 +31,12 @@ describe("paperclip_get_me", () => {
   it("returns agent data and calls GET /api/agents/{agentId}", async () => {
     const { fn, calls } = mockFetch(200, { id: "agent-1", name: "Engineer" });
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getMe.handler({}, client);
+    const result = await getMe.handler({ response_format: "json" }, client);
     assert.equal(calls.length, 1);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/agents/agent-1");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, {
-      content: [{ type: "text", text: JSON.stringify({ id: "agent-1", name: "Engineer" }) }],
-    });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, { id: "agent-1", name: "Engineer" });
   });
 
   it("throws McpError when args is not an object (validation failure, fetch not called)", async () => {
@@ -57,12 +56,11 @@ describe("paperclip_get_me", () => {
     const agentData = { id: "agent-1", name: "Engineer" };
     const { fn, calls } = mockFetch(200, agentData);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getMe.handler({}, client);
+    const result = await getMe.handler({ response_format: "json" }, client);
     assert.equal(calls.length, 1);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/agents/agent-1");
-    assert.deepEqual(result, {
-      content: [{ type: "text", text: JSON.stringify(agentData) }],
-    });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, agentData);
   });
 
   it("returns isError when /api/agents/{agentId} returns 401", async () => {
@@ -92,13 +90,12 @@ describe("paperclip_get_inbox", () => {
     ];
     const { fn, calls } = mockFetch(200, inbox);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getInbox.handler({}, client);
+    const result = await getInbox.handler({ response_format: "json" }, client);
     assert.equal(calls.length, 1);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/agents/me/inbox-lite");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, {
-      content: [{ type: "text", text: JSON.stringify(inbox) }],
-    });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, inbox);
   });
 
   it("throws McpError when args is not an object (validation failure, fetch not called)", async () => {
@@ -131,12 +128,11 @@ describe("paperclip_get_inbox", () => {
     ];
     const { fn, calls } = mockFetch(200, issues);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getInbox.handler({}, client);
+    const result = await getInbox.handler({ response_format: "json" }, client);
     assert.equal(calls.length, 1);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/agents/me/inbox-lite");
-    assert.deepEqual(result, {
-      content: [{ type: "text", text: JSON.stringify(issues) }],
-    });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, issues);
   });
 
   it("returns isError when inbox-lite endpoint returns 401", async () => {

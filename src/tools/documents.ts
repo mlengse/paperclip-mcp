@@ -7,13 +7,15 @@ import {
   handleApiError,
   composeDescription,
 } from "./validation.js";
+import { ResponseFormatSchema, formatJson, formatGenericList, applyCharLimit } from "./format.js";
 
-const ListDocumentsInput = IssueIdSchema.strict();
+const ListDocumentsInput = IssueIdSchema.extend({ response_format: ResponseFormatSchema }).strict();
 
 const GetDocumentInput = z
   .object({
     issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-22)"),
     key: z.string().min(1).describe("Document key (e.g. `plan`)"),
+    response_format: ResponseFormatSchema,
   })
   .strict();
 
@@ -38,6 +40,14 @@ const DocumentKeyInput = z
   })
   .strict();
 
+const GetDocumentRevisionsInput = z
+  .object({
+    issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-22)"),
+    key: z.string().min(1).describe("Document key (e.g. `plan`)"),
+    response_format: ResponseFormatSchema,
+  })
+  .strict();
+
 export const documentTools: ToolDefinition[] = [
   {
     name: "paperclip_list_documents",
@@ -59,9 +69,14 @@ export const documentTools: ToolDefinition[] = [
     annotations: { title: "List issue documents", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { issueId } = validate(ListDocumentsInput, args);
-        const data = await client.get<unknown>(`/api/issues/${issueId}/documents`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const { issueId, response_format: fmt } = validate(ListDocumentsInput, args);
+        const data = await client.get<unknown[]>(`/api/issues/${issueId}/documents`);
+        const hint = `Use paperclip_list_documents with issueId "${issueId}" to retrieve the full list.`;
+        const text =
+          fmt === "json"
+            ? applyCharLimit(formatJson(data), hint)
+            : applyCharLimit(formatGenericList(data, "Documents"), hint);
+        return { content: [{ type: "text", text }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -91,9 +106,14 @@ export const documentTools: ToolDefinition[] = [
     annotations: { title: "Get issue document", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { issueId, key } = validate(GetDocumentInput, args);
+        const { issueId, key, response_format: fmt } = validate(GetDocumentInput, args);
         const data = await client.get<unknown>(`/api/issues/${issueId}/documents/${key}`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = `Use paperclip_get_document with issueId "${issueId}" and key "${key}" to retrieve the full document.`;
+        const text =
+          fmt === "json"
+            ? applyCharLimit(formatJson(data), hint)
+            : applyCharLimit(formatGenericList([data], "Document"), hint);
+        return { content: [{ type: "text", text }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -139,7 +159,8 @@ export const documentTools: ToolDefinition[] = [
         const payload: Record<string, unknown> = { title, body, format: format ?? "markdown" };
         if (baseRevisionId !== undefined) payload.baseRevisionId = baseRevisionId;
         const data = await client.put<unknown>(`/api/issues/${issueId}/documents/${key}`, payload);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = `Use paperclip_get_document with issueId "${issueId}" and key "${key}" to retrieve the updated document.`;
+        return { content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -172,7 +193,8 @@ export const documentTools: ToolDefinition[] = [
       try {
         const { issueId, key } = validate(DocumentKeyInput, args);
         const data = await client.delete<unknown>(`/api/issues/${issueId}/documents/${key}`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = `Document "${key}" on issue "${issueId}" has been deleted.`;
+        return { content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -197,7 +219,7 @@ export const documentTools: ToolDefinition[] = [
         "- 404: document or issue not found → verify both issueId and key with paperclip_list_documents",
       ],
     }),
-    inputSchema: toJsonSchema(DocumentKeyInput),
+    inputSchema: toJsonSchema(GetDocumentRevisionsInput),
     annotations: {
       title: "Get document revision history",
       readOnlyHint: true,
@@ -205,9 +227,16 @@ export const documentTools: ToolDefinition[] = [
     },
     async handler(args, client) {
       try {
-        const { issueId, key } = validate(DocumentKeyInput, args);
-        const data = await client.get<unknown>(`/api/issues/${issueId}/documents/${key}/revisions`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const { issueId, key, response_format: fmt } = validate(GetDocumentRevisionsInput, args);
+        const data = await client.get<unknown[]>(
+          `/api/issues/${issueId}/documents/${key}/revisions`
+        );
+        const hint = `Use paperclip_get_document_revisions with issueId "${issueId}" and key "${key}" to retrieve the full revision history.`;
+        const text =
+          fmt === "json"
+            ? applyCharLimit(formatJson(data), hint)
+            : applyCharLimit(formatGenericList(data, "Revisions"), hint);
+        return { content: [{ type: "text", text }] };
       } catch (err) {
         return handleApiError(err);
       }

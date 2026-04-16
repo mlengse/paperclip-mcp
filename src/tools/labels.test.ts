@@ -35,11 +35,12 @@ describe("paperclip_list_labels", () => {
     ];
     const { fn, calls } = mockFetch(200, labels);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listLabels.handler({}, client);
+    const result = await listLabels.handler({ response_format: "json" }, client);
     assert.equal(calls.length, 1);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/labels");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(labels) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, labels);
   });
 
   it("returns isError response on 500 API error", async () => {
@@ -62,7 +63,8 @@ describe("paperclip_create_label", () => {
     const sentBody = JSON.parse(calls[0]!.init.body as string);
     assert.equal(sentBody.name, "type:feature");
     assert.equal(sentBody.color, "#8b5cf6");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(created) }] });
+    const parsedCreate = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedCreate, created);
   });
 
   it("calls POST without color when color is omitted", async () => {

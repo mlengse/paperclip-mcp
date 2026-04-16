@@ -1,16 +1,22 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import {
-  validate,
-  toJsonSchema,
-  handleApiError,
-  NoInput,
-  composeDescription,
-} from "./validation.js";
+import { validate, toJsonSchema, handleApiError, composeDescription } from "./validation.js";
+import { ResponseFormatSchema, formatJson, formatGenericList, applyCharLimit } from "./format.js";
+
+const ListProjectsInput = z
+  .object({
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
+  })
+  .strict();
 
 const ProjectIdInput = z
   .object({
     projectId: z.string().min(1).describe("Project UUID"),
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
   })
   .strict();
 
@@ -40,6 +46,15 @@ const UpdateProjectInput = z
   })
   .strict();
 
+const ListWorkspacesInput = z
+  .object({
+    projectId: z.string().min(1).describe("Project UUID"),
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
+  })
+  .strict();
+
 const CreateWorkspaceInput = z
   .object({
     projectId: z.string().min(1).describe("Project UUID"),
@@ -65,6 +80,9 @@ export const projectTools: ToolDefinition[] = [
     name: "paperclip_list_projects",
     description: composeDescription({
       summary: "List all projects for the current company.",
+      args: [
+        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
+      ],
       returns: "Array of project objects: id, name, status, goalId, createdAt.",
       examples: {
         useWhen: "finding the projectId to link when creating a new issue",
@@ -76,13 +94,16 @@ export const projectTools: ToolDefinition[] = [
         "- 403: permission denied → verify PAPERCLIP_COMPANY_ID is correct",
       ],
     }),
-    inputSchema: toJsonSchema(NoInput),
+    inputSchema: toJsonSchema(ListProjectsInput),
     annotations: { title: "List company projects", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        validate(NoInput, args);
+        const { response_format: fmt } = validate(ListProjectsInput, args);
         const data = await client.get<unknown>(`/api/companies/${client.companyId}/projects`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text =
+          (fmt ?? "markdown") === "json" ? formatJson(data) : formatGenericList(data, "Projects");
+        const hint = "Response too large. Try filtering by status or goal.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -92,7 +113,10 @@ export const projectTools: ToolDefinition[] = [
     name: "paperclip_get_project",
     description: composeDescription({
       summary: "Get a single project by UUID, including its associated workspaces.",
-      args: ['- projectId: string — Project UUID (example: "prj_abc123")'],
+      args: [
+        '- projectId: string — Project UUID (example: "prj_abc123")',
+        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
+      ],
       returns: "Project object: id, name, description, status, goalId, workspaces[], createdAt.",
       examples: {
         useWhen: "reading project details or checking workspace cwd before checking out a branch",
@@ -108,9 +132,12 @@ export const projectTools: ToolDefinition[] = [
     annotations: { title: "Get project by ID", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { projectId } = validate(ProjectIdInput, args);
+        const { projectId, response_format: fmt } = validate(ProjectIdInput, args);
         const data = await client.get<unknown>(`/api/projects/${projectId}`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text =
+          (fmt ?? "markdown") === "json" ? formatJson(data) : formatGenericList([data], "Project");
+        const hint = "Response too large.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -156,7 +183,10 @@ export const projectTools: ToolDefinition[] = [
           `/api/companies/${client.companyId}/projects`,
           body
         );
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -198,7 +228,10 @@ export const projectTools: ToolDefinition[] = [
           if (v !== undefined) body[k] = v;
         }
         const data = await client.patch<unknown>(`/api/projects/${projectId}`, body);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -208,7 +241,10 @@ export const projectTools: ToolDefinition[] = [
     name: "paperclip_list_workspaces",
     description: composeDescription({
       summary: "List all workspaces for a project.",
-      args: ['- projectId: string — Project UUID (example: "prj_abc123")'],
+      args: [
+        '- projectId: string — Project UUID (example: "prj_abc123")',
+        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
+      ],
       returns: "Array of workspace objects: id, cwd, repoUrl, projectId, createdAt.",
       examples: {
         useWhen: "finding the workspace cwd or repoUrl before an agent starts executing in it",
@@ -220,13 +256,16 @@ export const projectTools: ToolDefinition[] = [
         "- 404: project not found → verify ID with paperclip_list_projects",
       ],
     }),
-    inputSchema: toJsonSchema(ProjectIdInput),
+    inputSchema: toJsonSchema(ListWorkspacesInput),
     annotations: { title: "List project workspaces", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { projectId } = validate(ProjectIdInput, args);
+        const { projectId, response_format: fmt } = validate(ListWorkspacesInput, args);
         const data = await client.get<unknown>(`/api/projects/${projectId}/workspaces`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text =
+          (fmt ?? "markdown") === "json" ? formatJson(data) : formatGenericList(data, "Workspaces");
+        const hint = "Response too large.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -267,7 +306,10 @@ export const projectTools: ToolDefinition[] = [
         if (cwd !== undefined) body.cwd = cwd;
         if (repoUrl !== undefined) body.repoUrl = repoUrl;
         const data = await client.post<unknown>(`/api/projects/${projectId}/workspaces`, body);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -310,7 +352,10 @@ export const projectTools: ToolDefinition[] = [
           `/api/projects/${projectId}/workspaces/${workspaceId}`,
           body
         );
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
         return handleApiError(err);
       }

@@ -41,10 +41,11 @@ describe("paperclip_list_routines", () => {
     const routines = [{ id: "routine-1", name: "Daily Sync", agentId: "agent-1" }];
     const { fn, calls } = mockFetch(200, routines);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listRoutines.handler({}, client);
+    const result = await listRoutines.handler({ response_format: "json" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/routines");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(routines) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, routines);
   });
 
   it("throws McpError when args is not an object (validation failure, fetch not called)", async () => {
@@ -74,10 +75,14 @@ describe("paperclip_get_routine", () => {
     const routine = { id: "routine-1", name: "Daily Sync", triggers: [] };
     const { fn, calls } = mockFetch(200, routine);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getRoutine.handler({ routineId: "routine-1" }, client);
+    const result = await getRoutine.handler(
+      { routineId: "routine-1", response_format: "json" },
+      client
+    );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/routines/routine-1");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(routine) }] });
+    const parsedRoutine = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedRoutine, routine);
   });
 
   it("throws McpError when routineId is empty string (validation failure, fetch not called)", async () => {
@@ -117,7 +122,8 @@ describe("paperclip_create_routine", () => {
     assert.equal(body.agentId, "agent-1");
     assert.equal(body.name, "Weekly Report");
     assert.equal(body.concurrencyPolicy, "forbid");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(created) }] });
+    const parsedCreated = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedCreated, created);
   });
 
   it("throws McpError when name is empty string (validation failure, fetch not called)", async () => {
@@ -160,7 +166,8 @@ describe("paperclip_update_routine", () => {
     assert.equal(body.name, "Renamed Routine");
     assert.equal(body.catchUpPolicy, "run_once");
     assert.ok(!("routineId" in body), "routineId must not be in PATCH body");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsedUpdated = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedUpdated, updated);
   });
 
   it("throws McpError when routineId is empty string (validation failure, fetch not called)", async () => {
@@ -200,7 +207,8 @@ describe("paperclip_add_routine_trigger", () => {
     assert.equal(body.type, "schedule");
     assert.deepEqual(body.config, { cron: "0 9 * * 1" });
     assert.ok(!("routineId" in body), "routineId must not be in POST body");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(trigger) }] });
+    const parsedTrigger = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedTrigger, trigger);
   });
 
   it("throws McpError when type is invalid enum value (validation failure, fetch not called)", async () => {
@@ -236,7 +244,8 @@ describe("paperclip_update_routine_trigger", () => {
     const body = JSON.parse(calls[0]!.init.body as string);
     assert.equal(body.type, "webhook");
     assert.ok(!("triggerId" in body), "triggerId must not be in PATCH body");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsedTrigUpdated = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedTrigUpdated, updated);
   });
 
   it("throws McpError when triggerId is empty string (validation failure, fetch not called)", async () => {
@@ -301,7 +310,8 @@ describe("paperclip_run_routine", () => {
     const result = await runRoutine.handler({ routineId: "routine-1" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/routines/routine-1/run");
     assert.equal(calls[0]!.init.method, "POST");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(run) }] });
+    const parsedRun = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedRun, run);
   });
 
   it("throws McpError when routineId is empty string (validation failure, fetch not called)", async () => {
@@ -334,10 +344,14 @@ describe("paperclip_list_routine_runs", () => {
     ];
     const { fn, calls } = mockFetch(200, runs);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listRuns.handler({ routineId: "routine-1" }, client);
+    const result = await listRuns.handler(
+      { routineId: "routine-1", response_format: "json" },
+      client
+    );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/routines/routine-1/runs");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(runs) }] });
+    const parsedRuns = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedRuns, runs);
   });
 
   it("throws McpError when routineId is empty string (validation failure, fetch not called)", async () => {

@@ -37,11 +37,15 @@ describe("paperclip_list_documents", () => {
     const docs = [{ key: "plan", title: "Implementation Plan" }];
     const { fn, calls } = mockFetch(200, docs);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listDocuments.handler({ issueId: "issue-1" }, client);
+    const result = await listDocuments.handler(
+      { issueId: "issue-1", response_format: "json" },
+      client
+    );
     assert.equal(calls.length, 1);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1/documents");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(docs) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, docs);
   });
 
   it("throws McpError when issueId is empty string (validation failure, fetch not called)", async () => {
@@ -71,10 +75,14 @@ describe("paperclip_get_document", () => {
     const doc = { key: "plan", title: "Plan", body: "## Step 1" };
     const { fn, calls } = mockFetch(200, doc);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getDocument.handler({ issueId: "issue-1", key: "plan" }, client);
+    const result = await getDocument.handler(
+      { issueId: "issue-1", key: "plan", response_format: "json" },
+      client
+    );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1/documents/plan");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(doc) }] });
+    const parsedDoc = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedDoc, doc);
   });
 
   it("throws McpError when key is missing (validation failure, fetch not called)", async () => {
@@ -114,7 +122,8 @@ describe("paperclip_upsert_document", () => {
     assert.equal(sentBody.title, "Plan");
     assert.equal(sentBody.body, "## Step 1");
     assert.equal(sentBody.format, "markdown");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(saved) }] });
+    const parsedSaved = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedSaved, saved);
   });
 
   it("includes baseRevisionId in payload when provided", async () => {
@@ -161,9 +170,8 @@ describe("paperclip_delete_document", () => {
     assert.equal(calls.length, 1);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1/documents/plan");
     assert.equal(calls[0]!.init.method, "DELETE");
-    assert.deepEqual(result, {
-      content: [{ type: "text", text: JSON.stringify({ deleted: true }) }],
-    });
+    const parsedDeleted = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedDeleted, { deleted: true });
   });
 
   it("throws McpError when key is empty string (validation failure, fetch not called)", async () => {
@@ -196,14 +204,18 @@ describe("paperclip_get_document_revisions", () => {
     ];
     const { fn, calls } = mockFetch(200, revisions);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getDocumentRevisions.handler({ issueId: "issue-1", key: "plan" }, client);
+    const result = await getDocumentRevisions.handler(
+      { issueId: "issue-1", key: "plan", response_format: "json" },
+      client
+    );
     assert.equal(calls.length, 1);
     assert.equal(
       calls[0]!.url,
       "http://localhost:3100/api/issues/issue-1/documents/plan/revisions"
     );
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(revisions) }] });
+    const parsedRevisions = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedRevisions, revisions);
   });
 
   it("throws McpError when issueId is empty string (validation failure, fetch not called)", async () => {

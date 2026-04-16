@@ -55,11 +55,12 @@ describe("paperclip_list_agents", () => {
     ];
     const { fn, calls } = mockFetch(200, agents);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listAgents.handler({}, client);
+    const result = await listAgents.handler({ response_format: "json" }, client);
     assert.equal(calls.length, 1);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/agents");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(agents) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, agents);
   });
 
   it("throws McpError when args is not an object (validation failure, fetch not called)", async () => {
@@ -89,10 +90,11 @@ describe("paperclip_get_agent", () => {
     const agent = { id: "agent-1", name: "Engineer", role: "engineer", status: "idle" };
     const { fn, calls } = mockFetch(200, agent);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getAgent.handler({ agentId: "agent-1" }, client);
+    const result = await getAgent.handler({ agentId: "agent-1", response_format: "json" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/agents/agent-1?companyId=company-1");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(agent) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, agent);
   });
 
   it("throws McpError when agentId is empty string (validation failure, fetch not called)", async () => {
@@ -504,10 +506,11 @@ describe("paperclip_get_org_chart", () => {
     const org = { id: "company-1", agents: [] };
     const { fn, calls } = mockFetch(200, org);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getOrgChart.handler({}, client);
+    const result = await getOrgChart.handler({ response_format: "json" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/org");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(org) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, org);
   });
 
   it("returns isError response on 403 API error", async () => {

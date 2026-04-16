@@ -37,10 +37,11 @@ describe("paperclip_list_projects", () => {
     const projects = [{ id: "proj-1", name: "MCP Server", status: "active" }];
     const { fn, calls } = mockFetch(200, projects);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listProjects.handler({}, client);
+    const result = await listProjects.handler({ response_format: "json" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/projects");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(projects) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, projects);
   });
 
   it("throws McpError when args is not an object (validation failure, fetch not called)", async () => {
@@ -70,10 +71,14 @@ describe("paperclip_get_project", () => {
     const project = { id: "proj-1", name: "MCP Server", status: "active" };
     const { fn, calls } = mockFetch(200, project);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getProject.handler({ projectId: "proj-1" }, client);
+    const result = await getProject.handler(
+      { projectId: "proj-1", response_format: "json" },
+      client
+    );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/projects/proj-1");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(project) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, project);
   });
 
   it("throws McpError when projectId is empty string (validation failure, fetch not called)", async () => {
@@ -113,7 +118,8 @@ describe("paperclip_create_project", () => {
     assert.equal(body.name, "New Project");
     assert.equal(body.goalId, "goal-1");
     assert.deepEqual(body.workspace, { cwd: "/app" });
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(created) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, created);
   });
 
   it("throws McpError when name is empty string (validation failure, fetch not called)", async () => {
@@ -153,7 +159,8 @@ describe("paperclip_update_project", () => {
     assert.equal(body.name, "Renamed");
     assert.equal(body.status, "archived");
     assert.ok(!("projectId" in body), "projectId must not be in PATCH body");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, updated);
   });
 
   it("throws McpError when projectId is missing (validation failure, fetch not called)", async () => {
@@ -183,10 +190,14 @@ describe("paperclip_list_workspaces", () => {
     const workspaces = [{ id: "ws-1", cwd: "/app", repoUrl: null }];
     const { fn, calls } = mockFetch(200, workspaces);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listWorkspaces.handler({ projectId: "proj-1" }, client);
+    const result = await listWorkspaces.handler(
+      { projectId: "proj-1", response_format: "json" },
+      client
+    );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/projects/proj-1/workspaces");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(workspaces) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, workspaces);
   });
 
   it("throws McpError when projectId is empty string (validation failure, fetch not called)", async () => {
@@ -226,7 +237,8 @@ describe("paperclip_create_workspace", () => {
     assert.equal(body.cwd, "/app");
     assert.equal(body.repoUrl, "https://github.com/org/repo");
     assert.ok(!("projectId" in body), "projectId must not be in POST body");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(created) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, created);
   });
 
   it("throws McpError when projectId is empty string (validation failure, fetch not called)", async () => {
@@ -280,7 +292,8 @@ describe("paperclip_update_workspace", () => {
     const body = JSON.parse(calls[0]!.init.body as string);
     assert.equal(body.cwd, "/new-app");
     assert.ok(!("projectId" in body), "projectId must not be in PATCH body");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, updated);
   });
 
   it("throws McpError when workspaceId is missing (validation failure, fetch not called)", async () => {

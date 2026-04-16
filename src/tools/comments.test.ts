@@ -33,11 +33,15 @@ describe("paperclip_list_comments", () => {
     const comments = [{ id: "c-1", body: "Hello" }];
     const { fn, calls } = mockFetch(200, comments);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listComments.handler({ issueId: "issue-1" }, client);
+    const result = await listComments.handler(
+      { issueId: "issue-1", response_format: "json" },
+      client
+    );
     assert.equal(calls.length, 1);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1/comments");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(comments) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, comments);
   });
 
   it("appends order query param when provided without after", async () => {
@@ -57,7 +61,10 @@ describe("paperclip_list_comments", () => {
     ];
     const { fn, calls } = mockFetch(200, allComments);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listComments.handler({ issueId: "issue-1", after: "c-1" }, client);
+    const result = await listComments.handler(
+      { issueId: "issue-1", after: "c-1", response_format: "json" },
+      client
+    );
     const url = calls[0]!.url;
     assert.ok(url.includes("order=asc"), `URL missing order=asc: ${url}`);
     assert.ok(url.includes("limit=500"), `URL missing limit=500: ${url}`);
@@ -77,7 +84,10 @@ describe("paperclip_list_comments", () => {
     ];
     const { fn } = mockFetch(200, allComments);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listComments.handler({ issueId: "issue-1", after: "c-999" }, client);
+    const result = await listComments.handler(
+      { issueId: "issue-1", after: "c-999", response_format: "json" },
+      client
+    );
     const parsed = JSON.parse(result.content[0]!.text);
     assert.deepEqual(parsed.comments, allComments);
   });
@@ -89,7 +99,10 @@ describe("paperclip_list_comments", () => {
     ];
     const { fn } = mockFetch(200, allComments);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listComments.handler({ issueId: "issue-1", after: "c-2" }, client);
+    const result = await listComments.handler(
+      { issueId: "issue-1", after: "c-2", response_format: "json" },
+      client
+    );
     const parsed = JSON.parse(result.content[0]!.text);
     assert.deepEqual(parsed.comments, []);
   });
@@ -125,7 +138,8 @@ describe("paperclip_add_comment", () => {
     assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1/comments");
     assert.equal(calls[0]!.init.method, "POST");
     assert.equal(calls[0]!.init.body, JSON.stringify({ body: "Work done." }));
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(created) }] });
+    const parsedComment = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedComment, created);
   });
 
   it("throws McpError when body is empty string (validation failure, fetch not called)", async () => {
@@ -159,7 +173,8 @@ describe("paperclip_get_comment", () => {
     assert.equal(calls.length, 1);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1/comments/c-42");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(comment) }] });
+    const parsedGet = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedGet, comment);
   });
 
   it("throws McpError when commentId is missing (validation failure, fetch not called)", async () => {

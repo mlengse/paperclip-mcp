@@ -1,14 +1,17 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import {
-  validate,
-  toJsonSchema,
-  handleApiError,
-  NoInput,
-  composeDescription,
-} from "./validation.js";
+import { validate, toJsonSchema, handleApiError, composeDescription } from "./validation.js";
+import { ResponseFormatSchema, formatJson, formatGenericList, applyCharLimit } from "./format.js";
 
 const HEX_COLOR_REGEX = /^#[0-9a-fA-F]{6}$/;
+
+const ListLabelsInput = z
+  .object({
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
+  })
+  .strict();
 
 const CreateLabelInput = z
   .object({
@@ -26,6 +29,9 @@ export const labelTools: ToolDefinition[] = [
     name: "paperclip_list_labels",
     description: composeDescription({
       summary: "List all labels defined for the current company.",
+      args: [
+        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
+      ],
       returns: "Array of label objects: id, name, color (hex), createdAt.",
       examples: {
         useWhen:
@@ -37,13 +43,16 @@ export const labelTools: ToolDefinition[] = [
         "- 403: permission denied → verify PAPERCLIP_COMPANY_ID is correct",
       ],
     }),
-    inputSchema: toJsonSchema(NoInput),
+    inputSchema: toJsonSchema(ListLabelsInput),
     annotations: { title: "List company labels", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        validate(NoInput, args);
+        const { response_format: fmt } = validate(ListLabelsInput, args);
         const data = await client.get<unknown>(`/api/companies/${client.companyId}/labels`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text =
+          (fmt ?? "markdown") === "json" ? formatJson(data) : formatGenericList(data, "Labels");
+        const hint = "Response too large.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -78,7 +87,10 @@ export const labelTools: ToolDefinition[] = [
         const body: Record<string, unknown> = { name: input.name };
         if (input.color !== undefined) body["color"] = input.color;
         const data = await client.post<unknown>(`/api/companies/${client.companyId}/labels`, body);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = "Server response too large; the operation likely succeeded.";
+        return {
+          content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
+        };
       } catch (err) {
         return handleApiError(err);
       }

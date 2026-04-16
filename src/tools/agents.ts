@@ -7,10 +7,42 @@ import {
   handleApiError,
   composeDescription,
 } from "./validation.js";
+import {
+  ResponseFormatSchema,
+  formatJson,
+  formatAgentList,
+  formatOrgChart,
+  applyCharLimit,
+} from "./format.js";
 
 const AgentIdInput = z
   .object({
     agentId: z.string().min(1).describe("Agent UUID"),
+  })
+  .strict();
+
+const ListAgentsInput = z
+  .object({
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
+  })
+  .strict();
+
+const GetAgentInput = z
+  .object({
+    agentId: z.string().min(1).describe("Agent UUID"),
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
+  })
+  .strict();
+
+const GetOrgChartInput = z
+  .object({
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
   })
   .strict();
 
@@ -180,13 +212,15 @@ export const agentTools: ToolDefinition[] = [
         "- 403: permission denied → verify PAPERCLIP_COMPANY_ID is correct",
       ],
     }),
-    inputSchema: toJsonSchema(NoInput),
+    inputSchema: toJsonSchema(ListAgentsInput),
     annotations: { title: "List company agents", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        validate(NoInput, args);
+        const { response_format: fmt } = validate(ListAgentsInput, args);
         const data = await client.get<unknown>(`/api/companies/${client.companyId}/agents`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text = (fmt ?? "markdown") === "json" ? formatJson(data) : formatAgentList(data);
+        const hint = "Response too large. Use filters (status, role) to narrow results.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -209,15 +243,17 @@ export const agentTools: ToolDefinition[] = [
         "- 404: agent not found → verify ID with paperclip_list_agents",
       ],
     }),
-    inputSchema: toJsonSchema(AgentIdInput),
+    inputSchema: toJsonSchema(GetAgentInput),
     annotations: { title: "Get agent by ID", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { agentId } = validate(AgentIdInput, args);
+        const { agentId, response_format: fmt } = validate(GetAgentInput, args);
         const data = await client.get<unknown>(
           `/api/agents/${agentId}?companyId=${client.companyId}`
         );
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text = (fmt ?? "markdown") === "json" ? formatJson(data) : formatAgentList([data]);
+        const hint = "Entity response too large. This entity may have oversized fields.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -270,7 +306,17 @@ export const agentTools: ToolDefinition[] = [
           if (v !== undefined) body[k] = v;
         }
         const data = await client.patch<unknown>(`/api/agents/${agentId}`, body);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        return {
+          content: [
+            {
+              type: "text",
+              text: applyCharLimit(
+                JSON.stringify(data),
+                "Server response too large; the operation likely succeeded."
+              ),
+            },
+          ],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -316,7 +362,17 @@ export const agentTools: ToolDefinition[] = [
           canAssignTasks,
           canCreateAgents,
         });
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        return {
+          content: [
+            {
+              type: "text",
+              text: applyCharLimit(
+                JSON.stringify(data),
+                "Server response too large; the operation likely succeeded."
+              ),
+            },
+          ],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -344,7 +400,17 @@ export const agentTools: ToolDefinition[] = [
       try {
         const { agentId } = validate(AgentIdInput, args);
         const data = await client.post<unknown>(`/api/agents/${agentId}/pause`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        return {
+          content: [
+            {
+              type: "text",
+              text: applyCharLimit(
+                JSON.stringify(data),
+                "Server response too large; the operation likely succeeded."
+              ),
+            },
+          ],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -373,7 +439,17 @@ export const agentTools: ToolDefinition[] = [
       try {
         const { agentId } = validate(AgentIdInput, args);
         const data = await client.post<unknown>(`/api/agents/${agentId}/resume`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        return {
+          content: [
+            {
+              type: "text",
+              text: applyCharLimit(
+                JSON.stringify(data),
+                "Server response too large; the operation likely succeeded."
+              ),
+            },
+          ],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -407,7 +483,17 @@ export const agentTools: ToolDefinition[] = [
       try {
         const { agentId } = validate(AgentIdInput, args);
         const data = await client.post<unknown>(`/api/agents/${agentId}/heartbeat/invoke`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        return {
+          content: [
+            {
+              type: "text",
+              text: applyCharLimit(
+                JSON.stringify(data),
+                "Server response too large; the operation likely succeeded."
+              ),
+            },
+          ],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -440,7 +526,17 @@ export const agentTools: ToolDefinition[] = [
       try {
         const { agentId } = validate(AgentIdInput, args);
         const data = await client.post<unknown>(`/api/agents/${agentId}/terminate`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        return {
+          content: [
+            {
+              type: "text",
+              text: applyCharLimit(
+                JSON.stringify(data),
+                "Server response too large; the operation likely succeeded."
+              ),
+            },
+          ],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -480,7 +576,17 @@ export const agentTools: ToolDefinition[] = [
         if (rest.name !== undefined) body.name = rest.name;
         if (rest.expiresAt !== undefined) body.expiresAt = rest.expiresAt;
         const data = await client.post<unknown>(`/api/agents/${agentId}/keys`, body);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        return {
+          content: [
+            {
+              type: "text",
+              text: applyCharLimit(
+                JSON.stringify(data),
+                "Server response too large; the operation likely succeeded."
+              ),
+            },
+          ],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -512,7 +618,17 @@ export const agentTools: ToolDefinition[] = [
       try {
         const { agentId } = validate(AgentIdInput, args);
         const data = await client.get<unknown>(`/api/agents/${agentId}/config-revisions`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        return {
+          content: [
+            {
+              type: "text",
+              text: applyCharLimit(
+                JSON.stringify(data),
+                "Server response too large; the operation likely succeeded."
+              ),
+            },
+          ],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -551,7 +667,17 @@ export const agentTools: ToolDefinition[] = [
         const data = await client.post<unknown>(
           `/api/agents/${agentId}/config-revisions/${revisionId}/rollback`
         );
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        return {
+          content: [
+            {
+              type: "text",
+              text: applyCharLimit(
+                JSON.stringify(data),
+                "Server response too large; the operation likely succeeded."
+              ),
+            },
+          ],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -592,7 +718,17 @@ export const agentTools: ToolDefinition[] = [
         const body: Record<string, unknown> = { path };
         if (adapterConfigKey !== undefined) body.adapterConfigKey = adapterConfigKey;
         const data = await client.patch<unknown>(`/api/agents/${agentId}/instructions-path`, body);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        return {
+          content: [
+            {
+              type: "text",
+              text: applyCharLimit(
+                JSON.stringify(data),
+                "Server response too large; the operation likely succeeded."
+              ),
+            },
+          ],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -612,13 +748,15 @@ export const agentTools: ToolDefinition[] = [
         "- 403: permission denied → verify PAPERCLIP_COMPANY_ID is correct",
       ],
     }),
-    inputSchema: toJsonSchema(NoInput),
+    inputSchema: toJsonSchema(GetOrgChartInput),
     annotations: { title: "Get company org chart", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        validate(NoInput, args);
+        const { response_format: fmt } = validate(GetOrgChartInput, args);
         const data = await client.get<unknown>(`/api/companies/${client.companyId}/org`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const text = (fmt ?? "markdown") === "json" ? formatJson(data) : formatOrgChart(data);
+        const hint = "Response too large. Use filters (role, status) to narrow results.";
+        return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -653,7 +791,17 @@ export const agentTools: ToolDefinition[] = [
         const data = await client.post<unknown>(`/api/agents/${agentId}/skills/sync`, {
           desiredSkills,
         });
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        return {
+          content: [
+            {
+              type: "text",
+              text: applyCharLimit(
+                JSON.stringify(data),
+                "Server response too large; the operation likely succeeded."
+              ),
+            },
+          ],
+        };
       } catch (err) {
         return handleApiError(err);
       }
@@ -680,7 +828,17 @@ export const agentTools: ToolDefinition[] = [
       try {
         validate(NoInput, args);
         const data = await client.get<unknown>(`/api/companies/${client.companyId}/skills`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        return {
+          content: [
+            {
+              type: "text",
+              text: applyCharLimit(
+                JSON.stringify(data),
+                "Server response too large; the operation likely succeeded."
+              ),
+            },
+          ],
+        };
       } catch (err) {
         return handleApiError(err);
       }

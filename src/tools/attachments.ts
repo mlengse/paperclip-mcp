@@ -9,8 +9,11 @@ import {
   handleApiError,
   composeDescription,
 } from "./validation.js";
+import { ResponseFormatSchema, formatJson, formatGenericList, applyCharLimit } from "./format.js";
 
-const ListAttachmentsInput = IssueIdSchema.strict();
+const ListAttachmentsInput = IssueIdSchema.extend({
+  response_format: ResponseFormatSchema,
+}).strict();
 
 const UploadAttachmentInput = z
   .object({
@@ -30,6 +33,13 @@ const UploadAttachmentInput = z
 const AttachmentIdInput = z
   .object({
     attachmentId: z.string().min(1).describe("Attachment UUID"),
+  })
+  .strict();
+
+const DownloadAttachmentInput = z
+  .object({
+    attachmentId: z.string().min(1).describe("Attachment UUID"),
+    response_format: ResponseFormatSchema,
   })
   .strict();
 
@@ -54,9 +64,14 @@ export const attachmentTools: ToolDefinition[] = [
     annotations: { title: "List issue attachments", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { issueId } = validate(ListAttachmentsInput, args);
-        const data = await client.get<unknown>(`/api/issues/${issueId}/attachments`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const { issueId, response_format: fmt } = validate(ListAttachmentsInput, args);
+        const data = await client.get<unknown[]>(`/api/issues/${issueId}/attachments`);
+        const hint = `Use paperclip_list_attachments with issueId "${issueId}" to retrieve the full list.`;
+        const text =
+          fmt === "json"
+            ? applyCharLimit(formatJson(data), hint)
+            : applyCharLimit(formatGenericList(data, "Attachments"), hint);
+        return { content: [{ type: "text", text }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -103,7 +118,8 @@ export const attachmentTools: ToolDefinition[] = [
           `/api/companies/${client.companyId}/issues/${issueId}/attachments`,
           form
         );
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = `Use paperclip_list_attachments with issueId "${issueId}" to retrieve the full attachment list.`;
+        return { content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -128,13 +144,18 @@ export const attachmentTools: ToolDefinition[] = [
         "- 404: attachment not found → verify UUID with paperclip_list_attachments",
       ],
     }),
-    inputSchema: toJsonSchema(AttachmentIdInput),
+    inputSchema: toJsonSchema(DownloadAttachmentInput),
     annotations: { title: "Download attachment content", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { attachmentId } = validate(AttachmentIdInput, args);
+        const { attachmentId, response_format: fmt } = validate(DownloadAttachmentInput, args);
         const data = await client.get<unknown>(`/api/attachments/${attachmentId}/content`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = `Use paperclip_download_attachment with attachmentId "${attachmentId}" to retrieve the full content.`;
+        const text =
+          fmt === "json"
+            ? applyCharLimit(formatJson(data), hint)
+            : applyCharLimit(formatGenericList([data], "Attachment"), hint);
+        return { content: [{ type: "text", text }] };
       } catch (err) {
         return handleApiError(err);
       }
@@ -162,7 +183,8 @@ export const attachmentTools: ToolDefinition[] = [
       try {
         const { attachmentId } = validate(AttachmentIdInput, args);
         const data = await client.delete<unknown>(`/api/attachments/${attachmentId}`);
-        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+        const hint = `Attachment "${attachmentId}" has been deleted.`;
+        return { content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }] };
       } catch (err) {
         return handleApiError(err);
       }

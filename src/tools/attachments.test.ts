@@ -39,10 +39,14 @@ describe("paperclip_list_attachments", () => {
     const attachments = [{ id: "att-1", filename: "report.pdf", mimeType: "application/pdf" }];
     const { fn, calls } = mockFetch(200, attachments);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listAttachments.handler({ issueId: "issue-1" }, client);
+    const result = await listAttachments.handler(
+      { issueId: "issue-1", response_format: "json" },
+      client
+    );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1/attachments");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(attachments) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, attachments);
   });
 
   it("throws McpError when issueId is empty string (validation failure, fetch not called)", async () => {
@@ -85,7 +89,8 @@ describe("paperclip_upload_attachment", () => {
       );
       assert.equal(calls[0]!.init.method, "POST");
       assert.ok(calls[0]!.init.body instanceof FormData, "body should be FormData");
-      assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(created) }] });
+      const parsedCreated = JSON.parse(result.content[0]!.text);
+      assert.deepEqual(parsedCreated, created);
     } finally {
       unlinkSync(tmpFile);
     }
@@ -127,10 +132,14 @@ describe("paperclip_download_attachment", () => {
     const content = { data: "base64encodedcontent==" };
     const { fn, calls } = mockFetch(200, content);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await downloadAttachment.handler({ attachmentId: "att-1" }, client);
+    const result = await downloadAttachment.handler(
+      { attachmentId: "att-1", response_format: "json" },
+      client
+    );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/attachments/att-1/content");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(content) }] });
+    const parsedContent = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedContent, content);
   });
 
   it("throws McpError when attachmentId is empty string (validation failure, fetch not called)", async () => {

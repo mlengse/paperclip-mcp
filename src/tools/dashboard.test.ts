@@ -32,11 +32,12 @@ describe("paperclip_get_dashboard", () => {
     const summary = { goals: 3, issuesByStatus: { todo: 5, in_progress: 2, done: 10 } };
     const { fn, calls } = mockFetch(200, summary);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getDashboard.handler({}, client);
+    const result = await getDashboard.handler({ response_format: "json" }, client);
     assert.equal(calls.length, 1);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/dashboard");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(summary) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, summary);
   });
 
   it("throws McpError when args is not an object (validation failure, fetch not called)", async () => {
