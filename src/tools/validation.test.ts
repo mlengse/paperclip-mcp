@@ -114,6 +114,33 @@ describe("composeDescription", () => {
     assert.ok(!result.includes("Don't use when:"));
   });
 
+  it("output has no trailing whitespace", () => {
+    const result = composeDescription({
+      summary: "Test",
+      args: ["- a: string"],
+      returns: "stuff",
+      examples: { useWhen: "always" },
+      errors: ["- 500: fail"],
+    });
+    assert.equal(result, result.trimEnd(), "output must not have trailing whitespace");
+  });
+
+  it("boardOnly: true with all sections renders prefix and sections", () => {
+    const result = composeDescription({
+      boardOnly: true,
+      summary: "Do something",
+      args: ["- id: string — entity id"],
+      returns: "updated entity",
+      examples: { useWhen: "you need to do the thing" },
+      errors: ["- 403: board access required"],
+    });
+    assert.ok(result.startsWith("⚠ Board-only: Do something"));
+    assert.ok(result.includes("Args:"));
+    assert.ok(result.includes("Returns:"));
+    assert.ok(result.includes("Examples:"));
+    assert.ok(result.includes("Error Handling:"));
+  });
+
   it("sections are separated by double newlines", () => {
     const result = composeDescription({
       summary: "Test.",
