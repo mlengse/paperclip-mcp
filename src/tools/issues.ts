@@ -372,8 +372,8 @@ export const issueTools: ToolDefinition[] = [
         "Update one or more fields on an issue; optionally attach a comment in the same call.",
       args: [
         '- issueId: string — Issue ID or identifier (example: "PAP-42")',
-        "- status: enum (optional) — New status: backlog | todo | in_progress | in_review | done | blocked | cancelled",
-        "- priority: enum (optional) — New priority: critical | high | medium | low",
+        "- status: enum (optional) — backlog | todo | in_progress | in_review | done | blocked | cancelled",
+        "- priority: enum (optional) — critical | high | medium | low",
         "- title: string (optional) — New title",
         "- description: string (optional) — New description (markdown)",
         "- comment: string (optional) — Comment body to post alongside this update",
@@ -381,11 +381,8 @@ export const issueTools: ToolDefinition[] = [
         "- assigneeUserId: string | null (optional) — User UUID; null to unassign",
         "- goalId: string | null (optional) — Goal UUID; null to unlink",
         "- projectId: string | null (optional) — Project UUID; null to unlink",
-        "- parentId: string | null (optional) — Parent issue UUID; null to unlink",
-        "- billingCode: string | null (optional) — Billing code; null to clear",
         "- labelIds: string[] (optional) — Replaces existing label set; pass [] to clear all",
-        "- executionRunId: string | null (optional) — Execution run lock; pass null to clear stale lock",
-        "- executionLockedAt: string | null (optional) — ISO timestamp of lock acquisition; null to clear",
+        "- executionRunId: string | null (optional) — Pass null to clear a stale run lock",
       ],
       returns: "Returns the updated issue object with all fields.",
       examples: {

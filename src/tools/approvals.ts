@@ -1,6 +1,12 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import { validate, toJsonSchema, handleApiError, ApprovalTypeSchema } from "./validation.js";
+import {
+  validate,
+  toJsonSchema,
+  handleApiError,
+  ApprovalTypeSchema,
+  composeDescription,
+} from "./validation.js";
 
 const ApprovalIdInput = z
   .object({
@@ -71,8 +77,22 @@ const CreateAgentHireInput = z
 export const approvalTools: ToolDefinition[] = [
   {
     name: "paperclip_list_approvals",
-    description:
-      "List approval requests for the current company. Optionally filter by status (comma-separated).",
+    description: composeDescription({
+      summary: "List approval requests for the current company.",
+      args: [
+        '- status: string (optional) — Comma-separated status filter (example: "pending,approved")',
+      ],
+      returns:
+        "Array of approval objects: id, type, status, payload, requestedByAgentId, createdAt.",
+      examples: {
+        useWhen: "scanning for pending approval requests before escalating or following up",
+        dontUseWhen: "you need a single approval's details — use paperclip_get_approval instead",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 403: permission denied → verify PAPERCLIP_COMPANY_ID is correct",
+      ],
+    }),
     inputSchema: toJsonSchema(ListApprovalsInput),
     annotations: { title: "List approval requests", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
@@ -91,8 +111,23 @@ export const approvalTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_get_approval",
-    description:
-      "Get a single approval request by ID. Returns the approval object only (status, type, payload, etc.). Linked issues are not included in this response.",
+    description: composeDescription({
+      summary:
+        "Get a single approval request by ID. Linked issues are not included in this response.",
+      args: ['- approvalId: string — Approval UUID (example: "apr_abc123")'],
+      returns:
+        "Approval object: id, type, status, payload, requestedByAgentId, createdAt, updatedAt.",
+      examples: {
+        useWhen:
+          "checking the current status or payload of a specific approval before acting on it",
+        dontUseWhen:
+          "you need a list of approvals — use paperclip_list_approvals with a status filter",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: approval not found → verify ID with paperclip_list_approvals",
+      ],
+    }),
     inputSchema: toJsonSchema(ApprovalIdInput),
     annotations: { title: "Get approval request by ID", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
@@ -107,8 +142,25 @@ export const approvalTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_create_approval",
-    description:
-      "Create a new approval request. Requires `type` (hire_agent | approve_ceo_strategy | budget_override_required) and a type-specific `payload` object. Run ID header is injected automatically.",
+    description: composeDescription({
+      summary: "Create a new approval request for board review.",
+      args: [
+        "- type: enum — hire_agent | approve_ceo_strategy | budget_override_required",
+        "- payload: object — Type-specific payload (e.g. for hire_agent: { name, role, capabilities })",
+        "- requestedByAgentId: string (optional) — Override requester agent UUID (defaults to caller)",
+      ],
+      returns:
+        "Returns the created approval object: id, type, status:'pending', payload, createdAt.",
+      examples: {
+        useWhen: "submitting a hire request or budget override request for board review",
+        dontUseWhen:
+          "you want to use the streamlined hire flow — use paperclip_create_agent_hire instead",
+      },
+      errors: [
+        "- 400: validation failure → ensure type is a valid enum and payload matches the type schema",
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+      ],
+    }),
     inputSchema: toJsonSchema(CreateApprovalInput),
     annotations: { title: "Create approval request", destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
@@ -129,8 +181,24 @@ export const approvalTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_approve",
-    description:
-      "⚠ Board-only: Approve an approval request. Run ID header is injected automatically.",
+    description: composeDescription({
+      summary: "Approve a pending approval request, triggering the associated workflow.",
+      args: ['- approvalId: string — Approval UUID (example: "apr_abc123")'],
+      returns: "Returns the updated approval with status:'approved' and approvedAt timestamp.",
+      examples: {
+        useWhen:
+          "approving a hire_agent or budget_override request after board review (requires board API key)",
+        dontUseWhen:
+          "you want to reject or request changes — use paperclip_reject or paperclip_request_revision instead",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 403: permission denied → this tool requires a board (human) API key",
+        "- 404: approval not found → verify ID with paperclip_list_approvals",
+        "- 422: approval is not in pending state → check current status with paperclip_get_approval",
+      ],
+      boardOnly: true,
+    }),
     inputSchema: toJsonSchema(ApprovalIdInput),
     annotations: { title: "Approve approval request", destructiveHint: true, openWorldHint: false },
     async handler(args, client) {
@@ -145,8 +213,26 @@ export const approvalTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_reject",
-    description:
-      "⚠ Board-only: Reject an approval request. Run ID header is injected automatically.",
+    description: composeDescription({
+      summary: "Reject a pending approval request with an optional reason.",
+      args: [
+        '- approvalId: string — Approval UUID (example: "apr_abc123")',
+        "- reason: string (optional) — Human-readable reason for rejection",
+      ],
+      returns: "Returns the updated approval with status:'rejected' and rejectedAt timestamp.",
+      examples: {
+        useWhen: "denying a hire or budget request after board review (requires board API key)",
+        dontUseWhen:
+          "you want the requester to revise and resubmit — use paperclip_request_revision instead",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 403: permission denied → this tool requires a board (human) API key",
+        "- 404: approval not found → verify ID with paperclip_list_approvals",
+        "- 422: approval is not in pending state → check current status with paperclip_get_approval",
+      ],
+      boardOnly: true,
+    }),
     inputSchema: toJsonSchema(RejectInput),
     annotations: { title: "Reject approval request", destructiveHint: true, openWorldHint: false },
     async handler(args, client) {
@@ -163,8 +249,27 @@ export const approvalTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_request_revision",
-    description:
-      "⚠ Board-only: Request a revision on a pending approval. Run ID header is injected automatically.",
+    description: composeDescription({
+      summary:
+        "Request a revision on a pending approval, returning it to the requester for changes.",
+      args: [
+        '- approvalId: string — Approval UUID (example: "apr_abc123")',
+        "- feedback: string (optional) — Specific feedback on what needs to change",
+      ],
+      returns: "Returns the updated approval with status:'revision_requested'.",
+      examples: {
+        useWhen:
+          "asking an agent to revise a hire proposal before board approval (requires board API key)",
+        dontUseWhen: "you want to outright deny the request — use paperclip_reject instead",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 403: permission denied → this tool requires a board (human) API key",
+        "- 404: approval not found → verify ID with paperclip_list_approvals",
+        "- 422: approval is not in a revisable state → check current status with paperclip_get_approval",
+      ],
+      boardOnly: true,
+    }),
     inputSchema: toJsonSchema(RequestRevisionInput),
     annotations: {
       title: "Request revision on approval",
@@ -188,8 +293,24 @@ export const approvalTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_resubmit_approval",
-    description:
-      "Resubmit an approval request after addressing revision feedback. Run ID header is injected automatically.",
+    description: composeDescription({
+      summary: "Resubmit an approval request after addressing revision feedback.",
+      args: [
+        '- approvalId: string — Approval UUID (example: "apr_abc123")',
+        "- comment: string (optional) — Summary of changes made since last submission",
+      ],
+      returns: "Returns the updated approval with status:'pending' for board re-review.",
+      examples: {
+        useWhen: "submitting a revised hire proposal after the board requested changes",
+        dontUseWhen:
+          "the approval is already pending or approved — check status with paperclip_get_approval first",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: approval not found → verify ID with paperclip_list_approvals",
+        "- 422: approval is not in revision_requested state → check current status with paperclip_get_approval",
+      ],
+    }),
     inputSchema: toJsonSchema(ResubmitInput),
     annotations: {
       title: "Resubmit approval after revision",
@@ -210,7 +331,20 @@ export const approvalTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_list_approval_comments",
-    description: "List comments on an approval request.",
+    description: composeDescription({
+      summary: "List comments on an approval request.",
+      args: ['- approvalId: string — Approval UUID (example: "apr_abc123")'],
+      returns: "Array of comment objects: id, body, authorId, authorType, createdAt.",
+      examples: {
+        useWhen: "reading board feedback before resubmitting an approval",
+        dontUseWhen:
+          "you need approval metadata — use paperclip_get_approval for status, type, and payload",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: approval not found → verify ID with paperclip_list_approvals",
+      ],
+    }),
     inputSchema: toJsonSchema(ApprovalIdInput),
     annotations: {
       title: "List approval comments",
@@ -229,8 +363,24 @@ export const approvalTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_add_approval_comment",
-    description:
-      "Post a markdown comment on an approval request. Run ID header is injected automatically.",
+    description: composeDescription({
+      summary: "Post a markdown comment on an approval request.",
+      args: [
+        '- approvalId: string — Approval UUID (example: "apr_abc123")',
+        '- body: string — Comment body in markdown (example: "Revised per board feedback: ...")',
+      ],
+      returns: "Returns the created comment object: id, body, authorId, authorType, createdAt.",
+      examples: {
+        useWhen: "adding context to an approval request or responding to board revision feedback",
+        dontUseWhen:
+          "you also want to change the approval status — use paperclip_resubmit_approval or paperclip_approve",
+      },
+      errors: [
+        "- 400: validation failure → ensure body is non-empty",
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: approval not found → verify ID with paperclip_list_approvals",
+      ],
+    }),
     inputSchema: toJsonSchema(ApprovalCommentInput),
     annotations: {
       title: "Post comment on approval",
@@ -249,8 +399,29 @@ export const approvalTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_create_agent_hire",
-    description:
-      "Create an agent hire request (triggers the approval and onboarding flow). Run ID header is injected automatically.",
+    description: composeDescription({
+      summary:
+        "Create an agent hire request, triggering the governance approval and onboarding flow.",
+      args: [
+        '- name: string — Agent display name (example: "DevOps Agent")',
+        '- role: string — Agent role identifier (example: "devops")',
+        "- title: string (optional) — Job title",
+        "- capabilities: string (optional) — Free-text capability description",
+        "- goalId: string (optional) — Goal UUID to link the hire",
+        "- projectId: string (optional) — Project UUID to associate",
+      ],
+      returns: "Returns the created hire request object with a pending approval linked.",
+      examples: {
+        useWhen: "CEO agent initiating a new specialist hire after board approves the proposal",
+        dontUseWhen:
+          "you need a generic approval — use paperclip_create_approval with type:'hire_agent' for custom payloads",
+      },
+      errors: [
+        "- 400: validation failure → ensure name and role are non-empty",
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 403: only the CEO agent has canCreateAgents permission → verify agent governance config",
+      ],
+    }),
     inputSchema: toJsonSchema(CreateAgentHireInput),
     annotations: {
       title: "Create agent hire request",

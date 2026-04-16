@@ -6,6 +6,7 @@ import {
   NoInput,
   handleApiError,
   RoutineTriggerTypeSchema,
+  composeDescription,
 } from "./validation.js";
 
 // Basic 5-field cron regex: five whitespace-separated tokens
@@ -88,7 +89,20 @@ const UpdateTriggerInput = z
 export const routineTools: ToolDefinition[] = [
   {
     name: "paperclip_list_routines",
-    description: "List all routines for the current company.",
+    description: composeDescription({
+      summary: "List all routines defined for the current company.",
+      returns:
+        "Array of routine objects: id, name, agentId, concurrencyPolicy, catchUpPolicy, createdAt.",
+      examples: {
+        useWhen: "finding routineIds before adding a trigger or checking routine status",
+        dontUseWhen:
+          "you need a specific routine's triggers and run history — use paperclip_get_routine instead",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 403: permission denied → verify PAPERCLIP_COMPANY_ID is correct",
+      ],
+    }),
     inputSchema: toJsonSchema(NoInput),
     annotations: { title: "List company routines", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
@@ -103,7 +117,20 @@ export const routineTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_get_routine",
-    description: "Get a single routine by ID, including its triggers and recent runs.",
+    description: composeDescription({
+      summary: "Get a single routine by UUID, including its triggers and recent runs.",
+      args: ['- routineId: string — Routine UUID (example: "rtn_abc123")'],
+      returns:
+        "Routine object: id, name, agentId, triggers[], recentRuns[], concurrencyPolicy, catchUpPolicy.",
+      examples: {
+        useWhen: "inspecting a routine's current triggers before modifying them",
+        dontUseWhen: "you need all routine IDs — use paperclip_list_routines first",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: routine not found → verify ID with paperclip_list_routines",
+      ],
+    }),
     inputSchema: toJsonSchema(RoutineIdInput),
     annotations: { title: "Get routine by ID", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
@@ -118,8 +145,28 @@ export const routineTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_create_routine",
-    description:
-      "Create a new routine for an agent. Add triggers separately with paperclip_add_routine_trigger. Run ID header is injected automatically.",
+    description: composeDescription({
+      summary:
+        "Create a new routine for an agent. Add triggers separately with paperclip_add_routine_trigger.",
+      args: [
+        '- agentId: string — Agent UUID to run the routine (example: "agt_abc123")',
+        '- name: string — Routine name (example: "daily-standup")',
+        "- description: string (optional) — Routine description",
+        "- concurrencyPolicy: string (optional) — allow | forbid | replace (default: forbid)",
+        "- catchUpPolicy: string (optional) — skip | run_once for missed runs",
+      ],
+      returns: "Returns the created routine object: id, name, agentId, triggers:[], createdAt.",
+      examples: {
+        useWhen: "setting up a scheduled workflow for an agent before adding a cron trigger",
+        dontUseWhen:
+          "you want to trigger immediately — use paperclip_run_routine after creating the routine",
+      },
+      errors: [
+        "- 400: validation failure → ensure name and agentId are non-empty",
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: agentId not found → verify with paperclip_list_agents",
+      ],
+    }),
     inputSchema: toJsonSchema(CreateRoutineInput),
     annotations: { title: "Create agent routine", destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
@@ -141,8 +188,26 @@ export const routineTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_update_routine",
-    description:
-      "Update a routine's name, description, or scheduling policies. Run ID header is injected automatically.",
+    description: composeDescription({
+      summary: "Update a routine's name, description, or scheduling policies.",
+      args: [
+        '- routineId: string — Routine UUID (example: "rtn_abc123")',
+        "- name: string (optional) — New name",
+        "- description: string (optional) — New description",
+        "- concurrencyPolicy: string (optional) — New concurrency policy",
+        "- catchUpPolicy: string (optional) — New catch-up policy",
+      ],
+      returns: "Returns the updated routine object with all fields.",
+      examples: {
+        useWhen: "changing a routine's concurrency policy after observing overlapping runs",
+        dontUseWhen:
+          "you need to change the trigger schedule — use paperclip_update_routine_trigger instead",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: routine not found → verify ID with paperclip_list_routines",
+      ],
+    }),
     inputSchema: toJsonSchema(UpdateRoutineInput),
     annotations: {
       title: "Update routine settings",
@@ -166,8 +231,26 @@ export const routineTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_add_routine_trigger",
-    description:
-      "Add a trigger to a routine (schedule, webhook, or api). Run ID header is injected automatically.",
+    description: composeDescription({
+      summary:
+        "Add a trigger to a routine. Supports schedule (cron), webhook, and api trigger types.",
+      args: [
+        '- routineId: string — Routine UUID (example: "rtn_abc123")',
+        "- type: string — Trigger type: schedule | webhook | api",
+        '- config.cron: string (optional) — 5-field cron expression, required for schedule triggers (example: "*/5 * * * *")',
+      ],
+      returns: "Returns the created trigger object: id, routineId, type, config, createdAt.",
+      examples: {
+        useWhen: "scheduling a routine to run every 5 minutes after creating it",
+        dontUseWhen:
+          "the trigger already exists — use paperclip_update_routine_trigger to modify it",
+      },
+      errors: [
+        "- 400: invalid cron expression → must be a 5-field cron (e.g. '*/5 * * * *')",
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: routine not found → verify ID with paperclip_list_routines",
+      ],
+    }),
     inputSchema: toJsonSchema(AddTriggerInput),
     annotations: { title: "Add routine trigger", destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
@@ -184,8 +267,24 @@ export const routineTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_update_routine_trigger",
-    description:
-      "Update an existing routine trigger's type or config. Run ID header is injected automatically.",
+    description: composeDescription({
+      summary: "Update an existing routine trigger's type or cron schedule.",
+      args: [
+        '- triggerId: string — Routine trigger UUID (example: "trg_abc123")',
+        "- type: string (optional) — New trigger type: schedule | webhook | api",
+        '- config.cron: string (optional) — New 5-field cron expression (example: "0 9 * * 1-5")',
+      ],
+      returns: "Returns the updated trigger object: id, routineId, type, config, updatedAt.",
+      examples: {
+        useWhen: "changing a routine from every 5 minutes to daily at 9 AM on weekdays",
+        dontUseWhen: "you need to add a new trigger — use paperclip_add_routine_trigger instead",
+      },
+      errors: [
+        "- 400: invalid cron expression → ensure 5 whitespace-separated fields",
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: trigger not found → verify ID with paperclip_get_routine",
+      ],
+    }),
     inputSchema: toJsonSchema(UpdateTriggerInput),
     annotations: {
       title: "Update routine trigger",
@@ -208,8 +307,19 @@ export const routineTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_delete_routine_trigger",
-    description:
-      "Delete a routine trigger. The routine itself is not deleted. Run ID header is injected automatically.",
+    description: composeDescription({
+      summary: "Delete a routine trigger. The routine itself is not deleted.",
+      args: ['- triggerId: string — Routine trigger UUID (example: "trg_abc123")'],
+      returns: "Returns a confirmation object indicating the trigger was deleted.",
+      examples: {
+        useWhen: "removing a cron schedule from a routine without deleting the routine itself",
+        dontUseWhen: "you want to delete the entire routine — use paperclip_delete_routine instead",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: trigger not found → verify ID with paperclip_get_routine",
+      ],
+    }),
     inputSchema: toJsonSchema(TriggerIdInput),
     annotations: {
       title: "Delete routine trigger",
@@ -228,8 +338,20 @@ export const routineTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_run_routine",
-    description:
-      "Manually trigger a routine run immediately. Run ID header is injected automatically.",
+    description: composeDescription({
+      summary: "Manually trigger a routine run immediately, bypassing its schedule.",
+      args: ['- routineId: string — Routine UUID (example: "rtn_abc123")'],
+      returns: "Returns the created run object: id, routineId, status, startedAt.",
+      examples: {
+        useWhen: "testing a routine on demand before its next scheduled fire",
+        dontUseWhen: "you want to check past runs — use paperclip_list_routine_runs instead",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: routine not found → verify ID with paperclip_list_routines",
+        "- 409: concurrency policy forbids concurrent run → wait for the active run to finish",
+      ],
+    }),
     inputSchema: toJsonSchema(RoutineIdInput),
     annotations: { title: "Run routine now", destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
@@ -244,7 +366,20 @@ export const routineTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_list_routine_runs",
-    description: "List historical runs for a routine.",
+    description: composeDescription({
+      summary: "List historical runs for a routine, ordered most-recent first.",
+      args: ['- routineId: string — Routine UUID (example: "rtn_abc123")'],
+      returns: "Array of run objects: id, routineId, status, startedAt, finishedAt, triggerId.",
+      examples: {
+        useWhen: "auditing whether a scheduled routine has been firing and completing successfully",
+        dontUseWhen:
+          "you need the routine's triggers or settings — use paperclip_get_routine instead",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: routine not found → verify ID with paperclip_list_routines",
+      ],
+    }),
     inputSchema: toJsonSchema(RoutineIdInput),
     annotations: { title: "List routine run history", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
