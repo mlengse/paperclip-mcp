@@ -111,28 +111,28 @@ describe("paperclip_get_routine", () => {
 
 describe("paperclip_create_routine", () => {
   it("calls POST /api/companies/{id}/routines with required and optional fields", async () => {
-    const created = { id: "routine-new", name: "Weekly Report", agentId: "agent-1" };
+    const created = { id: "routine-new", title: "Weekly Report", assigneeAgentId: "agent-1" };
     const { fn, calls } = mockFetch(200, created);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await createRoutine.handler(
-      { agentId: "agent-1", name: "Weekly Report", concurrencyPolicy: "forbid" },
+      { assigneeAgentId: "agent-1", title: "Weekly Report", concurrencyPolicy: "forbid" },
       client
     );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/routines");
     assert.equal(calls[0]!.init.method, "POST");
     const body = JSON.parse(calls[0]!.init.body as string);
-    assert.equal(body.agentId, "agent-1");
-    assert.equal(body.name, "Weekly Report");
+    assert.equal(body.assigneeAgentId, "agent-1");
+    assert.equal(body.title, "Weekly Report");
     assert.equal(body.concurrencyPolicy, "forbid");
     const parsedCreated = JSON.parse(result.content[0]!.text);
     assert.deepEqual(parsedCreated, created);
   });
 
-  it("throws McpError when name is empty string (validation failure, fetch not called)", async () => {
+  it("throws McpError when title is empty string (validation failure, fetch not called)", async () => {
     const { fn, calls } = mockFetch(200, {});
     const client = new PaperclipClient(TEST_AUTH, fn);
     await assert.rejects(
-      () => createRoutine.handler({ agentId: "agent-1", name: "" }, client),
+      () => createRoutine.handler({ assigneeAgentId: "agent-1", title: "" }, client),
       (err: unknown) => {
         assert.ok(err instanceof McpError);
         return true;
@@ -145,7 +145,7 @@ describe("paperclip_create_routine", () => {
     const { fn } = mockFetch(400, { message: "Bad request" });
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await createRoutine.handler(
-      { agentId: "agent-1", name: "Valid Routine" },
+      { assigneeAgentId: "agent-1", title: "Valid Routine" },
       client
     );
     assert.equal(result.isError, true);
@@ -155,17 +155,17 @@ describe("paperclip_create_routine", () => {
 
 describe("paperclip_update_routine", () => {
   it("calls PATCH /api/routines/{id} with only provided fields", async () => {
-    const updated = { id: "routine-1", name: "Renamed Routine", catchUpPolicy: "run_once" };
+    const updated = { id: "routine-1", title: "Renamed Routine", catchUpPolicy: "run_once" };
     const { fn, calls } = mockFetch(200, updated);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await updateRoutine.handler(
-      { routineId: "routine-1", name: "Renamed Routine", catchUpPolicy: "run_once" },
+      { routineId: "routine-1", title: "Renamed Routine", catchUpPolicy: "run_once" },
       client
     );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/routines/routine-1");
     assert.equal(calls[0]!.init.method, "PATCH");
     const body = JSON.parse(calls[0]!.init.body as string);
-    assert.equal(body.name, "Renamed Routine");
+    assert.equal(body.title, "Renamed Routine");
     assert.equal(body.catchUpPolicy, "run_once");
     assert.ok(!("routineId" in body), "routineId must not be in PATCH body");
     const parsedUpdated = JSON.parse(result.content[0]!.text);
@@ -176,7 +176,7 @@ describe("paperclip_update_routine", () => {
     const { fn, calls } = mockFetch(200, {});
     const client = new PaperclipClient(TEST_AUTH, fn);
     await assert.rejects(
-      () => updateRoutine.handler({ routineId: "", name: "New Name" }, client),
+      () => updateRoutine.handler({ routineId: "", title: "New Name" }, client),
       (err: unknown) => {
         assert.ok(err instanceof McpError);
         return true;
@@ -188,36 +188,36 @@ describe("paperclip_update_routine", () => {
   it("returns isError response on 404 API error", async () => {
     const { fn } = mockFetch(404, { message: "Routine not found" });
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await updateRoutine.handler({ routineId: "missing", name: "X" }, client);
+    const result = await updateRoutine.handler({ routineId: "missing", title: "X" }, client);
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("404"));
   });
 });
 
 describe("paperclip_add_routine_trigger", () => {
-  it("calls POST /api/routines/{id}/triggers with type and config", async () => {
-    const trigger = { id: "trig-1", routineId: "routine-1", type: "schedule" };
+  it("calls POST /api/routines/{id}/triggers with kind and cronExpression", async () => {
+    const trigger = { id: "trig-1", routineId: "routine-1", kind: "schedule" };
     const { fn, calls } = mockFetch(200, trigger);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await addTrigger.handler(
-      { routineId: "routine-1", type: "schedule", config: { cron: "0 9 * * 1" } },
+      { routineId: "routine-1", kind: "schedule", cronExpression: "0 9 * * 1" },
       client
     );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/routines/routine-1/triggers");
     assert.equal(calls[0]!.init.method, "POST");
     const body = JSON.parse(calls[0]!.init.body as string);
-    assert.equal(body.type, "schedule");
-    assert.deepEqual(body.config, { cron: "0 9 * * 1" });
+    assert.equal(body.kind, "schedule");
+    assert.equal(body.cronExpression, "0 9 * * 1");
     assert.ok(!("routineId" in body), "routineId must not be in POST body");
     const parsedTrigger = JSON.parse(result.content[0]!.text);
     assert.deepEqual(parsedTrigger, trigger);
   });
 
-  it("throws McpError when type is invalid enum value (validation failure, fetch not called)", async () => {
+  it("throws McpError when kind is invalid enum value (validation failure, fetch not called)", async () => {
     const { fn, calls } = mockFetch(200, {});
     const client = new PaperclipClient(TEST_AUTH, fn);
     await assert.rejects(
-      () => addTrigger.handler({ routineId: "routine-1", type: "invalid-type" as never }, client),
+      () => addTrigger.handler({ routineId: "routine-1", kind: "invalid-type" as never }, client),
       (err: unknown) => {
         assert.ok(err instanceof McpError);
         return true;
@@ -229,7 +229,7 @@ describe("paperclip_add_routine_trigger", () => {
   it("returns isError response on 400 API error", async () => {
     const { fn } = mockFetch(400, { message: "Invalid trigger config" });
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await addTrigger.handler({ routineId: "routine-1", type: "schedule" }, client);
+    const result = await addTrigger.handler({ routineId: "routine-1", kind: "schedule" }, client);
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("400"));
   });
@@ -237,14 +237,14 @@ describe("paperclip_add_routine_trigger", () => {
 
 describe("paperclip_update_routine_trigger", () => {
   it("calls PATCH /api/routine-triggers/{id} with only provided fields", async () => {
-    const updated = { id: "trig-1", type: "webhook", config: {} };
+    const updated = { id: "trig-1", kind: "webhook" };
     const { fn, calls } = mockFetch(200, updated);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await updateTrigger.handler({ triggerId: "trig-1", type: "webhook" }, client);
+    const result = await updateTrigger.handler({ triggerId: "trig-1", kind: "webhook" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/routine-triggers/trig-1");
     assert.equal(calls[0]!.init.method, "PATCH");
     const body = JSON.parse(calls[0]!.init.body as string);
-    assert.equal(body.type, "webhook");
+    assert.equal(body.kind, "webhook");
     assert.ok(!("triggerId" in body), "triggerId must not be in PATCH body");
     const parsedTrigUpdated = JSON.parse(result.content[0]!.text);
     assert.deepEqual(parsedTrigUpdated, updated);
@@ -266,7 +266,7 @@ describe("paperclip_update_routine_trigger", () => {
   it("returns isError response on 404 API error", async () => {
     const { fn } = mockFetch(404, { message: "Trigger not found" });
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await updateTrigger.handler({ triggerId: "missing-trig", type: "api" }, client);
+    const result = await updateTrigger.handler({ triggerId: "missing-trig", kind: "api" }, client);
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("404"));
   });
@@ -305,13 +305,28 @@ describe("paperclip_delete_routine_trigger", () => {
 });
 
 describe("paperclip_run_routine", () => {
-  it("calls POST /api/routines/{id}/run and returns run data", async () => {
+  it("calls POST /api/routines/{id}/run with optional agentId and returns run data", async () => {
+    const run = { id: "run-1", routineId: "routine-1", status: "running" };
+    const { fn, calls } = mockFetch(200, run);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await runRoutine.handler({ routineId: "routine-1", agentId: "agent-1" }, client);
+    assert.equal(calls[0]!.url, "http://localhost:3100/api/routines/routine-1/run");
+    assert.equal(calls[0]!.init.method, "POST");
+    const body = JSON.parse(calls[0]!.init.body as string);
+    assert.equal(body.agentId, "agent-1");
+    const parsedRun = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedRun, run);
+  });
+
+  it("calls POST /api/routines/{id}/run without agentId when not provided", async () => {
     const run = { id: "run-1", routineId: "routine-1", status: "running" };
     const { fn, calls } = mockFetch(200, run);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await runRoutine.handler({ routineId: "routine-1" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/routines/routine-1/run");
     assert.equal(calls[0]!.init.method, "POST");
+    const body = JSON.parse(calls[0]!.init.body as string);
+    assert.ok(!("agentId" in body), "agentId must not be in body when not provided");
     const parsedRun = JSON.parse(result.content[0]!.text);
     assert.deepEqual(parsedRun, run);
   });
@@ -380,11 +395,11 @@ describe("paperclip_list_routine_runs", () => {
 
 // Stage 2 TDD: A4 (enum rejection) + A5 (.strict() rejects unknown fields)
 describe("[stage-2] paperclip_add_routine_trigger — A4: RoutineTriggerTypeSchema + A5: strict", () => {
-  it("A4: rejects invalid trigger type enum value", async () => {
+  it("A4: rejects invalid trigger kind enum value", async () => {
     const { fn, calls } = mockFetch(200, {});
     const client = new PaperclipClient(TEST_AUTH, fn);
     await assert.rejects(
-      () => addTrigger.handler({ routineId: "r-1", type: "cron" }, client),
+      () => addTrigger.handler({ routineId: "r-1", kind: "cron" }, client),
       (err: unknown) => {
         assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
         return true;
@@ -393,12 +408,12 @@ describe("[stage-2] paperclip_add_routine_trigger — A4: RoutineTriggerTypeSche
     assert.equal(calls.length, 0);
   });
 
-  it("A4: accepts valid trigger type schedule", async () => {
-    const created = { id: "trig-1", type: "schedule" };
+  it("A4: accepts valid trigger kind schedule", async () => {
+    const created = { id: "trig-1", kind: "schedule" };
     const { fn } = mockFetch(200, created);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await addTrigger.handler(
-      { routineId: "r-1", type: "schedule", config: { cron: "0 * * * *" } },
+      { routineId: "r-1", kind: "schedule", cronExpression: "0 * * * *" },
       client
     );
     assert.equal(result.isError, undefined);
@@ -408,7 +423,7 @@ describe("[stage-2] paperclip_add_routine_trigger — A4: RoutineTriggerTypeSche
     const { fn, calls } = mockFetch(200, {});
     const client = new PaperclipClient(TEST_AUTH, fn);
     await assert.rejects(
-      () => addTrigger.handler({ routineId: "r-1", type: "api", unknownField: "oops" }, client),
+      () => addTrigger.handler({ routineId: "r-1", kind: "api", unknownField: "oops" }, client),
       (err: unknown) => {
         assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
         return true;
@@ -424,7 +439,7 @@ describe("[stage-2] paperclip_add_routine_trigger — cron format validator", ()
     const client = new PaperclipClient(TEST_AUTH, fn);
     await assert.rejects(
       () =>
-        addTrigger.handler({ routineId: "r-1", type: "schedule", config: { cron: "*/5" } }, client),
+        addTrigger.handler({ routineId: "r-1", kind: "schedule", cronExpression: "*/5" }, client),
       (err: unknown) => {
         assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
         return true;
@@ -438,21 +453,21 @@ describe("[stage-2] paperclip_add_routine_trigger — cron format validator", ()
     const { fn } = mockFetch(200, created);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await addTrigger.handler(
-      { routineId: "r-1", type: "schedule", config: { cron: "*/5 * * * *" } },
+      { routineId: "r-1", kind: "schedule", cronExpression: "*/5 * * * *" },
       client
     );
     assert.equal(result.isError, undefined);
   });
 });
 
-describe("[stage-2] paperclip_add_routine_trigger — A5: nested strict rejection", () => {
-  it("A5: rejects unknown key inside config (nested strict)", async () => {
+describe("[stage-2] paperclip_add_routine_trigger — A5: strict rejection", () => {
+  it("A5: rejects unknown extra field (strict) for add_routine_trigger", async () => {
     const { fn, calls } = mockFetch(200, {});
     const client = new PaperclipClient(TEST_AUTH, fn);
     await assert.rejects(
       () =>
         addTrigger.handler(
-          { routineId: "r-1", type: "schedule", config: { cron: "* * * * *", unknownField: "x" } },
+          { routineId: "r-1", kind: "schedule", cronExpression: "* * * * *", unknownField: "x" },
           client
         ),
       (err: unknown) => {
@@ -464,14 +479,14 @@ describe("[stage-2] paperclip_add_routine_trigger — A5: nested strict rejectio
   });
 });
 
-describe("[stage-2] paperclip_update_routine_trigger — A4: cron + A5: nested strict rejection", () => {
+describe("[stage-2] paperclip_update_routine_trigger — A4: cron + A5: strict rejection", () => {
   it("A4: rejects invalid cron format", async () => {
     const { fn, calls } = mockFetch(200, {});
     const client = new PaperclipClient(TEST_AUTH, fn);
     await assert.rejects(
       () =>
         updateTrigger.handler(
-          { triggerId: "t-1", config: { cron: "* * * *" } }, // 4 fields, invalid
+          { triggerId: "t-1", cronExpression: "* * * *" }, // 4 fields, invalid
           client
         ),
       (err: unknown) => {
@@ -482,13 +497,13 @@ describe("[stage-2] paperclip_update_routine_trigger — A4: cron + A5: nested s
     assert.equal(calls.length, 0);
   });
 
-  it("A5: rejects unknown key inside config (nested strict)", async () => {
+  it("A5: rejects unknown extra field (strict) for update_routine_trigger", async () => {
     const { fn, calls } = mockFetch(200, {});
     const client = new PaperclipClient(TEST_AUTH, fn);
     await assert.rejects(
       () =>
         updateTrigger.handler(
-          { triggerId: "t-1", config: { cron: "* * * * *", unknownField: "x" } },
+          { triggerId: "t-1", cronExpression: "* * * * *", unknownField: "x" },
           client
         ),
       (err: unknown) => {

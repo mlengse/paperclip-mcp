@@ -51,9 +51,14 @@ const ListRoutineRunsInput = z
   })
   .strict();
 
-const RoutineIdMutateInput = z
+const RunRoutineInput = z
   .object({
     routineId: z.string().min(1).describe("Routine UUID"),
+    agentId: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("Agent UUID to run the routine (overrides routine's default assignee)"),
   })
   .strict();
 
@@ -65,8 +70,8 @@ const TriggerIdInput = z
 
 const CreateRoutineInput = z
   .object({
-    agentId: z.string().min(1).describe("Agent UUID to run the routine"),
-    name: z.string().min(1).describe("Routine name"),
+    assigneeAgentId: z.string().min(1).describe("Agent UUID to run the routine"),
+    title: z.string().min(1).describe("Routine title"),
     description: z.string().optional().describe("Routine description"),
     concurrencyPolicy: z
       .string()
@@ -82,7 +87,7 @@ const CreateRoutineInput = z
 const UpdateRoutineInput = z
   .object({
     routineId: z.string().min(1).describe("Routine UUID"),
-    name: z.string().optional().describe("New name"),
+    title: z.string().optional().describe("New title"),
     description: z.string().optional().describe("New description"),
     concurrencyPolicy: z.string().optional().describe("New concurrency policy"),
     catchUpPolicy: z.string().optional().describe("New catch-up policy"),
@@ -92,36 +97,31 @@ const UpdateRoutineInput = z
 const AddTriggerInput = z
   .object({
     routineId: z.string().min(1).describe("Routine UUID"),
-    type: RoutineTriggerTypeSchema.describe("Trigger type: schedule | webhook | api"),
-    config: z
-      .object({
-        cron: z
-          .string()
-          .regex(CRON_REGEX, "Must be a valid 5-field cron expression (e.g. '*/5 * * * *')")
-          .optional()
-          .describe("5-field cron expression for schedule triggers (e.g. '*/5 * * * *')"),
-      })
-      .strict()
+    kind: RoutineTriggerTypeSchema.describe("Trigger kind: schedule | webhook | api"),
+    cronExpression: z
+      .string()
+      .regex(CRON_REGEX, "Must be a valid 5-field cron expression (e.g. '*/5 * * * *')")
       .optional()
-      .describe("Trigger configuration"),
+      .describe(
+        "5-field cron expression for schedule triggers (e.g. '*/5 * * * *'). Required when kind is 'schedule'."
+      ),
+    timezone: z
+      .string()
+      .optional()
+      .describe("Timezone for schedule triggers (e.g. 'UTC', 'America/New_York'). Default: UTC"),
   })
   .strict();
 
 const UpdateTriggerInput = z
   .object({
     triggerId: z.string().min(1).describe("Routine trigger UUID"),
-    type: RoutineTriggerTypeSchema.optional().describe("New trigger type"),
-    config: z
-      .object({
-        cron: z
-          .string()
-          .regex(CRON_REGEX, "Must be a valid 5-field cron expression (e.g. '*/5 * * * *')")
-          .optional()
-          .describe("New 5-field cron expression for schedule triggers"),
-      })
-      .strict()
+    kind: RoutineTriggerTypeSchema.optional().describe("New trigger kind"),
+    cronExpression: z
+      .string()
+      .regex(CRON_REGEX, "Must be a valid 5-field cron expression (e.g. '*/5 * * * *')")
       .optional()
-      .describe("New trigger configuration"),
+      .describe("New 5-field cron expression for schedule triggers"),
+    timezone: z.string().optional().describe("New timezone for schedule triggers"),
   })
   .strict();
 
@@ -202,22 +202,23 @@ export const routineTools: ToolDefinition[] = [
       summary:
         "Create a new routine for an agent. Add triggers separately with paperclip_add_routine_trigger.",
       args: [
-        '- agentId: string — Agent UUID to run the routine (example: "agt_abc123")',
-        '- name: string — Routine name (example: "daily-standup")',
+        '- assigneeAgentId: string — Agent UUID to run the routine (example: "agt_abc123")',
+        '- title: string — Routine title (example: "daily-standup")',
         "- description: string (optional) — Routine description",
         "- concurrencyPolicy: string (optional) — allow | forbid | replace (default: forbid)",
         "- catchUpPolicy: string (optional) — skip | run_once for missed runs",
       ],
-      returns: "Returns the created routine object: id, name, agentId, triggers:[], createdAt.",
+      returns:
+        "Returns the created routine object: id, title, assigneeAgentId, triggers:[], createdAt.",
       examples: {
         useWhen: "setting up a scheduled workflow for an agent before adding a cron trigger",
         dontUseWhen:
           "you want to trigger immediately — use paperclip_run_routine after creating the routine",
       },
       errors: [
-        "- 400: validation failure → ensure name and agentId are non-empty",
+        "- 400: validation failure → ensure title and assigneeAgentId are non-empty",
         "- 401: authentication failed → check PAPERCLIP_API_KEY",
-        "- 404: agentId not found → verify with paperclip_list_agents",
+        "- 404: assigneeAgentId not found → verify with paperclip_list_agents",
       ],
     }),
     inputSchema: toJsonSchema(CreateRoutineInput),
@@ -225,7 +226,10 @@ export const routineTools: ToolDefinition[] = [
     async handler(args, client) {
       try {
         const input = validate(CreateRoutineInput, args);
-        const body: Record<string, unknown> = { agentId: input.agentId, name: input.name };
+        const body: Record<string, unknown> = {
+          assigneeAgentId: input.assigneeAgentId,
+          title: input.title,
+        };
         if (input.description !== undefined) body.description = input.description;
         if (input.concurrencyPolicy !== undefined) body.concurrencyPolicy = input.concurrencyPolicy;
         if (input.catchUpPolicy !== undefined) body.catchUpPolicy = input.catchUpPolicy;
@@ -245,10 +249,10 @@ export const routineTools: ToolDefinition[] = [
   {
     name: "paperclip_update_routine",
     description: composeDescription({
-      summary: "Update a routine's name, description, or scheduling policies.",
+      summary: "Update a routine's title, description, or scheduling policies.",
       args: [
         '- routineId: string — Routine UUID (example: "rtn_abc123")',
-        "- name: string (optional) — New name",
+        "- title: string (optional) — New title",
         "- description: string (optional) — New description",
         "- concurrencyPolicy: string (optional) — New concurrency policy",
         "- catchUpPolicy: string (optional) — New catch-up policy",
@@ -292,13 +296,15 @@ export const routineTools: ToolDefinition[] = [
     name: "paperclip_add_routine_trigger",
     description: composeDescription({
       summary:
-        "Add a trigger to a routine. Supports schedule (cron), webhook, and api trigger types.",
+        "Add a trigger to a routine. Supports schedule (cron), webhook, and api trigger kinds.",
       args: [
         '- routineId: string — Routine UUID (example: "rtn_abc123")',
-        "- type: string — Trigger type: schedule | webhook | api",
-        '- config.cron: string (optional) — 5-field cron expression, required for schedule triggers (example: "*/5 * * * *")',
+        "- kind: string — Trigger kind: schedule | webhook | api",
+        '- cronExpression: string (optional) — 5-field cron expression, required for schedule triggers (example: "*/5 * * * *")',
+        "- timezone: string (optional) — Timezone for schedule triggers (default: UTC)",
       ],
-      returns: "Returns the created trigger object: id, routineId, type, config, createdAt.",
+      returns:
+        "Returns the created trigger object: id, routineId, kind, cronExpression, createdAt.",
       examples: {
         useWhen: "scheduling a routine to run every 5 minutes after creating it",
         dontUseWhen:
@@ -314,9 +320,10 @@ export const routineTools: ToolDefinition[] = [
     annotations: { title: "Add routine trigger", destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { routineId, type, config } = validate(AddTriggerInput, args);
-        const body: Record<string, unknown> = { type };
-        if (config !== undefined) body.config = config;
+        const { routineId, kind, cronExpression, timezone } = validate(AddTriggerInput, args);
+        const body: Record<string, unknown> = { kind };
+        if (cronExpression !== undefined) body.cronExpression = cronExpression;
+        if (timezone !== undefined) body.timezone = timezone;
         const data = await client.post<unknown>(`/api/routines/${routineId}/triggers`, body);
         const hint = "Server response too large; the operation likely succeeded.";
         return {
@@ -330,13 +337,15 @@ export const routineTools: ToolDefinition[] = [
   {
     name: "paperclip_update_routine_trigger",
     description: composeDescription({
-      summary: "Update an existing routine trigger's type or cron schedule.",
+      summary: "Update an existing routine trigger's kind or cron schedule.",
       args: [
         '- triggerId: string — Routine trigger UUID (example: "trg_abc123")',
-        "- type: string (optional) — New trigger type: schedule | webhook | api",
-        '- config.cron: string (optional) — New 5-field cron expression (example: "0 9 * * 1-5")',
+        "- kind: string (optional) — New trigger kind: schedule | webhook | api",
+        '- cronExpression: string (optional) — New 5-field cron expression (example: "0 9 * * 1-5")',
+        "- timezone: string (optional) — New timezone for schedule triggers",
       ],
-      returns: "Returns the updated trigger object: id, routineId, type, config, updatedAt.",
+      returns:
+        "Returns the updated trigger object: id, routineId, kind, cronExpression, updatedAt.",
       examples: {
         useWhen: "changing a routine from every 5 minutes to daily at 9 AM on weekdays",
         dontUseWhen: "you need to add a new trigger — use paperclip_add_routine_trigger instead",
@@ -358,8 +367,9 @@ export const routineTools: ToolDefinition[] = [
       try {
         const { triggerId, ...rest } = validate(UpdateTriggerInput, args);
         const body: Record<string, unknown> = {};
-        if (rest.type !== undefined) body.type = rest.type;
-        if (rest.config !== undefined) body.config = rest.config;
+        if (rest.kind !== undefined) body.kind = rest.kind;
+        if (rest.cronExpression !== undefined) body.cronExpression = rest.cronExpression;
+        if (rest.timezone !== undefined) body.timezone = rest.timezone;
         const data = await client.patch<unknown>(`/api/routine-triggers/${triggerId}`, body);
         const hint = "Server response too large; the operation likely succeeded.";
         return {
@@ -414,7 +424,10 @@ export const routineTools: ToolDefinition[] = [
     name: "paperclip_run_routine",
     description: composeDescription({
       summary: "Manually trigger a routine run immediately, bypassing its schedule.",
-      args: ['- routineId: string — Routine UUID (example: "rtn_abc123")'],
+      args: [
+        '- routineId: string — Routine UUID (example: "rtn_abc123")',
+        "- agentId: string (optional) — Agent UUID to run the routine (overrides routine's default assignee)",
+      ],
       returns: "Returns the created run object: id, routineId, status, startedAt.",
       examples: {
         useWhen: "testing a routine on demand before its next scheduled fire",
@@ -426,12 +439,14 @@ export const routineTools: ToolDefinition[] = [
         "- 409: concurrency policy forbids concurrent run → wait for the active run to finish",
       ],
     }),
-    inputSchema: toJsonSchema(RoutineIdMutateInput),
+    inputSchema: toJsonSchema(RunRoutineInput),
     annotations: { title: "Run routine now", destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { routineId } = validate(RoutineIdMutateInput, args);
-        const data = await client.post<unknown>(`/api/routines/${routineId}/run`);
+        const { routineId, agentId } = validate(RunRoutineInput, args);
+        const body: Record<string, unknown> = {};
+        if (agentId !== undefined) body.agentId = agentId;
+        const data = await client.post<unknown>(`/api/routines/${routineId}/run`, body);
         const hint = "Server response too large; the operation likely succeeded.";
         return {
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
