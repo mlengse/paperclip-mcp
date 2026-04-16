@@ -4,6 +4,7 @@ import { McpError } from "@modelcontextprotocol/sdk/types.js";
 import { PaperclipClient } from "../client.js";
 import { goalTools } from "./goals.js";
 import { goalFixture, largeGoalList } from "../test/helpers/fixtures.js";
+import { assertPaginationEnvelope } from "../test/helpers/assert-result.js";
 
 const TEST_AUTH = {
   apiKey: "test-jwt",
@@ -261,15 +262,7 @@ describe("[stage-6] paperclip_list_goals — pagination envelope", () => {
     const { fn } = mockFetch(200, items);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await listGoals.handler({ response_format: "json" }, client);
-    assert.ok(!result.isError);
-    const data = JSON.parse(result.content[0]!.text);
-    assert.equal(data.total, 3);
-    assert.equal(data.count, 3);
-    assert.equal(data.limit, 50);
-    assert.equal(data.offset, 0);
-    assert.equal(data.has_more, false);
-    assert.equal(data.next_offset, undefined);
-    assert.ok(Array.isArray(data.items));
+    assertPaginationEnvelope(result, { total: 3, limit: 50, offset: 0, count: 3 });
   });
 
   it("E2: explicit limit=10, offset=20 reflected in envelope", async () => {

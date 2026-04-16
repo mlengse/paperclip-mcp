@@ -4,6 +4,7 @@ import { McpError } from "@modelcontextprotocol/sdk/types.js";
 import { PaperclipClient } from "../client.js";
 import { issueTools } from "./issues.js";
 import { largeIssueList, issueFixture } from "../test/helpers/fixtures.js";
+import { assertPaginationEnvelope } from "../test/helpers/assert-result.js";
 
 const TEST_AUTH = {
   apiKey: "test-jwt",
@@ -130,6 +131,16 @@ describe("paperclip_list_issues", () => {
         assert.ok(err instanceof McpError);
         return true;
       }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("[stage-6] rejects offset: -1 (boundary)", async () => {
+    const { fn, calls } = mockFetch(200, []);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => listIssues.handler({ offset: -1 }, client),
+      (err: unknown) => err instanceof McpError
     );
     assert.equal(calls.length, 0);
   });
@@ -1016,7 +1027,7 @@ describe("[stage-5] paperclip_list_issues — truncation + format", () => {
     const big = largeIssueList(500);
     const { fn } = mockFetch(200, big);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listIssues.handler({ response_format: "json" }, client);
+    const result = await listIssues.handler({ response_format: "json", limit: 100 }, client);
     assert.equal(result.isError, undefined);
     assert.ok(result.content[0]!.text.length < 26_000);
     assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
@@ -1129,14 +1140,7 @@ describe("[stage-6] paperclip_list_issues — pagination envelope", () => {
     const { fn } = mockFetch(200, items);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await listIssues.handler({ response_format: "json" }, client);
-    assert.ok(!result.isError);
-    const data = JSON.parse(result.content[0]!.text);
-    assert.equal(data.total, 3);
-    assert.equal(data.count, 3);
-    assert.equal(data.limit, 50);
-    assert.equal(data.offset, 0);
-    assert.equal(data.has_more, false);
-    assert.ok(Array.isArray(data.items));
+    assertPaginationEnvelope(result, { total: 3, limit: 50, offset: 0, count: 3 });
   });
 
   it("E2: explicit limit=5, offset=10 reflected in envelope", async () => {

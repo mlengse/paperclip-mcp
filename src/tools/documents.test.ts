@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { McpError } from "@modelcontextprotocol/sdk/types.js";
 import { PaperclipClient } from "../client.js";
 import { documentTools } from "./documents.js";
+import { assertPaginationEnvelope } from "../test/helpers/assert-result.js";
 
 const TEST_AUTH = {
   apiKey: "test-jwt",
@@ -258,14 +259,7 @@ describe("[stage-6] paperclip_list_documents — pagination envelope", () => {
       { issueId: "PAP-1", response_format: "json" },
       client
     );
-    assert.ok(!result.isError);
-    const data = JSON.parse(result.content[0]!.text);
-    assert.equal(data.total, 2);
-    assert.equal(data.count, 2);
-    assert.equal(data.limit, 50);
-    assert.equal(data.offset, 0);
-    assert.equal(data.has_more, false);
-    assert.ok(Array.isArray(data.items));
+    assertPaginationEnvelope(result, { total: 2, limit: 50, offset: 0, count: 2 });
   });
 
   it("E3: offset past end returns empty items with correct total", async () => {

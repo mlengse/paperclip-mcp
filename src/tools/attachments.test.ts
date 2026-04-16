@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { McpError } from "@modelcontextprotocol/sdk/types.js";
 import { PaperclipClient } from "../client.js";
 import { attachmentTools } from "./attachments.js";
+import { assertPaginationEnvelope } from "../test/helpers/assert-result.js";
 
 const TEST_AUTH = {
   apiKey: "test-jwt",
@@ -208,14 +209,7 @@ describe("[stage-6] paperclip_list_attachments — pagination envelope", () => {
       { issueId: "PAP-1", response_format: "json" },
       client
     );
-    assert.ok(!result.isError);
-    const data = JSON.parse(result.content[0]!.text);
-    assert.equal(data.total, 1);
-    assert.equal(data.count, 1);
-    assert.equal(data.limit, 50);
-    assert.equal(data.offset, 0);
-    assert.equal(data.has_more, false);
-    assert.ok(Array.isArray(data.items));
+    assertPaginationEnvelope(result, { total: 1, limit: 50, offset: 0, count: 1 });
   });
 
   it("E3: offset past end returns empty items", async () => {
