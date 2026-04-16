@@ -9,13 +9,19 @@ import {
 } from "./validation.js";
 import { ResponseFormatSchema, formatJson, formatGenericList, applyCharLimit } from "./format.js";
 
-const ListDocumentsInput = IssueIdSchema.extend({ response_format: ResponseFormatSchema }).strict();
+const ListDocumentsInput = IssueIdSchema.extend({
+  response_format: ResponseFormatSchema.optional()
+    .default("markdown")
+    .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
+}).strict();
 
 const GetDocumentInput = z
   .object({
     issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-22)"),
     key: z.string().min(1).describe("Document key (e.g. `plan`)"),
-    response_format: ResponseFormatSchema,
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
   })
   .strict();
 
@@ -44,7 +50,9 @@ const GetDocumentRevisionsInput = z
   .object({
     issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-22)"),
     key: z.string().min(1).describe("Document key (e.g. `plan`)"),
-    response_format: ResponseFormatSchema,
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
   })
   .strict();
 

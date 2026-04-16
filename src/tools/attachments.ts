@@ -12,7 +12,9 @@ import {
 import { ResponseFormatSchema, formatJson, formatGenericList, applyCharLimit } from "./format.js";
 
 const ListAttachmentsInput = IssueIdSchema.extend({
-  response_format: ResponseFormatSchema,
+  response_format: ResponseFormatSchema.optional()
+    .default("markdown")
+    .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
 }).strict();
 
 const UploadAttachmentInput = z
@@ -39,7 +41,9 @@ const AttachmentIdInput = z
 const DownloadAttachmentInput = z
   .object({
     attachmentId: z.string().min(1).describe("Attachment UUID"),
-    response_format: ResponseFormatSchema,
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
   })
   .strict();
 

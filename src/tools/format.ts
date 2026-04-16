@@ -6,7 +6,7 @@ import { CHARACTER_LIMIT } from "../constants.js";
 // ---------------------------------------------------------------------------
 export type ResponseFormat = "markdown" | "json";
 
-export const ResponseFormatSchema = z.enum(["markdown", "json"]).optional().default("markdown");
+export const ResponseFormatSchema = z.enum(["markdown", "json"]);
 
 // ---------------------------------------------------------------------------
 // JSON formatter
@@ -104,7 +104,7 @@ export function formatIssueList(issues: unknown, envelope?: IssueEnvelope): stri
     const { total, limit, offset } = envelope;
     const parts: string[] = [];
     if (total !== undefined) parts.push(`total: ${total}`);
-    if (limit !== undefined) parts.push(`showing ${list.length}`);
+    if (limit !== undefined) parts.push(`showing ${list.length} of ${limit ?? list.length}`);
     if (offset !== undefined) parts.push(`at offset ${offset}`);
     if (parts.length > 0) header += ` (${parts.join(", ")})`;
   } else {
@@ -157,7 +157,7 @@ export function formatDashboard(data: unknown): string {
   // Projects section — be defensive
   const rawProjects = d.projects;
   const projects = Array.isArray(rawProjects) ? rawProjects : [];
-  sections.push(`\n## Projects (${projects.length})`);
+  sections.push(`## Projects (${projects.length})`);
   if (projects.length === 0) {
     sections.push("_No projects._");
   } else {
@@ -173,7 +173,7 @@ export function formatDashboard(data: unknown): string {
       ? rawByStatus
       : {};
   const statusKeys = Object.keys(byStatus);
-  sections.push(`\n## Issues by Status`);
+  sections.push(`## Issues by Status`);
   if (statusKeys.length === 0) {
     sections.push("_No issues._");
   } else {
@@ -183,7 +183,7 @@ export function formatDashboard(data: unknown): string {
   // Agent workload — be defensive
   const rawWorkload = d.agentWorkload;
   const workload = Array.isArray(rawWorkload) ? rawWorkload : [];
-  sections.push(`\n## Agent Workload`);
+  sections.push(`## Agent Workload`);
   if (workload.length === 0) {
     sections.push("_No workload data._");
   } else {
@@ -194,7 +194,7 @@ export function formatDashboard(data: unknown): string {
     );
   }
 
-  return sections.join("\n");
+  return sections.join("\n\n");
 }
 
 // ---------------------------------------------------------------------------
