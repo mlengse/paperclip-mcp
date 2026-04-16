@@ -129,7 +129,8 @@ export const approvalTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_approve",
-    description: "Approve an approval request. Run ID header is injected automatically.",
+    description:
+      "⚠ Board-only: Approve an approval request. Run ID header is injected automatically.",
     inputSchema: toJsonSchema(ApprovalIdInput),
     annotations: { title: "Approve approval request", destructiveHint: true, openWorldHint: false },
     async handler(args, client) {
@@ -144,7 +145,8 @@ export const approvalTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_reject",
-    description: "Reject an approval request. Run ID header is injected automatically.",
+    description:
+      "⚠ Board-only: Reject an approval request. Run ID header is injected automatically.",
     inputSchema: toJsonSchema(RejectInput),
     annotations: { title: "Reject approval request", destructiveHint: true, openWorldHint: false },
     async handler(args, client) {
@@ -162,7 +164,7 @@ export const approvalTools: ToolDefinition[] = [
   {
     name: "paperclip_request_revision",
     description:
-      "Request a revision on a pending approval. Run ID header is injected automatically.",
+      "⚠ Board-only: Request a revision on a pending approval. Run ID header is injected automatically.",
     inputSchema: toJsonSchema(RequestRevisionInput),
     annotations: {
       title: "Request revision on approval",
