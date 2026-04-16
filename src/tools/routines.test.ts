@@ -361,3 +361,70 @@ describe("paperclip_list_routine_runs", () => {
     assert.ok(result.content[0]!.text.includes("404"));
   });
 });
+
+// Stage 2 TDD: A4 (enum rejection) + A5 (.strict() rejects unknown fields)
+describe("[stage-2] paperclip_add_routine_trigger — A4: RoutineTriggerTypeSchema + A5: strict", () => {
+  it("A4: rejects invalid trigger type enum value", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => addTrigger.handler({ routineId: "r-1", type: "cron" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A4: accepts valid trigger type schedule", async () => {
+    const created = { id: "trig-1", type: "schedule" };
+    const { fn } = mockFetch(200, created);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await addTrigger.handler(
+      { routineId: "r-1", type: "schedule", config: { cron: "0 * * * *" } },
+      client
+    );
+    assert.equal(result.isError, undefined);
+  });
+
+  it("A5: rejects unknown extra field (strict) for add_routine_trigger", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => addTrigger.handler({ routineId: "r-1", type: "api", unknownField: "oops" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});
+
+describe("[stage-2] paperclip_add_routine_trigger — cron format validator", () => {
+  it("rejects invalid cron expression (too few fields)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        addTrigger.handler({ routineId: "r-1", type: "schedule", config: { cron: "*/5" } }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("accepts valid 5-field cron expression", async () => {
+    const created = { id: "trig-1" };
+    const { fn } = mockFetch(200, created);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await addTrigger.handler(
+      { routineId: "r-1", type: "schedule", config: { cron: "*/5 * * * *" } },
+      client
+    );
+    assert.equal(result.isError, undefined);
+  });
+});

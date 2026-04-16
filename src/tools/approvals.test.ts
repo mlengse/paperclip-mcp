@@ -433,3 +433,44 @@ describe("paperclip_create_agent_hire", () => {
     assert.ok(result.content[0]!.text.includes("400"));
   });
 });
+
+// Stage 2 TDD: A4 (enum rejection) + A5 (.strict() rejects unknown fields)
+describe("[stage-2] paperclip_create_approval — A4: ApprovalTypeSchema + A5: strict", () => {
+  it("A4: rejects invalid approval type enum value", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => createApproval.handler({ type: "invalid_type", payload: { foo: "bar" } }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A4: accepts valid approval type hire_agent", async () => {
+    const created = { id: "appr-1", type: "hire_agent" };
+    const { fn } = mockFetch(200, created);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await createApproval.handler(
+      { type: "hire_agent", payload: { name: "Alice" } },
+      client
+    );
+    assert.equal(result.isError, undefined);
+  });
+
+  it("A5: rejects unknown extra field (strict) for create_approval", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        createApproval.handler({ type: "hire_agent", payload: {}, unknownField: "oops" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});

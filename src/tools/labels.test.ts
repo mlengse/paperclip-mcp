@@ -109,3 +109,53 @@ describe("paperclip_create_label", () => {
     assert.ok(result.content[0]!.text.includes("400"));
   });
 });
+
+// Stage 2 TDD: hex color format validation + A5 (.strict() rejects unknown fields)
+describe("[stage-2] paperclip_create_label — hex color regex + A5: strict", () => {
+  it("A4: rejects invalid hex color (no leading #)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => createLabel.handler({ name: "bug", color: "FF0000" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A4: rejects invalid hex color (3-digit shorthand)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => createLabel.handler({ name: "bug", color: "#F00" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A4: accepts valid 6-digit hex color", async () => {
+    const created = { id: "label-1", name: "bug", color: "#ff0000" };
+    const { fn } = mockFetch(200, created);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await createLabel.handler({ name: "bug", color: "#ff0000" }, client);
+    assert.equal(result.isError, undefined);
+  });
+
+  it("A5: rejects unknown extra field (strict) for create_label", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => createLabel.handler({ name: "bug", unknownField: "oops" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});

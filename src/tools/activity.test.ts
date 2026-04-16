@@ -207,3 +207,55 @@ describe("paperclip_report_cost_event", () => {
     assert.equal(calls.length, 0);
   });
 });
+
+// Stage 2 TDD: occurredAt ISO 8601 format + A5 (.strict() rejects unknown fields)
+describe("[stage-2] paperclip_report_cost_event — occurredAt ISO 8601 + A5: strict", () => {
+  const validBase = {
+    agentId: "agent-1",
+    provider: "anthropic",
+    model: "claude-sonnet-4-6",
+    inputTokens: 1000,
+    outputTokens: 200,
+    costCents: 5,
+  };
+
+  it("A4: rejects invalid ISO 8601 date string for occurredAt", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => reportCostEvent.handler({ ...validBase, occurredAt: "not-a-date" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A4: accepts valid ISO 8601 datetime for occurredAt", async () => {
+    const { fn } = mockFetch(200, { id: "cost-1" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await reportCostEvent.handler(
+      { ...validBase, occurredAt: "2026-04-16T12:00:00.000Z" },
+      client
+    );
+    assert.equal(result.isError, undefined);
+  });
+
+  it("A5: rejects unknown extra field (strict) for report_cost_event", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        reportCostEvent.handler(
+          { ...validBase, occurredAt: "2026-04-16T12:00:00.000Z", unknownField: "oops" },
+          client
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});

@@ -750,3 +750,62 @@ describe("paperclip_update_agent (extended fields)", () => {
     assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
   });
 });
+
+// Stage 2 TDD: A4 (ISO 8601 format) + A5 (.strict() rejects unknown fields)
+describe("[stage-2] paperclip_create_agent_key — expiresAt ISO 8601 + A5: strict", () => {
+  it("A4: rejects invalid ISO 8601 date string for expiresAt", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => createAgentKey.handler({ agentId: "agent-1", expiresAt: "not-a-date" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A4: accepts valid ISO 8601 datetime string for expiresAt", async () => {
+    const created = { id: "key-1" };
+    const { fn } = mockFetch(200, created);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await createAgentKey.handler(
+      { agentId: "agent-1", expiresAt: "2027-01-01T00:00:00.000Z" },
+      client
+    );
+    assert.equal(result.isError, undefined);
+  });
+
+  it("A5: rejects unknown extra field (strict) for create_agent_key", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => createAgentKey.handler({ agentId: "agent-1", unknownField: "oops" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});
+
+describe("[stage-2] paperclip_sync_agent_skills — A5: strict", () => {
+  it("A5: rejects unknown extra field (strict) for sync_agent_skills", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        syncAgentSkills.handler(
+          { agentId: "agent-1", desiredSkills: ["paperclip"], unknownField: "oops" },
+          client
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});
