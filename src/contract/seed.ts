@@ -9,8 +9,12 @@
  *   - One issue used as the primary fixture (title: "CONTRACT-TEST-ISSUE")
  *   - One approval used as the primary approval fixture
  *
- * Known project / goal IDs from the live server are used directly so the
- * seed is idempotent with respect to top-level resources.
+ * Required env vars (in addition to those in harness.ts):
+ *   PAPERCLIP_CONTRACT_PROJECT_ID — UUID of the project to attach fixture issues to
+ *   PAPERCLIP_CONTRACT_GOAL_ID    — UUID of the goal to attach fixture issues to
+ *
+ * These are only read when PAPERCLIP_CONTRACT_TESTS=1 is set; missing values
+ * produce a clear error at test startup rather than a cryptic API 404.
  */
 
 import { buildContractAuth } from "./harness.js";
@@ -36,13 +40,18 @@ export interface ContractFixtures {
 const FIXTURE_TITLE_1 = "CONTRACT-TEST-ISSUE-1";
 const FIXTURE_TITLE_2 = "CONTRACT-TEST-ISSUE-2";
 
+function requireContractEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`Contract tests require ${name} to be set`);
+  return value;
+}
+
 export async function seedFixtures(): Promise<ContractFixtures> {
   const auth = buildContractAuth();
   const client = new PaperclipClient(auth);
 
-  // Stable IDs from the live server (verified at harness authoring time).
-  const projectId = "b368fc4b-b137-42c6-8038-a699cb32f609";
-  const goalId = "241f9766-e253-48a8-84cd-2cf4c2572c9b";
+  const projectId = requireContractEnv("PAPERCLIP_CONTRACT_PROJECT_ID");
+  const goalId = requireContractEnv("PAPERCLIP_CONTRACT_GOAL_ID");
   const agentId = auth.agentId; // QA agent — always present
 
   // Create the primary fixture issue.
