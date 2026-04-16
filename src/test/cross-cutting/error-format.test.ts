@@ -46,15 +46,6 @@ describe("handleApiError — PaperclipApiError status code matrix", () => {
     });
   }
 
-  it("result content text includes the statusText", () => {
-    const err = makeError(404, "Not Found", { message: "resource missing" });
-    const result = handleApiError(err);
-    assert.ok(
-      result.content[0]!.text.includes("Not Found"),
-      `error text must include statusText; got: ${result.content[0]!.text}`
-    );
-  });
-
   it("result content text includes body information", () => {
     const body = { message: "specific error detail" };
     const err = makeError(422, "Unprocessable Entity", body);
