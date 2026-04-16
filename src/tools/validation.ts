@@ -7,9 +7,15 @@ import type { ToolResult } from "./index.js";
  * Convert a Zod schema to a JSON Schema object for use in MCP tool definitions.
  * Uses Zod 4's built-in toJSONSchema() which produces a standards-compliant
  * JSON Schema 2020-12 object with type, properties, and required.
+ *
+ * The $schema key is stripped: strict MCP clients may reject or mishandle it,
+ * and MCP tool inputSchema fields are implicitly JSON Schema objects without
+ * requiring an explicit $schema declaration.
  */
 export function toJsonSchema(schema: z.ZodTypeAny): Record<string, unknown> {
-  return schema.toJSONSchema() as Record<string, unknown>;
+  const out = schema.toJSONSchema() as Record<string, unknown>;
+  delete out["$schema"];
+  return out;
 }
 
 export function validate<T>(schema: z.ZodType<T>, args: unknown): T {

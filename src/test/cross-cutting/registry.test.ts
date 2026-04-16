@@ -27,6 +27,13 @@ const ALLOWED_ANNOTATION_KEYS = new Set<string>([
 ]);
 
 describe("ALL_TOOLS registry — structural invariants", () => {
+  it("ALL_TOOLS is not empty (guards against filter-based false positives)", () => {
+    assert.ok(
+      ALL_TOOLS.length > 0,
+      "ALL_TOOLS must be non-empty for filter-based invariants to be meaningful"
+    );
+  });
+
   it("has no duplicate tool names", () => {
     const names = ALL_TOOLS.map((t) => t.name);
     const seen = new Set<string>();
@@ -119,6 +126,17 @@ describe("ALL_TOOLS registry — JSON Schema shape", () => {
       bad.map((t) => t.name),
       [],
       "Tool inputSchema must have a 'properties' object (Zod→JSON Schema output)"
+    );
+  });
+
+  it("no tool inputSchema contains a $schema key", () => {
+    // Strict MCP clients may reject or mishandle the $schema declaration.
+    // toJsonSchema() in validation.ts strips it before returning.
+    const bad = ALL_TOOLS.filter((t) => "$schema" in (t.inputSchema as Record<string, unknown>));
+    assert.deepEqual(
+      bad.map((t) => t.name),
+      [],
+      "Tool inputSchema must not contain $schema (stripped by toJsonSchema())"
     );
   });
 });
