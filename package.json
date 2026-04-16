@@ -1,6 +1,6 @@
 {
   "name": "paperclip-mcp",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Paperclip MCP server for Claude Code agents",
   "type": "module",
   "main": "dist/index.js",
@@ -29,7 +29,8 @@
   "homepage": "https://github.com/bruhsb/paperclip-mcp#readme",
   "scripts": {
     "build": "tsc && shx chmod +x dist/*.js",
-    "prepare": "npm run build && ([ -f node_modules/.bin/husky ] && husky || true)",
+    "prepare": "npm run build && ([ -f node_modules/.bin/husky ] && husky || true) && bash scripts/check-no-raw-inputschema.sh",
+    "check:no-raw-inputschema": "bash scripts/check-no-raw-inputschema.sh",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "lint": "eslint src",
@@ -37,6 +38,7 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx/esm --test 'src/**/*.test.ts'",
+    "test:coverage": "node --import tsx/esm --experimental-test-coverage --test-coverage-lines=80 --test-coverage-branches=70 --test 'src/**/*.test.ts'",
     "docs:check": "find docs -name '*.md' | xargs markdown-link-check -c .markdown-link-check.json"
   },
   "dependencies": {
