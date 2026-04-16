@@ -23,6 +23,7 @@ import { companyTools } from "./company.js";
 import { pluginTools } from "./plugins.js";
 import { secretTools } from "./secrets.js";
 import { runTools } from "./runs.js";
+import { feedbackTools } from "./feedback.js";
 export { validate as validateInput } from "./validation.js";
 
 export type ToolResult = {
@@ -76,6 +77,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
   ...pluginTools,
   ...secretTools,
   ...runTools,
+  ...feedbackTools,
 ];
 
 export function registerAllTools(server: Server): void {
