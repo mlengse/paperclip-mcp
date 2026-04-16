@@ -71,6 +71,21 @@ See **[`docs/guides/mcp-tool-conventions.md`](docs/guides/mcp-tool-conventions.m
 
 See [`docs/ci-strategy.md`](docs/ci-strategy.md) for rationale, trigger matrix, and how to extend CI steps.
 
+## Workflow Skills
+
+Project-local skills that codify this repo's git/PR/release rules. Invoke via the trigger phrase or `/skill-name`.
+
+| Trigger phrase                | Skill               |
+| ----------------------------- | ------------------- |
+| `commit this`                 | `/commit`           |
+| `open a PR` / `create a PR`   | `/create-pr`        |
+| `squash merge PR #N`          | `/squash-merge-pr`  |
+| `run quality gate`            | `/quality-gate`     |
+| `why didn't the release fire` | `/diagnose-release` |
+| `what triggers a major bump`  | `/semver-strategy`  |
+
+Skills live under `.claude/skills/<name>/SKILL.md` and override equivalent generic plugin skills with this repo's specific rules (conventional-commits scopes, PAP-107 branch guard, `BREAKING CHANGE:` footer requirement, etc.).
+
 ## Paperclip Agent Workflow
 
 > **Scope note:** This section is for Paperclip-orchestrated agents running inside the Paperclip control plane. Human developers and general open-source contributors can skip everything below — see [`CONTRIBUTING.md`](CONTRIBUTING.md) instead.
@@ -108,7 +123,7 @@ Scrum Master (next heartbeat) → catches orphaned in_review → @QA · clears s
 
 6. **Board comment precedence check.** Immediately after a successful checkout, fetch the last 5 comments on the issue. If any were authored by `local-board` in the last 24h with blocking language (`blocked`, `cancelled`, `parked`, `hold`, `do not promote`, `needs board decision`, `board action`), release the checkout and exit with a deferral comment. The board's state takes precedence over a Scrum Master assignment.
 7. Do the work on a feature branch (`{agent-urlkey}/{PAP-XX}`). Follow conventions above.
-8. Commit all changes to the branch. **Verify `git rev-parse --abbrev-ref HEAD` after each commit** to catch any husky/lint-staged branch drift (PAP-107 regression guard). Push the branch. **Never merge to `develop` — QA is the sole merge owner.**
+8. Commit all changes to the branch. **Verify `git rev-parse --abbrev-ref HEAD` after each commit** to catch any husky/lint-staged branch drift (PAP-107 regression guard). Push the branch. **Never merge to `develop` — QA is the sole merge owner.** (run `/commit`)
 9. Set `in_review` + post `@QA — ready for review on PAP-XX. Changes: {summary}`.
 10. **Exit cleanly.** Your run is done. QA will merge on APPROVE; you will only be re-woken if QA posts `@<your-role> — changes needed on PAP-XX` (REQUEST_CHANGES flow) or escalates to CTO. If you are woken on an issue already `done` or already merged, exit without action.
 
@@ -118,7 +133,7 @@ Steps 1-4 are the same as the IC Protocol (identity, wake reason, Label Bootstra
 
 - **Step 5** — `paperclip_checkout_issue` with `expectedStatuses: ["in_review"]` for code review, or `["todo"]` for test-writing tasks.
 - **Step 6** — Board comment precedence check (same rule as IC).
-- **Step 7** — Review the feature branch diff, run the full quality gate (`npm run test && npm run lint && npm run typecheck && npm run format:check && npm run docs:check` — all required).
+- **Step 7** — Review the feature branch diff, run the full quality gate (`npm run test && npm run lint && npm run typecheck && npm run format:check && npm run docs:check` — all required). (or run `/quality-gate` for guided execution)
 - **Step 8 — Decision:**
   - **APPROVE** → execute the merge sequence: `git checkout develop && git pull`, `git merge --no-ff <feature-branch>`, re-run quality gate on merged develop, `git push origin develop`, delete local + remote feature branch, `paperclip_update_issue` to `done` with a structured closing comment.
   - **REQUEST_CHANGES** → set issue to `todo`, post `@<role> — changes needed on PAP-XX:\n- {bullet list}` matching the issue's `assigneeAgentId`. The feature branch stays open for the IC agent to push fixes.
