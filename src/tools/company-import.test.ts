@@ -130,7 +130,7 @@ describe("paperclip_export_company", () => {
     const { fn, calls } = mockFetch(200, exported);
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await exportCompany.handler(
-      { companyId: "company-1", include: includeAll, response_format: "json" },
+      { companyId: "company-1", include: includeAll },
       client
     );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/export");
@@ -279,7 +279,6 @@ describe("paperclip_preview_company_import", () => {
         companyId: "company-1",
         source: inlineSource,
         include: includeAll,
-        response_format: "json",
       },
       client
     );
@@ -478,7 +477,6 @@ describe("paperclip_apply_company_import", () => {
         companyId: "company-1",
         source: inlineSource,
         include: includeAll,
-        response_format: "json",
       },
       client
     );

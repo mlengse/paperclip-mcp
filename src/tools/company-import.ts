@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
 import { validate, toJsonSchema, handleApiError, composeDescription } from "./validation.js";
-import { ResponseFormatSchema, formatJson, applyCharLimit } from "./format.js";
+import { formatJson, applyCharLimit } from "./format.js";
 
 // ---------------------------------------------------------------------------
 // Shared sub-schemas
@@ -74,9 +74,6 @@ const ExportCompanyInput = z
       .boolean()
       .optional()
       .describe("When true, expand transitive skill references into the export bundle"),
-    response_format: ResponseFormatSchema.optional()
-      .default("markdown")
-      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
   })
   .strict();
 
@@ -105,9 +102,6 @@ const PreviewCompanyImportInput = z
       .describe(
         "Subset of file paths from the bundle to process (omit for all files in the bundle)"
       ),
-    response_format: ResponseFormatSchema.optional()
-      .default("markdown")
-      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
   })
   .strict();
 
@@ -140,9 +134,6 @@ const ApplyCompanyImportInput = z
       .describe(
         "Adapter-specific overrides map from the preview step (key: adapter name, value: override config)"
       ),
-    response_format: ResponseFormatSchema.optional()
-      .default("markdown")
-      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
   })
   .strict();
 
@@ -164,10 +155,9 @@ export const companyImportTools: ToolDefinition[] = [
         "- issues: string[] (optional) — Filter to specific issue IDs",
         "- projectIssues: string[] (optional) — Project IDs whose issues to include",
         "- expandReferencedSkills: boolean (optional) — Expand transitive skill references",
-        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
       ],
       returns:
-        "Export bundle: { rootPath, manifest, files (map of path → content), paperclipExtensionPath, warnings }. Files can be very large — response is truncated at 25k chars.",
+        "Export bundle (JSON only): { rootPath, manifest, files (map of path → content), paperclipExtensionPath, warnings }. Files can be very large — response is truncated at 25k chars.",
       examples: {
         useWhen: "creating a portable snapshot of a company configuration for backup or migration",
         dontUseWhen:
@@ -223,10 +213,9 @@ export const companyImportTools: ToolDefinition[] = [
         "- agents: 'all' | string[] (optional) — Which agents to import (default: 'all')",
         "- collisionStrategy: 'rename' | 'skip' | 'replace' (optional) — Collision handling (default: rename)",
         "- selectedFiles: string[] (optional) — Subset of bundle files to process",
-        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
       ],
       returns:
-        "Preview report: { source, target, agents, projects, issues, skills, warnings, adapterOverrides }. Non-mutating — no changes are applied. Note: openWorldHint is false; if source.type is 'github', the API fetches external content.",
+        "Preview report (JSON only): { source, target, agents, projects, issues, skills, warnings, adapterOverrides }. Non-mutating — no changes are applied. Note: openWorldHint is false; if source.type is 'github', the API fetches external content.",
       examples: {
         useWhen:
           "inspecting what an import would change before committing; also generates adapterOverrides for the apply step",
@@ -287,10 +276,9 @@ export const companyImportTools: ToolDefinition[] = [
         "- collisionStrategy: 'rename' | 'skip' | 'replace' (optional) — Collision handling (default: rename)",
         "- selectedFiles: string[] (optional) — Subset of bundle files to apply",
         "- adapterOverrides: Record<string,unknown> (optional) — Adapter overrides from preview step",
-        "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
       ],
       returns:
-        "Import result counts: { insertedAgents, insertedProjects, insertedIssues, insertedSkills, warnings }. This operation is destructive — it writes new records into the company.",
+        "Import result counts (JSON only): { insertedAgents, insertedProjects, insertedIssues, insertedSkills, warnings }. This operation is destructive — it writes new records into the company.",
       examples: {
         useWhen:
           "applying a validated import bundle; run paperclip_preview_company_import first to inspect changes",
