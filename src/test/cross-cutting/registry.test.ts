@@ -94,15 +94,16 @@ describe("ALL_TOOLS registry — structural invariants", () => {
     );
   });
 
-  it("tool count is within expected bounds (≥85, ≤110)", () => {
+  it("tool count is within expected bounds (≥91, ≤120)", () => {
     // Lower bound guards against accidental deletions.
     // Upper bound guards against a Stage 8 typo duplicating a module.
     // Stage 8b adds 6 tools (delete_workspace + 5 company tools): 78 → 84.
     // Stage 8c adds 1 tool (create_agent): 84 → 85.
-    assert.ok(ALL_TOOLS.length >= 85, `Expected at least 85 tools, got ${ALL_TOOLS.length}`);
+    // Stage 8d adds 6 tools (plugins module): 85 → 91.
+    assert.ok(ALL_TOOLS.length >= 91, `Expected at least 91 tools, got ${ALL_TOOLS.length}`);
     assert.ok(
-      ALL_TOOLS.length <= 110,
-      `Expected at most 110 tools, got ${ALL_TOOLS.length} — Stage 8 should land 103 total`
+      ALL_TOOLS.length <= 120,
+      `Expected at most 120 tools, got ${ALL_TOOLS.length} — Stage 8 should land 103 total`
     );
   });
 });
@@ -291,6 +292,9 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
     "paperclip_get_current_user",
     "paperclip_list_companies",
     "paperclip_get_company",
+    "paperclip_list_plugins",
+    "paperclip_get_plugin",
+    "paperclip_list_plugin_examples",
   ];
 
   it("read-only tools have readOnlyHint: true", () => {
@@ -325,6 +329,7 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
     "paperclip_delete_workspace",
     "paperclip_update_company",
     "paperclip_archive_company",
+    "paperclip_disable_plugin",
   ];
 
   it("destructive tools have destructiveHint: true", () => {
@@ -351,6 +356,7 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
     "paperclip_update_routine",
     "paperclip_update_routine_trigger",
     "paperclip_update_company",
+    "paperclip_enable_plugin",
   ];
 
   it("idempotent tools have idempotentHint: true", () => {
@@ -382,6 +388,12 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
     "paperclip_update_company",
     "paperclip_archive_company",
     "paperclip_create_agent",
+    "paperclip_list_plugins",
+    "paperclip_get_plugin",
+    "paperclip_install_plugin",
+    "paperclip_list_plugin_examples",
+    "paperclip_enable_plugin",
+    "paperclip_disable_plugin",
   ];
 
   it("board-only tools have '⚠ Board-only:' description prefix", () => {
@@ -469,6 +481,12 @@ describe("ALL_TOOLS registry — description quality", () => {
       "paperclip_update_company",
       "paperclip_archive_company",
       "paperclip_create_agent",
+      "paperclip_list_plugins",
+      "paperclip_get_plugin",
+      "paperclip_install_plugin",
+      "paperclip_list_plugin_examples",
+      "paperclip_enable_plugin",
+      "paperclip_disable_plugin",
     ];
     const bad: string[] = [];
     for (const name of boardOnlyTools) {
