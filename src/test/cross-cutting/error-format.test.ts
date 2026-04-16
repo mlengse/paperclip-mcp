@@ -105,7 +105,7 @@ describe("handleApiError — stage-7 actionable messages", () => {
     const err = new PaperclipApiError(409, "Conflict", { message: "label already exists" });
     const result = handleApiError(err, { tool: "paperclip_create_label", resource: "label" });
     assert.equal(result.isError, true);
-    assert.match(result.content[0]!.text.toLowerCase(), /conflict|retry/);
+    assert.match(result.content[0]!.text.toLowerCase(), /do not retry/);
   });
 
   it("[stage-7] 5xx includes transient / retry hint", () => {
