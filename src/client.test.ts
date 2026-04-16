@@ -153,9 +153,17 @@ describe("[stage-7] PaperclipClient — AbortSignal timeout", () => {
     };
     const client = new PaperclipClient(TEST_AUTH, fn);
     await client.get("/api/agents/me");
-    assert.ok(
-      calls[0]!.init.signal instanceof AbortSignal,
-      "fetch init must include an AbortSignal"
+    const getSignal = calls[0]!.init.signal;
+    assert.ok(getSignal != null, "Expected signal to be present");
+    assert.equal(
+      typeof (getSignal as AbortSignal).aborted,
+      "boolean",
+      "Expected AbortSignal-like object"
+    );
+    assert.equal(
+      typeof (getSignal as AbortSignal).addEventListener,
+      "function",
+      "Expected signal.addEventListener"
     );
   });
 
@@ -170,9 +178,17 @@ describe("[stage-7] PaperclipClient — AbortSignal timeout", () => {
     };
     const client = new PaperclipClient(TEST_AUTH, fn);
     await client.post("/api/issues", { title: "test" });
-    assert.ok(
-      calls[0]!.init.signal instanceof AbortSignal,
-      "fetch init must include an AbortSignal"
+    const postSignal = calls[0]!.init.signal;
+    assert.ok(postSignal != null, "Expected signal to be present");
+    assert.equal(
+      typeof (postSignal as AbortSignal).aborted,
+      "boolean",
+      "Expected AbortSignal-like object"
+    );
+    assert.equal(
+      typeof (postSignal as AbortSignal).addEventListener,
+      "function",
+      "Expected signal.addEventListener"
     );
   });
 
@@ -187,9 +203,17 @@ describe("[stage-7] PaperclipClient — AbortSignal timeout", () => {
     };
     const client = new PaperclipClient(TEST_AUTH, fn);
     await client.patch("/api/issues/1", { status: "done" });
-    assert.ok(
-      calls[0]!.init.signal instanceof AbortSignal,
-      "fetch init must include an AbortSignal"
+    const patchSignal = calls[0]!.init.signal;
+    assert.ok(patchSignal != null, "Expected signal to be present");
+    assert.equal(
+      typeof (patchSignal as AbortSignal).aborted,
+      "boolean",
+      "Expected AbortSignal-like object"
+    );
+    assert.equal(
+      typeof (patchSignal as AbortSignal).addEventListener,
+      "function",
+      "Expected signal.addEventListener"
     );
   });
 
@@ -201,9 +225,17 @@ describe("[stage-7] PaperclipClient — AbortSignal timeout", () => {
     };
     const client = new PaperclipClient(TEST_AUTH, fn);
     await client.delete("/api/attachments/1");
-    assert.ok(
-      calls[0]!.init.signal instanceof AbortSignal,
-      "fetch init must include an AbortSignal"
+    const deleteSignal = calls[0]!.init.signal;
+    assert.ok(deleteSignal != null, "Expected signal to be present");
+    assert.equal(
+      typeof (deleteSignal as AbortSignal).aborted,
+      "boolean",
+      "Expected AbortSignal-like object"
+    );
+    assert.equal(
+      typeof (deleteSignal as AbortSignal).addEventListener,
+      "function",
+      "Expected signal.addEventListener"
     );
   });
 
@@ -222,7 +254,8 @@ describe("[stage-7] PaperclipClient — AbortSignal timeout", () => {
     await client.get("/api/agents/me");
     // AbortSignal from timeout(30000) — signal is not aborted yet
     const signal = calls[0]!.init.signal as AbortSignal;
-    assert.ok(signal instanceof AbortSignal);
+    assert.ok(signal != null, "Expected signal to be present");
+    assert.equal(typeof signal.aborted, "boolean", "Expected AbortSignal-like object");
     assert.equal(signal.aborted, false);
     if (savedEnv !== undefined) process.env["PAPERCLIP_REQUEST_TIMEOUT_MS"] = savedEnv;
   });
@@ -262,9 +295,17 @@ describe("[stage-7] PaperclipClient — AbortSignal timeout", () => {
     };
     const client = new PaperclipClient(TEST_AUTH, fn);
     await client.put("/api/agents/agent-1/instructions", { path: "/agents/eng.md" });
-    assert.ok(
-      calls[0]!.init.signal instanceof AbortSignal,
-      "fetch init must include an AbortSignal for PUT"
+    const putSignal = calls[0]!.init.signal;
+    assert.ok(putSignal != null, "Expected signal to be present");
+    assert.equal(
+      typeof (putSignal as AbortSignal).aborted,
+      "boolean",
+      "Expected AbortSignal-like object"
+    );
+    assert.equal(
+      typeof (putSignal as AbortSignal).addEventListener,
+      "function",
+      "Expected signal.addEventListener"
     );
   });
 
@@ -281,9 +322,17 @@ describe("[stage-7] PaperclipClient — AbortSignal timeout", () => {
     const form = new FormData();
     form.append("file", new Blob(["content"], { type: "text/plain" }), "test.txt");
     await client.postForm("/api/attachments", form);
-    assert.ok(
-      calls[0]!.init.signal instanceof AbortSignal,
-      "fetch init must include an AbortSignal for postForm"
+    const formSignal = calls[0]!.init.signal;
+    assert.ok(formSignal != null, "Expected signal to be present");
+    assert.equal(
+      typeof (formSignal as AbortSignal).aborted,
+      "boolean",
+      "Expected AbortSignal-like object"
+    );
+    assert.equal(
+      typeof (formSignal as AbortSignal).addEventListener,
+      "function",
+      "Expected signal.addEventListener"
     );
   });
 });
