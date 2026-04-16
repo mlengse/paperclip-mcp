@@ -69,7 +69,7 @@ export const labelTools: ToolDefinition[] = [
           "Response too large. Use limit/offset to page. The company has an unusually large number of labels.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_list_labels", resource: "label" });
       }
     },
   },
@@ -107,7 +107,7 @@ export const labelTools: ToolDefinition[] = [
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_create_label", resource: "label" });
       }
     },
   },

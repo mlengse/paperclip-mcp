@@ -248,7 +248,7 @@ export const agentTools: ToolDefinition[] = [
             : formatAgentList(envelope.items, envelope);
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_list_agents", resource: "agent" });
       }
     },
   },
@@ -281,7 +281,7 @@ export const agentTools: ToolDefinition[] = [
         const hint = "Entity response too large. This entity may have oversized fields.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_get_agent", resource: "agent" });
       }
     },
   },
@@ -344,7 +344,7 @@ export const agentTools: ToolDefinition[] = [
           ],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_update_agent", resource: "agent" });
       }
     },
   },
@@ -400,7 +400,10 @@ export const agentTools: ToolDefinition[] = [
           ],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, {
+          tool: "paperclip_update_agent_permissions",
+          resource: "agent",
+        });
       }
     },
   },
@@ -438,7 +441,7 @@ export const agentTools: ToolDefinition[] = [
           ],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_pause_agent", resource: "agent" });
       }
     },
   },
@@ -477,7 +480,7 @@ export const agentTools: ToolDefinition[] = [
           ],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_resume_agent", resource: "agent" });
       }
     },
   },
@@ -521,7 +524,7 @@ export const agentTools: ToolDefinition[] = [
           ],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_invoke_heartbeat" });
       }
     },
   },
@@ -564,7 +567,7 @@ export const agentTools: ToolDefinition[] = [
           ],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_terminate_agent", resource: "agent" });
       }
     },
   },
@@ -614,7 +617,7 @@ export const agentTools: ToolDefinition[] = [
           ],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_create_agent_key" });
       }
     },
   },
@@ -658,7 +661,10 @@ export const agentTools: ToolDefinition[] = [
             : formatGenericList(envelope.items, "Config Revisions", envelope);
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, {
+          tool: "paperclip_list_agent_config_revisions",
+          resource: "agent",
+        });
       }
     },
   },
@@ -707,7 +713,7 @@ export const agentTools: ToolDefinition[] = [
           ],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_rollback_agent_config", resource: "agent" });
       }
     },
   },
@@ -758,7 +764,10 @@ export const agentTools: ToolDefinition[] = [
           ],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, {
+          tool: "paperclip_set_agent_instructions_path",
+          resource: "agent",
+        });
       }
     },
   },
@@ -786,7 +795,7 @@ export const agentTools: ToolDefinition[] = [
         const hint = "Response too large. Use filters (role, status) to narrow results.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_get_org_chart" });
       }
     },
   },
@@ -831,7 +840,7 @@ export const agentTools: ToolDefinition[] = [
           ],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_sync_agent_skills", resource: "agent" });
       }
     },
   },
@@ -865,7 +874,7 @@ export const agentTools: ToolDefinition[] = [
             : formatGenericList(envelope.items, "Company Skills", envelope);
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_list_company_skills" });
       }
     },
   },

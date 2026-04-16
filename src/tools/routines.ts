@@ -157,7 +157,7 @@ export const routineTools: ToolDefinition[] = [
           "Response too large. Use limit/offset to page. Consider deleting unused routines.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_list_routines", resource: "routine" });
       }
     },
   },
@@ -192,7 +192,7 @@ export const routineTools: ToolDefinition[] = [
           "Entity response too large. This routine may have an unusually long run history or oversized fields.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_get_routine", resource: "routine" });
       }
     },
   },
@@ -238,7 +238,7 @@ export const routineTools: ToolDefinition[] = [
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_create_routine", resource: "routine" });
       }
     },
   },
@@ -284,7 +284,7 @@ export const routineTools: ToolDefinition[] = [
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_update_routine", resource: "routine" });
       }
     },
   },
@@ -323,7 +323,7 @@ export const routineTools: ToolDefinition[] = [
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_add_routine_trigger", resource: "routine" });
       }
     },
   },
@@ -366,7 +366,10 @@ export const routineTools: ToolDefinition[] = [
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, {
+          tool: "paperclip_update_routine_trigger",
+          resource: "routine",
+        });
       }
     },
   },
@@ -400,7 +403,10 @@ export const routineTools: ToolDefinition[] = [
           content: [{ type: "text", text: applyCharLimit(formatResult(data), hint) }],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, {
+          tool: "paperclip_delete_routine_trigger",
+          resource: "routine",
+        });
       }
     },
   },
@@ -431,7 +437,7 @@ export const routineTools: ToolDefinition[] = [
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_run_routine", resource: "routine" });
       }
     },
   },
@@ -475,7 +481,7 @@ export const routineTools: ToolDefinition[] = [
           "Response too large. Use limit/offset to page. This routine has an unusually long run history.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_list_routine_runs", resource: "routine" });
       }
     },
   },

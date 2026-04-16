@@ -193,7 +193,7 @@ export const issueTools: ToolDefinition[] = [
         const hint = "Use filters (projectId, status, assigneeAgentId, offset) to narrow results.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_list_issues", resource: "issue" });
       }
     },
   },
@@ -227,7 +227,7 @@ export const issueTools: ToolDefinition[] = [
         const hint = "Entity response too large. This entity may have oversized fields.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_get_issue", resource: "issue" });
       }
     },
   },
@@ -262,7 +262,7 @@ export const issueTools: ToolDefinition[] = [
         const hint = "Entity response too large. This entity may have oversized fields.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_get_heartbeat_context" });
       }
     },
   },
@@ -360,7 +360,7 @@ export const issueTools: ToolDefinition[] = [
           throw conflictErr;
         }
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_checkout_issue", resource: "issue" });
       }
     },
   },
@@ -392,7 +392,7 @@ export const issueTools: ToolDefinition[] = [
         const hint = "Server response too large; the operation likely succeeded.";
         return { content: [{ type: "text", text: applyCharLimit(formatResult(data), hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_release_issue", resource: "issue" });
       }
     },
   },
@@ -451,7 +451,7 @@ export const issueTools: ToolDefinition[] = [
         );
         return { content: [{ type: "text", text }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_update_issue", resource: "issue" });
       }
     },
   },
@@ -509,7 +509,7 @@ export const issueTools: ToolDefinition[] = [
         );
         return { content: [{ type: "text", text }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_create_issue", resource: "issue" });
       }
     },
   },

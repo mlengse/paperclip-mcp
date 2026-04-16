@@ -85,7 +85,7 @@ export const goalTools: ToolDefinition[] = [
             : formatGenericList(envelope.items, "Goals", envelope);
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_list_goals", resource: "goal" });
       }
     },
   },
@@ -120,7 +120,7 @@ export const goalTools: ToolDefinition[] = [
         const hint = "Entity response too large. This goal may have oversized description fields.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_get_goal", resource: "goal" });
       }
     },
   },
@@ -163,7 +163,7 @@ export const goalTools: ToolDefinition[] = [
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_create_goal", resource: "goal" });
       }
     },
   },
@@ -207,7 +207,7 @@ export const goalTools: ToolDefinition[] = [
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_update_goal", resource: "goal" });
       }
     },
   },

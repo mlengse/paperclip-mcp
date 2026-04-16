@@ -121,7 +121,7 @@ export const projectTools: ToolDefinition[] = [
         const hint = "Response too large. Use limit/offset to page through results.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_list_projects", resource: "project" });
       }
     },
   },
@@ -156,7 +156,7 @@ export const projectTools: ToolDefinition[] = [
           "Entity response too large. This project may have oversized description or metadata fields.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_get_project", resource: "project" });
       }
     },
   },
@@ -205,7 +205,7 @@ export const projectTools: ToolDefinition[] = [
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_create_project", resource: "project" });
       }
     },
   },
@@ -250,7 +250,7 @@ export const projectTools: ToolDefinition[] = [
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_update_project", resource: "project" });
       }
     },
   },
@@ -294,7 +294,7 @@ export const projectTools: ToolDefinition[] = [
           "Response too large. Use limit/offset to page. This project has an unusually large number of workspaces.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_list_workspaces", resource: "workspace" });
       }
     },
   },
@@ -338,7 +338,7 @@ export const projectTools: ToolDefinition[] = [
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_create_workspace", resource: "workspace" });
       }
     },
   },
@@ -384,7 +384,7 @@ export const projectTools: ToolDefinition[] = [
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_update_workspace", resource: "workspace" });
       }
     },
   },

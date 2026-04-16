@@ -146,7 +146,7 @@ export const approvalTools: ToolDefinition[] = [
         const hint = "Response too large. Filter by status or use limit/offset to narrow results.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_list_approvals", resource: "approval" });
       }
     },
   },
@@ -181,7 +181,7 @@ export const approvalTools: ToolDefinition[] = [
           "Entity response too large. This approval may have oversized fields or an unusual number of comments.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_get_approval", resource: "approval" });
       }
     },
   },
@@ -223,7 +223,7 @@ export const approvalTools: ToolDefinition[] = [
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_create_approval", resource: "approval" });
       }
     },
   },
@@ -258,7 +258,7 @@ export const approvalTools: ToolDefinition[] = [
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_approve" });
       }
     },
   },
@@ -297,7 +297,7 @@ export const approvalTools: ToolDefinition[] = [
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_reject" });
       }
     },
   },
@@ -344,7 +344,7 @@ export const approvalTools: ToolDefinition[] = [
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_request_revision" });
       }
     },
   },
@@ -385,7 +385,7 @@ export const approvalTools: ToolDefinition[] = [
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_resubmit_approval" });
       }
     },
   },
@@ -430,7 +430,10 @@ export const approvalTools: ToolDefinition[] = [
           "Response too large. Use limit/offset to page. This approval may have an unusually high number of comments.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, {
+          tool: "paperclip_list_approval_comments",
+          resource: "approval",
+        });
       }
     },
   },
@@ -469,7 +472,10 @@ export const approvalTools: ToolDefinition[] = [
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, {
+          tool: "paperclip_add_approval_comment",
+          resource: "approval",
+        });
       }
     },
   },
@@ -521,7 +527,7 @@ export const approvalTools: ToolDefinition[] = [
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_create_agent_hire", resource: "approval" });
       }
     },
   },

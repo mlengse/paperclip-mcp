@@ -108,7 +108,11 @@ export const commentTools: ToolDefinition[] = [
             : formatGenericList(envelope.items, "Comments", envelope);
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, {
+          tool: "paperclip_list_comments",
+          resource: "comment",
+          hint: "500 with an `after` cursor is a known Paperclip API bug; try without the cursor or use limit/offset pagination",
+        });
       }
     },
   },
@@ -144,7 +148,7 @@ export const commentTools: ToolDefinition[] = [
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_add_comment", resource: "comment" });
       }
     },
   },
@@ -179,7 +183,7 @@ export const commentTools: ToolDefinition[] = [
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_get_comment", resource: "comment" });
       }
     },
   },

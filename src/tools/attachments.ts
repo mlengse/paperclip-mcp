@@ -95,7 +95,7 @@ export const attachmentTools: ToolDefinition[] = [
             : applyCharLimit(formatGenericList(envelope.items, "Attachments", envelope), hint);
         return { content: [{ type: "text", text }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_list_attachments", resource: "attachment" });
       }
     },
   },
@@ -143,7 +143,7 @@ export const attachmentTools: ToolDefinition[] = [
         const hint = `Use paperclip_list_attachments with issueId "${issueId}" to retrieve the full attachment list.`;
         return { content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_upload_attachment" });
       }
     },
   },
@@ -179,7 +179,7 @@ export const attachmentTools: ToolDefinition[] = [
             : applyCharLimit(formatGenericList([data], "Attachment"), hint);
         return { content: [{ type: "text", text }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_download_attachment" });
       }
     },
   },
@@ -208,7 +208,7 @@ export const attachmentTools: ToolDefinition[] = [
         const hint = `Attachment "${attachmentId}" has been deleted.`;
         return { content: [{ type: "text", text: applyCharLimit(formatResult(data), hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_delete_attachment", resource: "attachment" });
       }
     },
   },

@@ -42,7 +42,7 @@ export const dashboardTools: ToolDefinition[] = [
         const hint = "Response too large. Use filters (agentId, projectId) to narrow results.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_get_dashboard" });
       }
     },
   },

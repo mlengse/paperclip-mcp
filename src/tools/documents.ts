@@ -98,7 +98,7 @@ export const documentTools: ToolDefinition[] = [
             : applyCharLimit(formatGenericList(envelope.items, "Documents", envelope), hint);
         return { content: [{ type: "text", text }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_list_documents", resource: "document" });
       }
     },
   },
@@ -135,7 +135,7 @@ export const documentTools: ToolDefinition[] = [
             : applyCharLimit(formatGenericList([data], "Document"), hint);
         return { content: [{ type: "text", text }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_get_document", resource: "document" });
       }
     },
   },
@@ -182,7 +182,7 @@ export const documentTools: ToolDefinition[] = [
         const hint = `Use paperclip_get_document with issueId "${issueId}" and key "${key}" to retrieve the updated document.`;
         return { content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_upsert_document", resource: "document" });
       }
     },
   },
@@ -216,7 +216,7 @@ export const documentTools: ToolDefinition[] = [
         const hint = `Document "${key}" on issue "${issueId}" has been deleted.`;
         return { content: [{ type: "text", text: applyCharLimit(formatResult(data), hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_delete_document", resource: "document" });
       }
     },
   },
@@ -258,7 +258,10 @@ export const documentTools: ToolDefinition[] = [
             : applyCharLimit(formatGenericList(data, "Revisions"), hint);
         return { content: [{ type: "text", text }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, {
+          tool: "paperclip_get_document_revisions",
+          resource: "document",
+        });
       }
     },
   },

@@ -94,7 +94,7 @@ export const activityTools: ToolDefinition[] = [
           "Response too large. Filter by agentId, entityType, or entityId, or use limit/offset.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_get_activity", resource: "activity" });
       }
     },
   },
@@ -132,7 +132,7 @@ export const activityTools: ToolDefinition[] = [
           "Cost summary response too large; this is unusual. The company may have an exceptional number of cost entries.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_get_cost_summary" });
       }
     },
   },
@@ -167,7 +167,7 @@ export const activityTools: ToolDefinition[] = [
           "Cost-by-agent response too large; this is unusual. The company may have an exceptional number of agents or cost entries.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_get_costs_by_agent" });
       }
     },
   },
@@ -205,7 +205,7 @@ export const activityTools: ToolDefinition[] = [
           "Cost-by-project response too large; this is unusual. The company may have an exceptional number of projects or cost entries.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_get_costs_by_project" });
       }
     },
   },
@@ -253,7 +253,7 @@ export const activityTools: ToolDefinition[] = [
           content: [{ type: "text", text: applyCharLimit(JSON.stringify(data), hint) }],
         };
       } catch (err) {
-        return handleApiError(err);
+        return handleApiError(err, { tool: "paperclip_report_cost_event" });
       }
     },
   },
