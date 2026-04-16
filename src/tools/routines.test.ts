@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { McpError } from "@modelcontextprotocol/sdk/types.js";
 import { PaperclipClient } from "../client.js";
 import { routineTools } from "./routines.js";
+import { routineFixture, largeRoutineList, largeRoutineRunList } from "../test/helpers/fixtures.js";
 
 const TEST_AUTH = {
   apiKey: "test-jwt",
@@ -495,5 +496,141 @@ describe("[stage-2] paperclip_update_routine_trigger — A4: cron + A5: nested s
       }
     );
     assert.equal(calls.length, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] D1/F1/F2 — paperclip_list_routines
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_list_routines — truncation + format", () => {
+  it("[stage-5] D1: response >25k chars is truncated with actionable hint", async () => {
+    const big = largeRoutineList(300);
+    const { fn } = mockFetch(200, big);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listRoutines.handler({ response_format: "json" }, client);
+    assert.ok(result.content[0]!.text.length < 26_000);
+    assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("[stage-5] D2: small response is not truncated", async () => {
+    const small = [routineFixture()];
+    const { fn } = mockFetch(200, small);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listRoutines.handler({ response_format: "json" }, client);
+    assert.ok(!result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("[stage-5] F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, [routineFixture()]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listRoutines.handler({}, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("[stage-5] F2: response_format 'json' returns parseable JSON array", async () => {
+    const routines = [routineFixture()];
+    const { fn } = mockFetch(200, routines);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listRoutines.handler({ response_format: "json" }, client);
+    assert.doesNotThrow(() => JSON.parse(result.content[0]!.text));
+    assert.deepEqual(JSON.parse(result.content[0]!.text), routines);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] D1/F1/F2 — paperclip_get_routine
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_get_routine — truncation + format", () => {
+  it("[stage-5] D1: oversized routine response is truncated with actionable hint", async () => {
+    const big = { id: "routine-1", name: "Big Routine", log: "x".repeat(30_000) };
+    const { fn } = mockFetch(200, big);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getRoutine.handler(
+      { routineId: "routine-1", response_format: "json" },
+      client
+    );
+    assert.ok(result.content[0]!.text.length < 26_000);
+    assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("[stage-5] D2: normal routine is not truncated", async () => {
+    const routine = routineFixture();
+    const { fn } = mockFetch(200, routine);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getRoutine.handler(
+      { routineId: "routine-1", response_format: "json" },
+      client
+    );
+    assert.ok(!result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("[stage-5] F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, routineFixture());
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getRoutine.handler({ routineId: "routine-1" }, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("[stage-5] F2: response_format 'json' returns valid JSON", async () => {
+    const routine = routineFixture();
+    const { fn } = mockFetch(200, routine);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getRoutine.handler(
+      { routineId: "routine-1", response_format: "json" },
+      client
+    );
+    assert.doesNotThrow(() => JSON.parse(result.content[0]!.text));
+    assert.deepEqual(JSON.parse(result.content[0]!.text), routine);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] D1/F1/F2 — paperclip_list_routine_runs
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_list_routine_runs — truncation + format", () => {
+  it("[stage-5] D1: response >25k chars is truncated with actionable hint", async () => {
+    const big = largeRoutineRunList(500);
+    const { fn } = mockFetch(200, big);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listRuns.handler(
+      { routineId: "routine-1", response_format: "json" },
+      client
+    );
+    assert.ok(result.content[0]!.text.length < 26_000);
+    assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("[stage-5] D2: small run list is not truncated", async () => {
+    const small = [{ id: "run-1", routineId: "routine-1", status: "completed" }];
+    const { fn } = mockFetch(200, small);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listRuns.handler(
+      { routineId: "routine-1", response_format: "json" },
+      client
+    );
+    assert.ok(!result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("[stage-5] F1: defaults to markdown output", async () => {
+    const runs = [{ id: "run-1", routineId: "routine-1", status: "completed" }];
+    const { fn } = mockFetch(200, runs);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listRuns.handler({ routineId: "routine-1" }, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("[stage-5] F2: response_format 'json' returns parseable JSON array", async () => {
+    const runs = [{ id: "run-1", routineId: "routine-1", status: "completed" }];
+    const { fn } = mockFetch(200, runs);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listRuns.handler(
+      { routineId: "routine-1", response_format: "json" },
+      client
+    );
+    assert.doesNotThrow(() => JSON.parse(result.content[0]!.text));
+    assert.deepEqual(JSON.parse(result.content[0]!.text), runs);
   });
 });

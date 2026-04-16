@@ -246,3 +246,83 @@ export function largeApprovalList(count = 300): ApprovalLike[] {
     })
   );
 }
+
+// ---------------------------------------------------------------------------
+// Activity
+// ---------------------------------------------------------------------------
+export interface ActivityLike {
+  id: string;
+  entityType: string;
+  entityId: string;
+  action: string;
+  agentId: string;
+  createdAt: string;
+  detail: string;
+}
+
+export function activityFixture(overrides: Partial<ActivityLike> = {}): ActivityLike {
+  return {
+    id: "event-1",
+    entityType: "issue",
+    entityId: "issue-1",
+    action: "updated",
+    agentId: "agent-1",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    detail: "Status changed",
+    ...overrides,
+  };
+}
+
+export function largeActivityList(count = 500): ActivityLike[] {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `event-${i + 1}`,
+    entityType: "issue",
+    entityId: `issue-${i + 1}`,
+    action: "updated",
+    agentId: "agent-1",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    detail: "x".repeat(100),
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Routine
+// ---------------------------------------------------------------------------
+export interface RoutineLike {
+  id: string;
+  name: string;
+  agentId: string;
+  concurrencyPolicy: string;
+  catchUpPolicy: string;
+}
+
+export function routineFixture(overrides: Partial<RoutineLike> = {}): RoutineLike {
+  return {
+    id: "routine-1",
+    name: "Fixture routine",
+    agentId: "agent-1",
+    concurrencyPolicy: "forbid",
+    catchUpPolicy: "skip",
+    ...overrides,
+  };
+}
+
+export function largeRoutineList(count = 300): RoutineLike[] {
+  return Array.from({ length: count }, (_, i) =>
+    routineFixture({
+      id: `routine-${i + 1}`,
+      name: `Routine ${i + 1} — ${"x".repeat(100)}`,
+    })
+  );
+}
+
+export function largeRoutineRunList(count = 500): Record<string, unknown>[] {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `run-${i + 1}`,
+    routineId: "routine-1",
+    status: "completed",
+    startedAt: "2026-01-01T00:00:00.000Z",
+    finishedAt: "2026-01-01T00:05:00.000Z",
+    log: "x".repeat(100),
+  }));
+}

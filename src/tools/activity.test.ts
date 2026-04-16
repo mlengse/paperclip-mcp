@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { McpError } from "@modelcontextprotocol/sdk/types.js";
 import { PaperclipClient } from "../client.js";
 import { activityTools } from "./activity.js";
+import { activityFixture, largeActivityList } from "../test/helpers/fixtures.js";
 
 const TEST_AUTH = {
   apiKey: "test-jwt",
@@ -208,6 +209,108 @@ describe("paperclip_report_cost_event", () => {
       }
     );
     assert.equal(calls.length, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] D1/F1/F2 — paperclip_get_activity
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_get_activity — truncation + format", () => {
+  it("[stage-5] D1: response >25k chars is truncated with actionable hint", async () => {
+    const big = largeActivityList(500);
+    const { fn } = mockFetch(200, big);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getActivity.handler({ response_format: "json" }, client);
+    assert.ok(result.content[0]!.text.length < 26_000);
+    assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("[stage-5] D2: small response is not truncated", async () => {
+    const small = [activityFixture()];
+    const { fn } = mockFetch(200, small);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getActivity.handler({ response_format: "json" }, client);
+    assert.ok(!result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("[stage-5] F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, [activityFixture()]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getActivity.handler({}, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("[stage-5] F2: response_format 'json' returns parseable JSON array", async () => {
+    const events = [activityFixture()];
+    const { fn } = mockFetch(200, events);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getActivity.handler({ response_format: "json" }, client);
+    assert.doesNotThrow(() => JSON.parse(result.content[0]!.text));
+    assert.deepEqual(JSON.parse(result.content[0]!.text), events);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] F1/F2 — paperclip_get_cost_summary
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_get_cost_summary — format", () => {
+  it("[stage-5] F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, { total: 1234, currency: "usd" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getCostSummary.handler({}, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("[stage-5] F2: response_format 'json' returns valid JSON", async () => {
+    const summary = { total: 1234, currency: "usd" };
+    const { fn } = mockFetch(200, summary);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getCostSummary.handler({ response_format: "json" }, client);
+    assert.doesNotThrow(() => JSON.parse(result.content[0]!.text));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] F1/F2 — paperclip_get_costs_by_agent
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_get_costs_by_agent — format", () => {
+  it("[stage-5] F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, [{ agentId: "agent-1", total: 500 }]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getCostsByAgent.handler({}, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("[stage-5] F2: response_format 'json' returns valid JSON", async () => {
+    const breakdown = [{ agentId: "agent-1", total: 500 }];
+    const { fn } = mockFetch(200, breakdown);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getCostsByAgent.handler({ response_format: "json" }, client);
+    assert.doesNotThrow(() => JSON.parse(result.content[0]!.text));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] F1/F2 — paperclip_get_costs_by_project
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_get_costs_by_project — format", () => {
+  it("[stage-5] F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, [{ projectId: "proj-1", total: 800 }]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getCostsByProject.handler({}, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("[stage-5] F2: response_format 'json' returns valid JSON", async () => {
+    const breakdown = [{ projectId: "proj-1", total: 800 }];
+    const { fn } = mockFetch(200, breakdown);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getCostsByProject.handler({ response_format: "json" }, client);
+    assert.doesNotThrow(() => JSON.parse(result.content[0]!.text));
   });
 });
 
