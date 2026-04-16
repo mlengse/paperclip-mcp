@@ -1,6 +1,12 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import { validate, toJsonSchema, handleApiError, NoInput } from "./validation.js";
+import {
+  validate,
+  toJsonSchema,
+  handleApiError,
+  NoInput,
+  composeDescription,
+} from "./validation.js";
 
 const HEX_COLOR_REGEX = /^#[0-9a-fA-F]{6}$/;
 
@@ -18,7 +24,19 @@ const CreateLabelInput = z
 export const labelTools: ToolDefinition[] = [
   {
     name: "paperclip_list_labels",
-    description: "List all labels for the current company.",
+    description: composeDescription({
+      summary: "List all labels defined for the current company.",
+      returns: "Array of label objects: id, name, color (hex), createdAt.",
+      examples: {
+        useWhen:
+          "bootstrapping the label taxonomy at the start of a run to build a name→UUID cache",
+        dontUseWhen: "you already have the label UUID — pass it directly to the relevant tool",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 403: permission denied → verify PAPERCLIP_COMPANY_ID is correct",
+      ],
+    }),
     inputSchema: toJsonSchema(NoInput),
     annotations: { title: "List company labels", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
@@ -33,8 +51,25 @@ export const labelTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_create_label",
-    description:
-      "Create a new label for the current company. Use to establish the label taxonomy before applying labels to issues.",
+    description: composeDescription({
+      summary: "Create a new label for the current company.",
+      args: [
+        '- name: string — Label name, typically namespaced (example: "source:agent")',
+        '- color: string (optional) — 6-digit hex color (example: "#6366f1")',
+      ],
+      returns: "Returns the created label object: id, name, color, createdAt.",
+      examples: {
+        useWhen:
+          "seeding a missing taxonomy label (e.g. source:agent, type:bug) during Label Bootstrap",
+        dontUseWhen:
+          "the label already exists — use paperclip_list_labels to check before creating",
+      },
+      errors: [
+        "- 400: validation failure → check name is non-empty and color is valid hex if supplied",
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 409: label name already exists → fetch existing ID from paperclip_list_labels",
+      ],
+    }),
     inputSchema: toJsonSchema(CreateLabelInput),
     annotations: { title: "Create company label", destructiveHint: false, openWorldHint: false },
     async handler(args, client) {

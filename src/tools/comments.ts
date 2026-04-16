@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import { validate, toJsonSchema, handleApiError } from "./validation.js";
+import { validate, toJsonSchema, handleApiError, composeDescription } from "./validation.js";
 
 const ListCommentsInput = z
   .object({
@@ -38,10 +38,25 @@ const GetCommentInput = z
 export const commentTools: ToolDefinition[] = [
   {
     name: "paperclip_list_comments",
-    description:
-      "List comments for an issue. Supports cursor-based incremental fetching via the `after` parameter. " +
-      "When `after` is provided, a client-side workaround is used because the server-side `after` cursor " +
-      "returns HTTP 500. The tool fetches up to 500 comments in ascending order and filters client-side.",
+    description: composeDescription({
+      summary: "List comments on an issue, with optional cursor-based incremental fetching.",
+      args: [
+        '- issueId: string — Issue ID or identifier (example: "PAP-42")',
+        "- after: string (optional) — Comment UUID cursor; returns only comments after this ID (client-side workaround active — server after param returns 500)",
+        '- order: "asc" | "desc" (optional) — Sort order (default: asc)',
+      ],
+      returns:
+        "Array of comment objects: id, body, authorId, authorType, createdAt. When `after` is set, response includes _note about the client-side workaround.",
+      examples: {
+        useWhen: "reading new @-mention comments since the last heartbeat using the `after` cursor",
+        dontUseWhen: "you need a single comment by ID — use paperclip_get_comment instead",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: issue not found → verify ID with paperclip_list_issues",
+        "- 500: server error on the `after` cursor path → tool automatically applies a client-side workaround",
+      ],
+    }),
     inputSchema: toJsonSchema(ListCommentsInput),
     annotations: { title: "List issue comments", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
@@ -77,8 +92,25 @@ export const commentTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_add_comment",
-    description:
-      "Post a markdown comment on an issue. Run ID header is injected automatically for audit trail.",
+    description: composeDescription({
+      summary:
+        "Post a markdown comment on an issue. Run ID header injected automatically for audit trail.",
+      args: [
+        '- issueId: string — Issue ID or identifier (example: "PAP-42")',
+        '- body: string — Comment body in markdown (example: "@QA — ready for review on PAP-42. Changes: ...")',
+      ],
+      returns: "Returns the created comment object: id, body, authorId, authorType, createdAt.",
+      examples: {
+        useWhen: "posting @-mention handoffs (e.g. @QA ready for review, @Engineer changes needed)",
+        dontUseWhen:
+          "you also need to update issue fields — use paperclip_update_issue with a `comment` field instead",
+      },
+      errors: [
+        "- 400: validation failure → ensure body is non-empty",
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: issue not found → verify ID with paperclip_list_issues",
+      ],
+    }),
     inputSchema: toJsonSchema(AddCommentInput),
     annotations: { title: "Post comment on issue", destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
@@ -93,8 +125,23 @@ export const commentTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_get_comment",
-    description:
-      "Fetch a single comment by ID. Use this when PAPERCLIP_WAKE_COMMENT_ID is set to read the exact comment that triggered an issue_comment_mentioned wake.",
+    description: composeDescription({
+      summary: "Fetch a single comment by ID, typically the triggering comment from a wake event.",
+      args: [
+        '- issueId: string — Issue ID or identifier (example: "PAP-42")',
+        '- commentId: string — Comment UUID (example: "cmt_abc123")',
+      ],
+      returns: "Returns the comment object: id, body, authorId, authorType, createdAt.",
+      examples: {
+        useWhen:
+          "PAPERCLIP_WAKE_COMMENT_ID is set — read the exact comment that triggered the @-mention wake",
+        dontUseWhen: "you need all comments on an issue — use paperclip_list_comments instead",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: comment or issue not found → verify both issueId and commentId",
+      ],
+    }),
     inputSchema: toJsonSchema(GetCommentInput),
     annotations: { title: "Get comment by ID", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {

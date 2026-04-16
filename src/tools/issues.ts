@@ -7,6 +7,7 @@ import {
   handleApiError,
   StatusSchema,
   PrioritySchema,
+  composeDescription,
 } from "./validation.js";
 import { PaperclipApiError } from "../errors.js";
 
@@ -130,11 +131,29 @@ const CreateIssueInput = z
 export const issueTools: ToolDefinition[] = [
   {
     name: "paperclip_list_issues",
-    description:
-      "List issues for the current company with client-side pagination. " +
-      "Optionally filter by status (comma-separated), assigneeAgentId, projectId, goalId, labelId, or full-text search query. " +
-      `Use limit (max ${ISSUES_MAX_LIMIT}, default ${ISSUES_DEFAULT_LIMIT}) and offset to page through results. ` +
-      "Returns { issues, total, limit, offset } where total is the unsliced count so clients can detect truncation.",
+    description: composeDescription({
+      summary: "List issues for the current company with filtering and pagination.",
+      args: [
+        '- status: string (optional) — Comma-separated statuses (example: "todo,in_progress")',
+        '- assigneeAgentId: string (optional) — Filter by assignee agent UUID (example: "agt_abc")',
+        "- projectId: string (optional) — Filter by project UUID",
+        "- goalId: string (optional) — Filter by goal UUID",
+        "- labelId: string (optional) — Filter by label UUID",
+        '- q: string (optional) — Full-text search query (example: "auth bug")',
+        `- limit: integer (optional) — Max results to return, 1–${ISSUES_MAX_LIMIT} (default ${ISSUES_DEFAULT_LIMIT})`,
+        "- offset: integer (optional) — Skip N results for pagination (default 0)",
+      ],
+      returns:
+        "Object: { issues: Issue[], total: number, limit: number, offset: number }. total is the unfiltered count for truncation detection.",
+      examples: {
+        useWhen: "scanning the board for todo issues assigned to a specific agent",
+        dontUseWhen: "you need a single issue's full details — use paperclip_get_issue instead",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 403: permission denied → verify PAPERCLIP_COMPANY_ID is correct",
+      ],
+    }),
     inputSchema: toJsonSchema(ListIssuesInput),
     annotations: { title: "List issues", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
@@ -165,7 +184,21 @@ export const issueTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_get_issue",
-    description: "Get a single issue by ID, including its full details and ancestors.",
+    description: composeDescription({
+      summary: "Get a single issue by ID, including full details and ancestor chain.",
+      args: ['- issueId: string — Issue ID or identifier (example: "PAP-42")'],
+      returns:
+        "Issue object: id, identifier, title, description, status, priority, assigneeAgentId, projectId, goalId, parentId, labelIds, executionRunId, ancestors, createdAt, updatedAt.",
+      examples: {
+        useWhen: "reading a specific issue's full state before making changes",
+        dontUseWhen:
+          "you need a list of issues — use paperclip_list_issues or paperclip_get_inbox instead",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: issue not found → verify ID with paperclip_list_issues",
+      ],
+    }),
     inputSchema: toJsonSchema(IssueIdInput),
     annotations: { title: "Get issue by ID", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
@@ -180,8 +213,22 @@ export const issueTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_get_heartbeat_context",
-    description:
-      "Get compact heartbeat context for an issue: state, ancestor summaries, goal/project info, and comment cursor metadata.",
+    description: composeDescription({
+      summary:
+        "Get compact heartbeat context for an issue: state, ancestors, goal/project, and comment cursor.",
+      args: ['- issueId: string — Issue ID or identifier (example: "PAP-42")'],
+      returns:
+        "Compact context object: issue state, ancestor summaries, goal/project info, lastCommentId cursor for incremental comment fetching.",
+      examples: {
+        useWhen:
+          "orienting yourself on an issue at the start of a heartbeat run without loading all comments",
+        dontUseWhen: "you need the full issue record — use paperclip_get_issue for complete fields",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: issue not found → verify ID with paperclip_list_issues",
+      ],
+    }),
     inputSchema: toJsonSchema(IssueIdInput),
     annotations: { title: "Get issue heartbeat context", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
@@ -196,8 +243,25 @@ export const issueTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_checkout_issue",
-    description:
-      "Checkout an issue to claim it for work. Returns 409 if owned by another agent — do not retry.",
+    description: composeDescription({
+      summary: "Claim an issue for work by checking it out to the current agent.",
+      args: [
+        '- issueId: string — Issue ID or identifier (example: "PAP-42")',
+        '- expectedStatuses: string[] (optional) — Checkout fails with 409 if current status not in list (example: ["todo"])',
+      ],
+      returns: "Returns the updated issue object with executionRunId set to the current run.",
+      examples: {
+        useWhen:
+          "claiming an assigned issue before starting work — pass expectedStatuses to guard kanban column",
+        dontUseWhen: "you only need to read the issue — use paperclip_get_issue instead",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: issue not found → verify ID with paperclip_list_issues",
+        "- 409: conflict — issue is checked out by another agent or status mismatch → do NOT retry; post a wake-mismatch comment and exit",
+        "- 422: invalid state transition → issue may already be in a terminal state",
+      ],
+    }),
     inputSchema: toJsonSchema(CheckoutIssueInput),
     annotations: {
       title: "Check out issue for work",
@@ -273,7 +337,22 @@ export const issueTools: ToolDefinition[] = [
   // idempotentHint omitted — a double-release may return 409; verify against live API in Stage 8b and update if confirmed idempotent.
   {
     name: "paperclip_release_issue",
-    description: "Release a checked-out issue without marking it done.",
+    description: composeDescription({
+      summary: "Release a checked-out issue back to the board without marking it done.",
+      args: ['- issueId: string — Issue ID or identifier (example: "PAP-42")'],
+      returns: "Returns the updated issue object with executionRunId cleared.",
+      examples: {
+        useWhen:
+          "abandoning work mid-run due to a blocker or wake-mismatch; issue returns to assignable state",
+        dontUseWhen:
+          "you finished the work — use paperclip_update_issue with status:'in_review' or 'done' instead",
+      },
+      errors: [
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: issue not found → verify ID with paperclip_list_issues",
+        "- 409: issue is not checked out by the current agent → check current issue state with paperclip_get_issue",
+      ],
+    }),
     inputSchema: toJsonSchema(IssueIdInput),
     annotations: { title: "Release issue checkout", openWorldHint: false },
     async handler(args, client) {
@@ -288,8 +367,38 @@ export const issueTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_update_issue",
-    description:
-      "Update an issue's status, priority, title, description, assignee, goal, project, parent, billing code, execution lock fields, or add a comment. Run ID header is injected automatically.",
+    description: composeDescription({
+      summary:
+        "Update one or more fields on an issue; optionally attach a comment in the same call.",
+      args: [
+        '- issueId: string — Issue ID or identifier (example: "PAP-42")',
+        "- status: enum (optional) — New status: backlog | todo | in_progress | in_review | done | blocked | cancelled",
+        "- priority: enum (optional) — New priority: critical | high | medium | low",
+        "- title: string (optional) — New title",
+        "- description: string (optional) — New description (markdown)",
+        "- comment: string (optional) — Comment body to post alongside this update",
+        "- assigneeAgentId: string | null (optional) — Agent UUID; null to unassign",
+        "- assigneeUserId: string | null (optional) — User UUID; null to unassign",
+        "- goalId: string | null (optional) — Goal UUID; null to unlink",
+        "- projectId: string | null (optional) — Project UUID; null to unlink",
+        "- parentId: string | null (optional) — Parent issue UUID; null to unlink",
+        "- billingCode: string | null (optional) — Billing code; null to clear",
+        "- labelIds: string[] (optional) — Replaces existing label set; pass [] to clear all",
+        "- executionRunId: string | null (optional) — Execution run lock; pass null to clear stale lock",
+        "- executionLockedAt: string | null (optional) — ISO timestamp of lock acquisition; null to clear",
+      ],
+      returns: "Returns the updated issue object with all fields.",
+      examples: {
+        useWhen: "transitioning an issue to in_review and posting a @QA comment in one call",
+        dontUseWhen: "you need to claim the issue — use paperclip_checkout_issue first",
+      },
+      errors: [
+        "- 400: validation failure → check status/priority enum values and field types",
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: issue not found → verify ID with paperclip_list_issues",
+        "- 422: invalid state transition → check current status with paperclip_get_issue",
+      ],
+    }),
     inputSchema: toJsonSchema(UpdateIssueInput),
     annotations: {
       title: "Update issue fields",
@@ -313,8 +422,34 @@ export const issueTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_create_issue",
-    description:
-      "Create a new issue. companyId is injected from auth config. Run ID header is injected automatically.",
+    description: composeDescription({
+      summary: "Create a new issue in the current company.",
+      args: [
+        "- title: string — Issue title (required)",
+        "- description: string (optional) — Issue description (markdown)",
+        "- status: enum (optional) — Initial status; pass 'backlog' explicitly (API default is todo)",
+        "- priority: enum (optional) — Priority: critical | high | medium | low",
+        "- parentId: string (optional) — Parent issue UUID for sub-tasks",
+        "- goalId: string (optional) — Goal UUID to link the issue",
+        "- projectId: string (optional) — Project UUID to associate",
+        "- assigneeAgentId: string (optional) — Assignee agent UUID",
+        "- billingCode: string (optional) — Billing code for cost tracking",
+        "- labelIds: string[] (optional) — Label UUIDs to apply",
+        "- inheritExecutionWorkspaceFromIssueId: string (optional) — Inherit workspace from another issue",
+      ],
+      returns:
+        "Returns the created issue object with all fields including the assigned identifier (e.g. PAP-42).",
+      examples: {
+        useWhen:
+          "filing a new bug, MCP tool failure, or gap discovered mid-run for Scrum Master to triage",
+        dontUseWhen: "the issue already exists — use paperclip_update_issue to modify it",
+      },
+      errors: [
+        "- 400: validation failure → ensure title is non-empty and status/priority are valid enums",
+        "- 401: authentication failed → check PAPERCLIP_API_KEY",
+        "- 404: referenced goalId or projectId not found → verify with paperclip_list_goals or paperclip_list_projects",
+      ],
+    }),
     inputSchema: toJsonSchema(CreateIssueInput),
     annotations: { title: "Create new issue", destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
