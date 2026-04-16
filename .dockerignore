@@ -1,0 +1,50 @@
+# ─── Build artifacts (rebuilt inside container) ───────────────────────────────
+node_modules/
+dist/
+
+# ─── Version control ──────────────────────────────────────────────────────────
+.git/
+.github/
+
+# ─── Dev tooling / hooks ──────────────────────────────────────────────────────
+.husky/
+.eslintcache
+.prettierignore
+
+# ─── Claude / BMAD / agent configuration ──────────────────────────────────────
+.claude/
+_bmad/
+_bmad-output/
+
+# ─── Documentation (not needed at runtime) ────────────────────────────────────
+docs/
+*.md
+!package.json
+
+# ─── Tests ────────────────────────────────────────────────────────────────────
+**/*.test.ts
+coverage/
+
+# ─── IDE / OS noise ───────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.DS_Store
+*.swp
+*.swo
+Thumbs.db
+
+# ─── Worktrees / scripts (not needed at runtime) ──────────────────────────────
+worktrees/
+scripts/
+skills/
+
+# ─── Secrets / local config ───────────────────────────────────────────────────
+.env
+.env.*
+*.local
+
+# ─── KEEP (explicitly included despite patterns above) ────────────────────────
+# src/           — TypeScript source (needed by builder stage)
+# package.json   — needed in both stages
+# package-lock.json — needed for npm ci
+# tsconfig.json  — needed by builder stage
