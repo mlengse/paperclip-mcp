@@ -21,6 +21,7 @@ import { attachmentTools } from "./attachments.js";
 import { labelTools } from "./labels.js";
 import { companyTools } from "./company.js";
 import { pluginTools } from "./plugins.js";
+import { secretTools } from "./secrets.js";
 export { validate as validateInput } from "./validation.js";
 
 export type ToolResult = {
@@ -72,6 +73,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
   ...labelTools,
   ...companyTools,
   ...pluginTools,
+  ...secretTools,
 ];
 
 export function registerAllTools(server: Server): void {
