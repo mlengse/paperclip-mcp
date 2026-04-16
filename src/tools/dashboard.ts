@@ -1,17 +1,13 @@
 import type { ToolDefinition } from "./index.js";
-import { validate, NoInput, handleApiError } from "./validation.js";
+import { validate, toJsonSchema, NoInput, handleApiError } from "./validation.js";
 
 export const dashboardTools: ToolDefinition[] = [
   {
     name: "paperclip_get_dashboard",
     description:
       "Return the company-level health summary including active goals, projects, issues by status, and agent workload.",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      required: [],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(NoInput),
+    annotations: { title: "Get company dashboard", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         validate(NoInput, args);

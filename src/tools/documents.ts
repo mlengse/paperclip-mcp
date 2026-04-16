@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import { validate, IssueIdSchema, handleApiError } from "./validation.js";
+import { validate, toJsonSchema, IssueIdSchema, handleApiError } from "./validation.js";
 
 const ListDocumentsInput = IssueIdSchema;
 
@@ -30,14 +30,8 @@ export const documentTools: ToolDefinition[] = [
   {
     name: "paperclip_list_documents",
     description: "List all documents attached to an issue (e.g. plan, notes).",
-    inputSchema: {
-      type: "object",
-      properties: {
-        issueId: { type: "string", description: "Issue ID or identifier (e.g. PAP-22)" },
-      },
-      required: ["issueId"],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(ListDocumentsInput),
+    annotations: { title: "List issue documents", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { issueId } = validate(ListDocumentsInput, args);
@@ -51,15 +45,8 @@ export const documentTools: ToolDefinition[] = [
   {
     name: "paperclip_get_document",
     description: "Get the content of a specific issue document by key (e.g. `plan`).",
-    inputSchema: {
-      type: "object",
-      properties: {
-        issueId: { type: "string", description: "Issue ID or identifier (e.g. PAP-22)" },
-        key: { type: "string", description: "Document key (e.g. `plan`)" },
-      },
-      required: ["issueId", "key"],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(GetDocumentInput),
+    annotations: { title: "Get issue document", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { issueId, key } = validate(GetDocumentInput, args);
@@ -74,26 +61,12 @@ export const documentTools: ToolDefinition[] = [
     name: "paperclip_upsert_document",
     description:
       "Create or update an issue document. Send `baseRevisionId` (from a prior get) for safe concurrent updates. Run ID is injected automatically.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        issueId: { type: "string", description: "Issue ID or identifier (e.g. PAP-22)" },
-        key: { type: "string", description: "Document key (e.g. `plan`)" },
-        title: { type: "string", description: "Document title" },
-        body: { type: "string", description: "Document body (markdown)" },
-        format: {
-          type: "string",
-          enum: ["markdown"],
-          description: "Document format (default: markdown)",
-        },
-        baseRevisionId: {
-          type: "string",
-          description: "Current revision ID for optimistic concurrency — omit on first create",
-        },
-      },
-      required: ["issueId", "key", "title", "body"],
+    inputSchema: toJsonSchema(UpsertDocumentInput),
+    annotations: {
+      title: "Create or update issue document",
+      idempotentHint: true,
+      openWorldHint: false,
     },
-    annotations: { idempotentHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { issueId, key, title, body, format, baseRevisionId } = validate(
@@ -111,16 +84,10 @@ export const documentTools: ToolDefinition[] = [
   },
   {
     name: "paperclip_delete_document",
-    description: "Delete a document from an issue by key. Run ID header is injected automatically.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        issueId: { type: "string", description: "Issue ID or identifier (e.g. PAP-22)" },
-        key: { type: "string", description: "Document key to delete (e.g. `plan`)" },
-      },
-      required: ["issueId", "key"],
-    },
-    annotations: { destructiveHint: true, openWorldHint: false, boardOnlyHint: true },
+    description:
+      "⚠ Board-only: Delete a document from an issue by key. Run ID header is injected automatically.",
+    inputSchema: toJsonSchema(DocumentKeyInput),
+    annotations: { title: "Delete issue document", destructiveHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { issueId, key } = validate(DocumentKeyInput, args);
@@ -134,15 +101,12 @@ export const documentTools: ToolDefinition[] = [
   {
     name: "paperclip_get_document_revisions",
     description: "Get the revision history for an issue document.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        issueId: { type: "string", description: "Issue ID or identifier (e.g. PAP-22)" },
-        key: { type: "string", description: "Document key (e.g. `plan`)" },
-      },
-      required: ["issueId", "key"],
+    inputSchema: toJsonSchema(DocumentKeyInput),
+    annotations: {
+      title: "Get document revision history",
+      readOnlyHint: true,
+      openWorldHint: false,
     },
-    annotations: { readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { issueId, key } = validate(DocumentKeyInput, args);

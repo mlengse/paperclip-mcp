@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import { validate, NoInput, handleApiError } from "./validation.js";
+import { validate, toJsonSchema, NoInput, handleApiError } from "./validation.js";
 
 const AgentIdInput = z.object({
   agentId: z.string().min(1).describe("Agent UUID"),
@@ -138,12 +138,8 @@ export const agentTools: ToolDefinition[] = [
   {
     name: "paperclip_list_agents",
     description: "Return the list of agents in the company (id, name, urlKey, role, status).",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      required: [],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(NoInput),
+    annotations: { title: "List company agents", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         validate(NoInput, args);
@@ -157,14 +153,8 @@ export const agentTools: ToolDefinition[] = [
   {
     name: "paperclip_get_agent",
     description: "Get full details for a single agent by ID.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        agentId: { type: "string", description: "Agent UUID" },
-      },
-      required: ["agentId"],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(AgentIdInput),
+    annotations: { title: "Get agent by ID", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { agentId } = validate(AgentIdInput, args);
@@ -181,103 +171,12 @@ export const agentTools: ToolDefinition[] = [
     name: "paperclip_update_agent",
     description:
       "Update an agent's name, title, capabilities, status, heartbeat/runtime config, or adapter config. Run ID header is injected automatically. For permissions, use paperclip_update_agent_permissions.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        agentId: { type: "string", description: "Agent UUID" },
-        name: { type: "string", description: "New display name" },
-        title: { type: "string", description: "New job title" },
-        capabilities: { type: "string", description: "Updated capability description" },
-        status: { type: "string", description: "New status (e.g. active, paused)" },
-        runtimeConfig: {
-          type: "object",
-          description: "Agent runtime configuration",
-          properties: {
-            heartbeat: {
-              type: "object",
-              description: "Heartbeat scheduling settings",
-              properties: {
-                enabled: {
-                  type: "boolean",
-                  description: "Enable or disable scheduled heartbeats",
-                },
-                intervalSec: {
-                  type: "number",
-                  description: "Heartbeat interval in seconds",
-                },
-                cooldownSec: {
-                  type: "number",
-                  description: "Minimum seconds between heartbeat runs",
-                },
-                maxConcurrentRuns: {
-                  type: "number",
-                  description: "Maximum concurrent heartbeat runs allowed",
-                },
-                wakeOnDemand: {
-                  type: "boolean",
-                  description: "Allow on-demand heartbeat invocation via the invoke endpoint",
-                },
-              },
-            },
-          },
-        },
-        adapterConfig: {
-          type: "object",
-          description: "Adapter configuration for the agent process",
-          properties: {
-            model: {
-              type: "string",
-              description: "LLM model identifier (e.g. claude-sonnet-4-6)",
-            },
-            cwd: {
-              type: "string",
-              description: "Working directory for the agent process",
-            },
-            maxTurnsPerRun: {
-              type: "number",
-              description: "Maximum LLM turns per heartbeat run",
-            },
-            timeoutSec: {
-              type: "number",
-              description: "Hard timeout in seconds for a heartbeat run",
-            },
-            graceSec: {
-              type: "number",
-              description: "Grace period in seconds before hard termination after timeout",
-            },
-            instructionsFilePath: {
-              type: "string",
-              description: "Path to the AGENTS.md instructions file",
-            },
-            instructionsRootPath: {
-              type: "string",
-              description: "Root path used for resolving relative instruction paths",
-            },
-            instructionsBundleMode: {
-              type: "string",
-              description: "Instruction bundling mode (e.g. concat, merge)",
-            },
-            dangerouslySkipPermissions: {
-              type: "boolean",
-              description: "Skip permission checks — dangerous, use only in trusted sandboxes",
-            },
-            paperclipSkillSync: {
-              type: "object",
-              description: "Paperclip skill auto-sync configuration",
-              properties: {
-                desiredSkills: {
-                  type: "array",
-                  items: { type: "string" },
-                  description: "Skill names the agent should have installed",
-                },
-              },
-            },
-          },
-        },
-      },
-      required: ["agentId"],
+    inputSchema: toJsonSchema(UpdateAgentInput),
+    annotations: {
+      title: "Update agent configuration",
+      destructiveHint: true,
+      openWorldHint: false,
     },
-    annotations: { destructiveHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { agentId, ...rest } = validate(UpdateAgentInput, args);
@@ -296,23 +195,8 @@ export const agentTools: ToolDefinition[] = [
     name: "paperclip_update_agent_permissions",
     description:
       "Update an agent's permissions (canAssignTasks, canCreateAgents). Both fields are required — the API enforces this. Run ID header is injected automatically.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        agentId: { type: "string", description: "Agent UUID" },
-        canAssignTasks: {
-          type: "boolean",
-          description: "Allow this agent to assign tasks to other agents",
-        },
-        canCreateAgents: {
-          type: "boolean",
-          description:
-            "Allow this agent to create new agents (reserved for CEO by governance policy)",
-        },
-      },
-      required: ["agentId", "canAssignTasks", "canCreateAgents"],
-    },
-    annotations: { destructiveHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(UpdateAgentPermissionsInput),
+    annotations: { title: "Update agent permissions", destructiveHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { agentId, canAssignTasks, canCreateAgents } = validate(
@@ -332,14 +216,8 @@ export const agentTools: ToolDefinition[] = [
   {
     name: "paperclip_pause_agent",
     description: "Pause an agent, preventing it from starting new heartbeat runs.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        agentId: { type: "string", description: "Agent UUID" },
-      },
-      required: ["agentId"],
-    },
-    annotations: { destructiveHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(AgentIdInput),
+    annotations: { title: "Pause agent", destructiveHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { agentId } = validate(AgentIdInput, args);
@@ -353,14 +231,8 @@ export const agentTools: ToolDefinition[] = [
   {
     name: "paperclip_resume_agent",
     description: "Resume a paused agent, allowing it to start new heartbeat runs.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        agentId: { type: "string", description: "Agent UUID" },
-      },
-      required: ["agentId"],
-    },
-    annotations: { destructiveHint: false, openWorldHint: false },
+    inputSchema: toJsonSchema(AgentIdInput),
+    annotations: { title: "Resume paused agent", destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
       try {
         const { agentId } = validate(AgentIdInput, args);
@@ -375,14 +247,12 @@ export const agentTools: ToolDefinition[] = [
     name: "paperclip_invoke_heartbeat",
     description:
       "Manually trigger a heartbeat run for an agent. Run ID header is injected automatically.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        agentId: { type: "string", description: "Agent UUID" },
-      },
-      required: ["agentId"],
+    inputSchema: toJsonSchema(AgentIdInput),
+    annotations: {
+      title: "Invoke agent heartbeat manually",
+      destructiveHint: false,
+      openWorldHint: false,
     },
-    annotations: { destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
       try {
         const { agentId } = validate(AgentIdInput, args);
@@ -397,14 +267,12 @@ export const agentTools: ToolDefinition[] = [
     name: "paperclip_terminate_agent",
     description:
       "Permanently deactivate an agent. WARNING: This action is irreversible. The agent cannot be reactivated after termination. Run ID header is injected automatically.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        agentId: { type: "string", description: "Agent UUID" },
-      },
-      required: ["agentId"],
+    inputSchema: toJsonSchema(AgentIdInput),
+    annotations: {
+      title: "Terminate agent permanently",
+      destructiveHint: true,
+      openWorldHint: false,
     },
-    annotations: { destructiveHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { agentId } = validate(AgentIdInput, args);
@@ -419,16 +287,8 @@ export const agentTools: ToolDefinition[] = [
     name: "paperclip_create_agent_key",
     description:
       "Create a long-lived API key for an agent. Returns the key value — store it securely, it will not be shown again. Run ID header is injected automatically.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        agentId: { type: "string", description: "Agent UUID" },
-        name: { type: "string", description: "Key label (optional)" },
-        expiresAt: { type: "string", description: "ISO 8601 expiry date (optional)" },
-      },
-      required: ["agentId"],
-    },
-    annotations: { destructiveHint: false, openWorldHint: false },
+    inputSchema: toJsonSchema(CreateAgentKeyInput),
+    annotations: { title: "Create agent API key", destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
       try {
         const { agentId, ...rest } = validate(CreateAgentKeyInput, args);
@@ -445,14 +305,12 @@ export const agentTools: ToolDefinition[] = [
   {
     name: "paperclip_list_agent_config_revisions",
     description: "List config revision history for an agent.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        agentId: { type: "string", description: "Agent UUID" },
-      },
-      required: ["agentId"],
+    inputSchema: toJsonSchema(AgentIdInput),
+    annotations: {
+      title: "List agent config revisions",
+      readOnlyHint: true,
+      openWorldHint: false,
     },
-    annotations: { readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { agentId } = validate(AgentIdInput, args);
@@ -467,15 +325,12 @@ export const agentTools: ToolDefinition[] = [
     name: "paperclip_rollback_agent_config",
     description:
       "Rollback an agent's config to a previous revision. Run ID header is injected automatically.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        agentId: { type: "string", description: "Agent UUID" },
-        revisionId: { type: "string", description: "Config revision UUID to rollback to" },
-      },
-      required: ["agentId", "revisionId"],
+    inputSchema: toJsonSchema(ConfigRevisionInput),
+    annotations: {
+      title: "Rollback agent config revision",
+      destructiveHint: true,
+      openWorldHint: false,
     },
-    annotations: { destructiveHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { agentId, revisionId } = validate(ConfigRevisionInput, args);
@@ -492,22 +347,12 @@ export const agentTools: ToolDefinition[] = [
     name: "paperclip_set_agent_instructions_path",
     description:
       "Set or clear the AGENTS.md instructions file path for an agent. Send null to clear. Run ID header is injected automatically.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        agentId: { type: "string", description: "Agent UUID" },
-        path: {
-          type: ["string", "null"],
-          description: "Path to AGENTS.md file, or null to clear",
-        },
-        adapterConfigKey: {
-          type: "string",
-          description: "Adapter config key override for non-standard adapters (optional)",
-        },
-      },
-      required: ["agentId", "path"],
+    inputSchema: toJsonSchema(SetInstructionsPathInput),
+    annotations: {
+      title: "Set agent instructions file path",
+      destructiveHint: false,
+      openWorldHint: false,
     },
-    annotations: { destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
       try {
         const { agentId, path, adapterConfigKey } = validate(SetInstructionsPathInput, args);
@@ -523,12 +368,8 @@ export const agentTools: ToolDefinition[] = [
   {
     name: "paperclip_get_org_chart",
     description: "Get the full company agent hierarchy (org chart).",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      required: [],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(NoInput),
+    annotations: { title: "Get company org chart", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         validate(NoInput, args);
@@ -543,19 +384,8 @@ export const agentTools: ToolDefinition[] = [
     name: "paperclip_sync_agent_skills",
     description:
       "Sync the desired skill set for an agent, adding or removing skills as needed. Run ID header is injected automatically.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        agentId: { type: "string", description: "Agent UUID" },
-        desiredSkills: {
-          type: "array",
-          items: { type: "string" },
-          description: "Complete list of skill names the agent should have",
-        },
-      },
-      required: ["agentId", "desiredSkills"],
-    },
-    annotations: { destructiveHint: false, openWorldHint: false },
+    inputSchema: toJsonSchema(SyncAgentSkillsInput),
+    annotations: { title: "Sync agent skills", destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
       try {
         const { agentId, desiredSkills } = validate(SyncAgentSkillsInput, args);
@@ -571,12 +401,8 @@ export const agentTools: ToolDefinition[] = [
   {
     name: "paperclip_list_company_skills",
     description: "List all skills installed in the company.",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      required: [],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(NoInput),
+    annotations: { title: "List company skills", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         validate(NoInput, args);

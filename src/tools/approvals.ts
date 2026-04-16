@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import { validate, handleApiError } from "./validation.js";
+import { validate, toJsonSchema, handleApiError } from "./validation.js";
 
 const ApprovalIdInput = z.object({
   approvalId: z.string().min(1).describe("Approval UUID"),
@@ -57,17 +57,8 @@ export const approvalTools: ToolDefinition[] = [
     name: "paperclip_list_approvals",
     description:
       "List approval requests for the current company. Optionally filter by status (comma-separated).",
-    inputSchema: {
-      type: "object",
-      properties: {
-        status: {
-          type: "string",
-          description: "Comma-separated status values (e.g. 'pending,approved')",
-        },
-      },
-      required: [],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(ListApprovalsInput),
+    annotations: { title: "List approval requests", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const input = validate(ListApprovalsInput, args);
@@ -86,14 +77,8 @@ export const approvalTools: ToolDefinition[] = [
     name: "paperclip_get_approval",
     description:
       "Get a single approval request by ID. Returns the approval object only (status, type, payload, etc.). Linked issues are not included in this response.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        approvalId: { type: "string", description: "Approval UUID" },
-      },
-      required: ["approvalId"],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(ApprovalIdInput),
+    annotations: { title: "Get approval request by ID", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { approvalId } = validate(ApprovalIdInput, args);
@@ -108,26 +93,8 @@ export const approvalTools: ToolDefinition[] = [
     name: "paperclip_create_approval",
     description:
       "Create a new approval request. Requires `type` (hire_agent | approve_ceo_strategy | budget_override_required) and a type-specific `payload` object. Run ID header is injected automatically.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        type: {
-          type: "string",
-          enum: ["hire_agent", "approve_ceo_strategy", "budget_override_required"],
-          description: "Approval type",
-        },
-        payload: {
-          type: "object",
-          description: "Type-specific payload object (required by the API)",
-        },
-        requestedByAgentId: {
-          type: "string",
-          description: "Agent UUID of the requester (defaults to caller)",
-        },
-      },
-      required: ["type", "payload"],
-    },
-    annotations: { destructiveHint: false, openWorldHint: false },
+    inputSchema: toJsonSchema(CreateApprovalInput),
+    annotations: { title: "Create approval request", destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
       try {
         const input = validate(CreateApprovalInput, args);
@@ -147,14 +114,8 @@ export const approvalTools: ToolDefinition[] = [
   {
     name: "paperclip_approve",
     description: "Approve an approval request. Run ID header is injected automatically.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        approvalId: { type: "string", description: "Approval UUID" },
-      },
-      required: ["approvalId"],
-    },
-    annotations: { destructiveHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(ApprovalIdInput),
+    annotations: { title: "Approve request", destructiveHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { approvalId } = validate(ApprovalIdInput, args);
@@ -168,15 +129,8 @@ export const approvalTools: ToolDefinition[] = [
   {
     name: "paperclip_reject",
     description: "Reject an approval request. Run ID header is injected automatically.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        approvalId: { type: "string", description: "Approval UUID" },
-        reason: { type: "string", description: "Reason for rejection" },
-      },
-      required: ["approvalId"],
-    },
-    annotations: { destructiveHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(RejectInput),
+    annotations: { title: "Reject approval request", destructiveHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { approvalId, reason } = validate(RejectInput, args);
@@ -193,15 +147,12 @@ export const approvalTools: ToolDefinition[] = [
     name: "paperclip_request_revision",
     description:
       "Request a revision on a pending approval. Run ID header is injected automatically.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        approvalId: { type: "string", description: "Approval UUID" },
-        feedback: { type: "string", description: "Feedback on what needs to change" },
-      },
-      required: ["approvalId"],
+    inputSchema: toJsonSchema(RequestRevisionInput),
+    annotations: {
+      title: "Request revision on approval",
+      destructiveHint: false,
+      openWorldHint: false,
     },
-    annotations: { destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
       try {
         const { approvalId, feedback } = validate(RequestRevisionInput, args);
@@ -221,15 +172,12 @@ export const approvalTools: ToolDefinition[] = [
     name: "paperclip_resubmit_approval",
     description:
       "Resubmit an approval request after addressing revision feedback. Run ID header is injected automatically.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        approvalId: { type: "string", description: "Approval UUID" },
-        comment: { type: "string", description: "Summary of changes made" },
-      },
-      required: ["approvalId"],
+    inputSchema: toJsonSchema(ResubmitInput),
+    annotations: {
+      title: "Resubmit approval after revision",
+      destructiveHint: false,
+      openWorldHint: false,
     },
-    annotations: { destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
       try {
         const { approvalId, comment } = validate(ResubmitInput, args);
@@ -245,14 +193,12 @@ export const approvalTools: ToolDefinition[] = [
   {
     name: "paperclip_list_approval_comments",
     description: "List comments on an approval request.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        approvalId: { type: "string", description: "Approval UUID" },
-      },
-      required: ["approvalId"],
+    inputSchema: toJsonSchema(ApprovalIdInput),
+    annotations: {
+      title: "List approval comments",
+      readOnlyHint: true,
+      openWorldHint: false,
     },
-    annotations: { readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { approvalId } = validate(ApprovalIdInput, args);
@@ -267,15 +213,12 @@ export const approvalTools: ToolDefinition[] = [
     name: "paperclip_add_approval_comment",
     description:
       "Post a markdown comment on an approval request. Run ID header is injected automatically.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        approvalId: { type: "string", description: "Approval UUID" },
-        body: { type: "string", description: "Comment body (markdown)" },
-      },
-      required: ["approvalId", "body"],
+    inputSchema: toJsonSchema(ApprovalCommentInput),
+    annotations: {
+      title: "Post comment on approval",
+      destructiveHint: false,
+      openWorldHint: false,
     },
-    annotations: { destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
       try {
         const { approvalId, body } = validate(ApprovalCommentInput, args);
@@ -290,19 +233,12 @@ export const approvalTools: ToolDefinition[] = [
     name: "paperclip_create_agent_hire",
     description:
       "Create an agent hire request (triggers the approval and onboarding flow). Run ID header is injected automatically.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        name: { type: "string", description: "Agent display name" },
-        role: { type: "string", description: "Agent role (e.g. engineer, cto)" },
-        title: { type: "string", description: "Job title" },
-        capabilities: { type: "string", description: "Free-text capability description" },
-        goalId: { type: "string", description: "Goal UUID to link the hire to" },
-        projectId: { type: "string", description: "Project UUID to associate" },
-      },
-      required: ["name", "role"],
+    inputSchema: toJsonSchema(CreateAgentHireInput),
+    annotations: {
+      title: "Create agent hire request",
+      destructiveHint: false,
+      openWorldHint: false,
     },
-    annotations: { destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
       try {
         const input = validate(CreateAgentHireInput, args);

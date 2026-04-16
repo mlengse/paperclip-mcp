@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import { validate, NoInput, handleApiError } from "./validation.js";
+import { validate, toJsonSchema, NoInput, handleApiError } from "./validation.js";
 
 const ReportCostEventInput = z.object({
   agentId: z.string().describe("ID of the agent that incurred the cost"),
@@ -23,19 +23,8 @@ export const activityTools: ToolDefinition[] = [
     name: "paperclip_get_activity",
     description:
       "Get audit trail activity for the current company. Optionally filter by agentId, entityType, or entityId.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        agentId: { type: "string", description: "Filter by agent ID" },
-        entityType: {
-          type: "string",
-          description: "Filter by entity type (e.g. issue, approval)",
-        },
-        entityId: { type: "string", description: "Filter by entity ID" },
-      },
-      required: [],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(GetActivityInput),
+    annotations: { title: "Get company activity feed", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const input = validate(GetActivityInput, args);
@@ -55,12 +44,8 @@ export const activityTools: ToolDefinition[] = [
   {
     name: "paperclip_get_cost_summary",
     description: "Get a cost summary for the current company across all agents and projects.",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      required: [],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(NoInput),
+    annotations: { title: "Get company cost summary", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         validate(NoInput, args);
@@ -74,12 +59,8 @@ export const activityTools: ToolDefinition[] = [
   {
     name: "paperclip_get_costs_by_agent",
     description: "Get costs broken down by agent for the current company.",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      required: [],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(NoInput),
+    annotations: { title: "Get costs by agent", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         validate(NoInput, args);
@@ -93,12 +74,8 @@ export const activityTools: ToolDefinition[] = [
   {
     name: "paperclip_get_costs_by_project",
     description: "Get costs broken down by project for the current company.",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      required: [],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(NoInput),
+    annotations: { title: "Get costs by project", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         validate(NoInput, args);
@@ -115,37 +92,8 @@ export const activityTools: ToolDefinition[] = [
     name: "paperclip_report_cost_event",
     description:
       "Report an agent's token usage and cost to Paperclip for budget tracking and spend analytics. Calls POST /api/companies/{companyId}/cost-events.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        agentId: { type: "string", description: "ID of the agent that incurred the cost" },
-        provider: { type: "string", description: "LLM provider name (e.g. anthropic, openai)" },
-        model: { type: "string", description: "Model name (e.g. claude-sonnet-4-6)" },
-        inputTokens: {
-          type: "number",
-          description: "Number of input tokens consumed",
-        },
-        outputTokens: {
-          type: "number",
-          description: "Number of output tokens generated",
-        },
-        costCents: { type: "number", description: "Total cost in cents" },
-        occurredAt: {
-          type: "string",
-          description: "ISO 8601 timestamp of when the cost was incurred",
-        },
-      },
-      required: [
-        "agentId",
-        "provider",
-        "model",
-        "inputTokens",
-        "outputTokens",
-        "costCents",
-        "occurredAt",
-      ],
-    },
-    annotations: { readOnlyHint: false, openWorldHint: false },
+    inputSchema: toJsonSchema(ReportCostEventInput),
+    annotations: { title: "Report agent cost event", readOnlyHint: false, openWorldHint: false },
     async handler(args, client) {
       try {
         const input = validate(ReportCostEventInput, args);

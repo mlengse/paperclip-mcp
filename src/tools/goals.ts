@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import { validate, handleApiError, NoInput } from "./validation.js";
+import { validate, toJsonSchema, handleApiError, NoInput } from "./validation.js";
 
 const GoalIdInput = z.object({
   goalId: z.string().min(1).describe("Goal UUID"),
@@ -25,12 +25,8 @@ export const goalTools: ToolDefinition[] = [
   {
     name: "paperclip_list_goals",
     description: "List goals for the current company.",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      required: [],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(NoInput),
+    annotations: { title: "List company goals", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         validate(NoInput, args);
@@ -44,14 +40,8 @@ export const goalTools: ToolDefinition[] = [
   {
     name: "paperclip_get_goal",
     description: "Get a single goal by ID, including its status and linked projects.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        goalId: { type: "string", description: "Goal UUID" },
-      },
-      required: ["goalId"],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(GoalIdInput),
+    annotations: { title: "Get goal by ID", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { goalId } = validate(GoalIdInput, args);
@@ -66,18 +56,8 @@ export const goalTools: ToolDefinition[] = [
     name: "paperclip_create_goal",
     description:
       "Create a new goal. companyId is injected from auth config. Run ID header is injected automatically.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        title: { type: "string", description: "Goal title" },
-        description: { type: "string", description: "Goal description (markdown)" },
-        status: { type: "string", description: "Initial status (default: active)" },
-        level: { type: "string", description: "Goal level (e.g. company, team)" },
-        parentId: { type: "string", description: "Parent goal UUID" },
-      },
-      required: ["title"],
-    },
-    annotations: { destructiveHint: false, openWorldHint: false },
+    inputSchema: toJsonSchema(CreateGoalInput),
+    annotations: { title: "Create new goal", destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
       try {
         const input = validate(CreateGoalInput, args);
@@ -97,17 +77,8 @@ export const goalTools: ToolDefinition[] = [
     name: "paperclip_update_goal",
     description:
       "Update a goal's title, description, or status. Run ID header is injected automatically.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        goalId: { type: "string", description: "Goal UUID" },
-        title: { type: "string", description: "New title" },
-        description: { type: "string", description: "New description (markdown)" },
-        status: { type: "string", description: "New status" },
-      },
-      required: ["goalId"],
-    },
-    annotations: { destructiveHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(UpdateGoalInput),
+    annotations: { title: "Update goal fields", destructiveHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { goalId, ...rest } = validate(UpdateGoalInput, args);

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import { validate, IssueIdSchema, handleApiError } from "./validation.js";
+import { validate, toJsonSchema, IssueIdSchema, handleApiError } from "./validation.js";
 import { PaperclipApiError } from "../errors.js";
 
 const ISSUES_MAX_LIMIT = 100;
@@ -94,30 +94,8 @@ export const issueTools: ToolDefinition[] = [
       "Optionally filter by status (comma-separated), assigneeAgentId, projectId, goalId, labelId, or full-text search query. " +
       `Use limit (max ${ISSUES_MAX_LIMIT}, default ${ISSUES_DEFAULT_LIMIT}) and offset to page through results. ` +
       "Returns { issues, total, limit, offset } where total is the unsliced count so clients can detect truncation.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        status: {
-          type: "string",
-          description: "Comma-separated status values (e.g. 'todo,in_progress')",
-        },
-        assigneeAgentId: { type: "string", description: "Filter by assignee agent ID" },
-        projectId: { type: "string", description: "Filter by project ID" },
-        goalId: { type: "string", description: "Filter by goal ID" },
-        labelId: { type: "string", description: "Filter by label ID" },
-        q: { type: "string", description: "Full-text search query" },
-        limit: {
-          type: "number",
-          description: `Maximum number of issues to return (1–${ISSUES_MAX_LIMIT}, default ${ISSUES_DEFAULT_LIMIT})`,
-        },
-        offset: {
-          type: "number",
-          description: "Number of issues to skip before returning results (default 0)",
-        },
-      },
-      required: [],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(ListIssuesInput),
+    annotations: { title: "List issues", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const input = validate(ListIssuesInput, args);
@@ -147,14 +125,8 @@ export const issueTools: ToolDefinition[] = [
   {
     name: "paperclip_get_issue",
     description: "Get a single issue by ID, including its full details and ancestors.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        issueId: { type: "string", description: "Issue ID or identifier (e.g. PAP-20)" },
-      },
-      required: ["issueId"],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(IssueIdInput),
+    annotations: { title: "Get issue by ID", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { issueId } = validate(IssueIdInput, args);
@@ -169,14 +141,8 @@ export const issueTools: ToolDefinition[] = [
     name: "paperclip_get_heartbeat_context",
     description:
       "Get compact heartbeat context for an issue: state, ancestor summaries, goal/project info, and comment cursor metadata.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        issueId: { type: "string", description: "Issue ID or identifier" },
-      },
-      required: ["issueId"],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(IssueIdInput),
+    annotations: { title: "Get issue heartbeat context", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { issueId } = validate(IssueIdInput, args);
@@ -191,19 +157,13 @@ export const issueTools: ToolDefinition[] = [
     name: "paperclip_checkout_issue",
     description:
       "Checkout an issue to claim it for work. Returns 409 if owned by another agent — do not retry.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        issueId: { type: "string", description: "Issue ID to check out" },
-        expectedStatuses: {
-          type: "array",
-          items: { type: "string" },
-          description: "Expected current statuses (e.g. ['todo', 'backlog'])",
-        },
-      },
-      required: ["issueId"],
+    inputSchema: toJsonSchema(CheckoutIssueInput),
+    annotations: {
+      title: "Check out issue for work",
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false,
     },
-    annotations: { destructiveHint: false, idempotentHint: false, openWorldHint: false },
     async handler(args, client) {
       try {
         const { issueId, expectedStatuses } = validate(CheckoutIssueInput, args);
@@ -272,14 +232,8 @@ export const issueTools: ToolDefinition[] = [
   {
     name: "paperclip_release_issue",
     description: "Release a checked-out issue without marking it done.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        issueId: { type: "string", description: "Issue ID to release" },
-      },
-      required: ["issueId"],
-    },
-    annotations: { idempotentHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(IssueIdInput),
+    annotations: { title: "Release issue checkout", idempotentHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { issueId } = validate(IssueIdInput, args);
@@ -294,57 +248,8 @@ export const issueTools: ToolDefinition[] = [
     name: "paperclip_update_issue",
     description:
       "Update an issue's status, priority, title, description, assignee, goal, project, parent, billing code, execution lock fields, or add a comment. Run ID header is injected automatically.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        issueId: { type: "string", description: "Issue ID to update" },
-        status: { type: "string", description: "New status value" },
-        comment: { type: "string", description: "Comment to post alongside the update" },
-        priority: { type: "string", description: "New priority value" },
-        title: { type: "string", description: "New title" },
-        description: { type: "string", description: "New description (markdown)" },
-        assigneeAgentId: {
-          type: ["string", "null"],
-          description: "Reassign to agent ID, or null to unassign",
-        },
-        assigneeUserId: {
-          type: ["string", "null"],
-          description: "Reassign to board/human user ID, or null to unassign",
-        },
-        goalId: {
-          type: ["string", "null"],
-          description: "Move issue to a different goal, or null to unlink",
-        },
-        projectId: {
-          type: ["string", "null"],
-          description: "Move issue to a different project, or null to unlink",
-        },
-        parentId: {
-          type: ["string", "null"],
-          description: "Reparent issue (make sub-task of another), or null to unparent",
-        },
-        billingCode: {
-          type: ["string", "null"],
-          description: "Cross-team billing attribution, or null to clear",
-        },
-        labelIds: {
-          type: "array",
-          items: { type: "string" },
-          description: "Label IDs to apply to the issue (replaces existing labels)",
-        },
-        executionRunId: {
-          type: ["string", "null"],
-          description:
-            "Execution run ID holding the checkout lock; pass null to clear a stale lock",
-        },
-        executionLockedAt: {
-          type: ["string", "null"],
-          description: "ISO timestamp of when the execution lock was acquired; pass null to clear",
-        },
-      },
-      required: ["issueId"],
-    },
-    annotations: { destructiveHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(UpdateIssueInput),
+    annotations: { title: "Update issue fields", destructiveHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { issueId, ...rest } = validate(UpdateIssueInput, args);
@@ -363,32 +268,8 @@ export const issueTools: ToolDefinition[] = [
     name: "paperclip_create_issue",
     description:
       "Create a new issue. companyId is injected from auth config. Run ID header is injected automatically.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        title: { type: "string", description: "Issue title (required)" },
-        description: { type: "string", description: "Issue description (markdown)" },
-        status: { type: "string", description: "Initial status (default: todo)" },
-        priority: { type: "string", description: "Priority level" },
-        parentId: { type: "string", description: "Parent issue ID (required for subtasks)" },
-        goalId: { type: "string", description: "Goal ID to link the issue to" },
-        projectId: { type: "string", description: "Project ID to assign to" },
-        assigneeAgentId: { type: "string", description: "Agent ID to assign to" },
-        billingCode: { type: "string", description: "Cross-team billing attribution code" },
-        labelIds: {
-          type: "array",
-          items: { type: "string" },
-          description: "Label IDs to apply to the new issue",
-        },
-        inheritExecutionWorkspaceFromIssueId: {
-          type: "string",
-          description:
-            "Link to an existing execution workspace (for follow-up tasks on same checkout/worktree)",
-        },
-      },
-      required: ["title"],
-    },
-    annotations: { destructiveHint: false, openWorldHint: false },
+    inputSchema: toJsonSchema(CreateIssueInput),
+    annotations: { title: "Create new issue", destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
       try {
         const input = validate(CreateIssueInput, args);

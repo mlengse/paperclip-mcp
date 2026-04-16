@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import { validate, handleApiError, NoInput } from "./validation.js";
+import { validate, toJsonSchema, handleApiError, NoInput } from "./validation.js";
 
 const ProjectIdInput = z.object({
   projectId: z.string().min(1).describe("Project UUID"),
@@ -44,12 +44,8 @@ export const projectTools: ToolDefinition[] = [
   {
     name: "paperclip_list_projects",
     description: "List projects for the current company.",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      required: [],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(NoInput),
+    annotations: { title: "List company projects", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         validate(NoInput, args);
@@ -63,14 +59,8 @@ export const projectTools: ToolDefinition[] = [
   {
     name: "paperclip_get_project",
     description: "Get a single project by ID, including its workspaces.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        projectId: { type: "string", description: "Project UUID" },
-      },
-      required: ["projectId"],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(ProjectIdInput),
+    annotations: { title: "Get project by ID", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { projectId } = validate(ProjectIdInput, args);
@@ -85,25 +75,8 @@ export const projectTools: ToolDefinition[] = [
     name: "paperclip_create_project",
     description:
       "Create a new project. Optionally include a workspace config. companyId is injected from auth config. Run ID header is injected automatically.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        name: { type: "string", description: "Project name" },
-        description: { type: "string", description: "Project description (markdown)" },
-        status: { type: "string", description: "Initial status (default: active)" },
-        goalId: { type: "string", description: "Goal UUID to link the project to" },
-        workspace: {
-          type: "object",
-          description: "Optional workspace to create alongside the project",
-          properties: {
-            cwd: { type: "string", description: "Local working directory path" },
-            repoUrl: { type: "string", description: "Remote repository URL" },
-          },
-        },
-      },
-      required: ["name"],
-    },
-    annotations: { destructiveHint: false, openWorldHint: false },
+    inputSchema: toJsonSchema(CreateProjectInput),
+    annotations: { title: "Create new project", destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
       try {
         const input = validate(CreateProjectInput, args);
@@ -126,17 +99,8 @@ export const projectTools: ToolDefinition[] = [
     name: "paperclip_update_project",
     description:
       "Update a project's name, description, or status. Run ID header is injected automatically.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        projectId: { type: "string", description: "Project UUID" },
-        name: { type: "string", description: "New name" },
-        description: { type: "string", description: "New description (markdown)" },
-        status: { type: "string", description: "New status" },
-      },
-      required: ["projectId"],
-    },
-    annotations: { destructiveHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(UpdateProjectInput),
+    annotations: { title: "Update project fields", destructiveHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { projectId, ...rest } = validate(UpdateProjectInput, args);
@@ -154,14 +118,8 @@ export const projectTools: ToolDefinition[] = [
   {
     name: "paperclip_list_workspaces",
     description: "List workspaces for a project.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        projectId: { type: "string", description: "Project UUID" },
-      },
-      required: ["projectId"],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(ProjectIdInput),
+    annotations: { title: "List project workspaces", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { projectId } = validate(ProjectIdInput, args);
@@ -176,16 +134,12 @@ export const projectTools: ToolDefinition[] = [
     name: "paperclip_create_workspace",
     description:
       "Create a new workspace for a project. Provide at least one of cwd or repoUrl. Run ID header is injected automatically.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        projectId: { type: "string", description: "Project UUID" },
-        cwd: { type: "string", description: "Local working directory path" },
-        repoUrl: { type: "string", description: "Remote repository URL" },
-      },
-      required: ["projectId"],
+    inputSchema: toJsonSchema(CreateWorkspaceInput),
+    annotations: {
+      title: "Create project workspace",
+      destructiveHint: false,
+      openWorldHint: false,
     },
-    annotations: { destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
       try {
         const { projectId, cwd, repoUrl } = validate(CreateWorkspaceInput, args);
@@ -202,17 +156,12 @@ export const projectTools: ToolDefinition[] = [
   {
     name: "paperclip_update_workspace",
     description: "Update a workspace's cwd or repoUrl. Run ID header is injected automatically.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        projectId: { type: "string", description: "Project UUID" },
-        workspaceId: { type: "string", description: "Workspace UUID" },
-        cwd: { type: "string", description: "New local working directory path" },
-        repoUrl: { type: "string", description: "New remote repository URL" },
-      },
-      required: ["projectId", "workspaceId"],
+    inputSchema: toJsonSchema(UpdateWorkspaceInput),
+    annotations: {
+      title: "Update workspace settings",
+      destructiveHint: true,
+      openWorldHint: false,
     },
-    annotations: { destructiveHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { projectId, workspaceId, cwd, repoUrl } = validate(UpdateWorkspaceInput, args);

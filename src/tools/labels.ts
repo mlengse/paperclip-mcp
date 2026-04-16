@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import { validate, handleApiError, NoInput } from "./validation.js";
+import { validate, toJsonSchema, handleApiError, NoInput } from "./validation.js";
 
 const CreateLabelInput = z.object({
   name: z.string().min(1).describe("Label name (e.g. 'source:agent', 'type:bug')"),
@@ -11,12 +11,8 @@ export const labelTools: ToolDefinition[] = [
   {
     name: "paperclip_list_labels",
     description: "List all labels for the current company.",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      required: [],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: toJsonSchema(NoInput),
+    annotations: { title: "List company labels", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         validate(NoInput, args);
@@ -31,15 +27,8 @@ export const labelTools: ToolDefinition[] = [
     name: "paperclip_create_label",
     description:
       "Create a new label for the current company. Use to establish the label taxonomy before applying labels to issues.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        name: { type: "string", description: "Label name (e.g. 'source:agent', 'type:bug')" },
-        color: { type: "string", description: "Hex color string (e.g. '#6366f1')" },
-      },
-      required: ["name"],
-    },
-    annotations: { destructiveHint: false, openWorldHint: false },
+    inputSchema: toJsonSchema(CreateLabelInput),
+    annotations: { title: "Create company label", destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
       try {
         const input = validate(CreateLabelInput, args);
