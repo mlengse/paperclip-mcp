@@ -35,20 +35,24 @@ export function handleApiError(err: unknown): ToolResult {
 }
 
 // Common input schemas reused across tool modules
-export const NoInput = z.object({});
+export const NoInput = z.object({}).strict();
 
 export const IssueIdSchema = z.object({
-  issueId: z.string().min(1),
+  issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-21)"),
 });
 
-export const StatusSchema = z.enum([
-  "backlog",
-  "todo",
-  "in_progress",
-  "in_review",
-  "done",
-  "blocked",
-  "cancelled",
-]);
+export const StatusSchema = z
+  .enum(["backlog", "todo", "in_progress", "in_review", "done", "blocked", "cancelled"])
+  .describe("Issue lifecycle status");
 
-export const PrioritySchema = z.enum(["critical", "high", "medium", "low"]);
+export const PrioritySchema = z
+  .enum(["critical", "high", "medium", "low"])
+  .describe("Issue priority level");
+
+export const ApprovalTypeSchema = z
+  .enum(["hire_agent", "approve_ceo_strategy", "budget_override_required"])
+  .describe("Approval request type");
+
+export const RoutineTriggerTypeSchema = z
+  .enum(["schedule", "webhook", "api"])
+  .describe("Routine trigger type");
