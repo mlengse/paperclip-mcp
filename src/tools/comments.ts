@@ -58,6 +58,8 @@ export const commentTools: ToolDefinition[] = [
         '- issueId: string — Issue ID or identifier (example: "PAP-42")',
         "- after: string (optional) — Comment UUID cursor; returns only comments after this ID (client-side workaround active — server after param returns 500)",
         '- order: "asc" | "desc" (optional) — Sort order (default: asc)',
+        "- limit: number (optional) — Max comments per page (1–100, default 50)",
+        "- offset: number (optional) — Number of comments to skip (default 0)",
         "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
       ],
       returns:
@@ -96,8 +98,13 @@ export const commentTools: ToolDefinition[] = [
           return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
         }
 
+        // Server respects `limit` (confirmed: ?limit=2 returns ≤ 2 items).
+        // Server ignores `offset` (confirmed: ?offset=1 returns same set as ?offset=0).
+        // Strategy: send `limit` upstream to reduce payload size; apply `offset` client-side.
+        // Belt-and-suspenders: paginate() re-enforces limit in case the server returns more.
         const params = new URLSearchParams();
         if (input.order) params.set("order", input.order);
+        if (input.limit !== undefined) params.set("limit", String(input.limit));
         const qs = params.toString();
         const path = `/api/issues/${input.issueId}/comments${qs ? `?${qs}` : ""}`;
         const all = await client.get<unknown[]>(path);

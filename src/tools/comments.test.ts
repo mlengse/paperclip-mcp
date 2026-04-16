@@ -31,7 +31,7 @@ const addComment = commentTools.find((t) => t.name === "paperclip_add_comment")!
 const getComment = commentTools.find((t) => t.name === "paperclip_get_comment")!;
 
 describe("paperclip_list_comments", () => {
-  it("calls GET /api/issues/{id}/comments with no query params when only issueId given", async () => {
+  it("calls GET /api/issues/{id}/comments with limit param when only issueId given", async () => {
     const comments = [{ id: "c-1", body: "Hello" }];
     const { fn, calls } = mockFetch(200, comments);
     const client = new PaperclipClient(TEST_AUTH, fn);
@@ -40,7 +40,15 @@ describe("paperclip_list_comments", () => {
       client
     );
     assert.equal(calls.length, 1);
-    assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1/comments");
+    // Default limit=50 is forwarded upstream to reduce server payload size.
+    assert.ok(
+      calls[0]!.url.startsWith("http://localhost:3100/api/issues/issue-1/comments"),
+      `Unexpected base URL: ${calls[0]!.url}`
+    );
+    assert.ok(
+      calls[0]!.url.includes("limit=50"),
+      `Expected default limit=50 in URL: ${calls[0]!.url}`
+    );
     assert.equal(calls[0]!.init.method, "GET");
     const parsed = JSON.parse(result.content[0]!.text);
     assert.deepEqual(parsed.items, comments);
