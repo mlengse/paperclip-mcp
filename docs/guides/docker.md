@@ -19,10 +19,16 @@ docker build -t paperclip-mcp:2.0.0 -t paperclip-mcp:latest .
 
 The build uses two stages:
 
-1. **builder** — installs all dependencies (including devDependencies) and compiles TypeScript via `tsc`.
-2. **runtime** — installs production-only dependencies (`npm ci --omit=dev --ignore-scripts`), copies `dist/`, and drops to a non-root `mcp` user.
+1. **builder** — `node:22-slim` (glibc). Installs all dependencies (including devDependencies) and compiles TypeScript via `tsc`.
+2. **runtime** — `node:22-alpine` (musl, hardened). Installs production-only dependencies (`npm ci --omit=dev --ignore-scripts`), copies `dist/`, and drops to a non-root `mcp` user. Both `@modelcontextprotocol/sdk` and `zod` are pure JS — no native compilation is needed, making musl fully compatible.
 
-Typical final image size: ~230 MB (node:22-slim base).
+Typical final image size: ~186 MB (`node:22-alpine` runtime base).
+
+### Hardening and CVE posture
+
+The runtime stage is built on `node:22-alpine`, which carries **0 OS-layer CVEs** at release time (verified with Trivy). The only findings Trivy reports are in `npm`'s own bundled node_modules (`/usr/local/lib/node_modules/npm/`), which are not part of the application and are not reachable from a stdio-only MCP server.
+
+See [`docs/security/trivy-report.md`](../security/trivy-report.md) for the full scan report and reproducibility instructions.
 
 ## Running via `.mcp.json`
 
@@ -110,16 +116,28 @@ podman run -i --rm \
   for maximum hardening if your runtime supports it.
 - **No network ports:** The image has no `EXPOSE` directive. The MCP server communicates
   exclusively via stdio — there is no inbound network attack surface.
-- **Minimal runtime image:** Only `dist/`, production `node_modules`, and `dumb-init`
+- **Minimal runtime image:** Only `dist/`, production `node_modules`, and `tini`
   are present in the final stage. DevDependencies, test files, source TypeScript, and
   the `.husky/` hooks are excluded.
+- **Alpine base:** The `node:22-alpine` runtime base carries 0 OS-layer CVEs at release
+  time. Consumers can verify this with:
+
+  ```bash
+  trivy image --severity HIGH,CRITICAL paperclip-mcp:2.0.0
+  ```
+
+  See [`docs/security/trivy-report.md`](../security/trivy-report.md) for the baseline report.
 
 ## Signal handling
 
-`dumb-init` runs as PID 1 and forwards `SIGTERM` to the Node.js process, which the
-MCP SDK translates into a clean shutdown (drain in-flight requests, close the stdio
-transport). This ensures that `podman stop` or `docker stop` results in a graceful exit
-rather than a hard `SIGKILL` after the stop timeout.
+`tini` runs as PID 1 (via `ENTRYPOINT ["/sbin/tini", "--", "node", "dist/index.js"]`) and
+forwards `SIGTERM` to the Node.js process, which the MCP SDK translates into a clean
+shutdown (drain in-flight requests, close the stdio transport). This ensures that
+`podman stop` or `docker stop` results in a graceful exit rather than a hard `SIGKILL`
+after the stop timeout.
+
+`tini` is installed from Alpine's official package registry (`apk add --no-cache tini`)
+and is functionally equivalent to `dumb-init` for this use case.
 
 ## Smoke testing the image
 
