@@ -119,7 +119,7 @@ export const companyTools: ToolDefinition[] = [
     description: composeDescription({
       summary: "⚠ Board-only: Get a single company by UUID.",
       args: [
-        '- companyId: string — Company UUID (example: "53caad5d-05d6-469d-b6eb-8961a71b615e")',
+        '- companyId: string — Company UUID (example: "00000000-0000-0000-0000-000000000000")',
         "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
       ],
       returns:
@@ -198,7 +198,7 @@ export const companyTools: ToolDefinition[] = [
       summary:
         "⚠ Board-only: Update a company's name, description, or monthly budget. Requires board-level authentication (agent keys are rejected — even CEO agents receive 403).",
       args: [
-        '- companyId: string — Company UUID (example: "53caad5d-05d6-469d-b6eb-8961a71b615e")',
+        '- companyId: string — Company UUID (example: "00000000-0000-0000-0000-000000000000")',
         "- name: string (optional) — New company name",
         "- description: string | null (optional) — New description (pass null to clear)",
         "- budgetMonthlyCents: number (optional) — New monthly budget in cents (non-negative integer)",
@@ -245,7 +245,7 @@ export const companyTools: ToolDefinition[] = [
       summary:
         "⚠ Board-only: Archive a company, setting its status to 'archived'. Uses a dedicated POST endpoint — not a PATCH. This action is irreversible through the API.",
       args: [
-        '- companyId: string — Company UUID to archive (example: "53caad5d-05d6-469d-b6eb-8961a71b615e")',
+        '- companyId: string — Company UUID to archive (example: "00000000-0000-0000-0000-000000000000")',
       ],
       returns: "The updated company object with status: 'archived' and updated timestamps.",
       examples: {
