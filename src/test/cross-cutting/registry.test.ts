@@ -100,7 +100,8 @@ describe("ALL_TOOLS registry — structural invariants", () => {
     // Stage 8b adds 6 tools (delete_workspace + 5 company tools): 78 → 84.
     // Stage 8c adds 1 tool (create_agent): 84 → 85.
     // Stage 8d adds 6 tools (plugins module): 85 → 91.
-    assert.ok(ALL_TOOLS.length >= 91, `Expected at least 91 tools, got ${ALL_TOOLS.length}`);
+    // Stage 8e adds 4 tools (secrets module): 91 → 95.
+    assert.ok(ALL_TOOLS.length >= 95, `Expected at least 95 tools, got ${ALL_TOOLS.length}`);
     assert.ok(
       ALL_TOOLS.length <= 120,
       `Expected at most 120 tools, got ${ALL_TOOLS.length} — Stage 8 should land 103 total`
@@ -295,6 +296,7 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
     "paperclip_list_plugins",
     "paperclip_get_plugin",
     "paperclip_list_plugin_examples",
+    "paperclip_list_secrets",
   ];
 
   it("read-only tools have readOnlyHint: true", () => {
@@ -330,6 +332,8 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
     "paperclip_update_company",
     "paperclip_archive_company",
     "paperclip_disable_plugin",
+    "paperclip_update_secret",
+    "paperclip_rotate_secret",
   ];
 
   it("destructive tools have destructiveHint: true", () => {
@@ -357,6 +361,7 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
     "paperclip_update_routine_trigger",
     "paperclip_update_company",
     "paperclip_enable_plugin",
+    "paperclip_update_secret",
   ];
 
   it("idempotent tools have idempotentHint: true", () => {
@@ -394,6 +399,10 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
     "paperclip_list_plugin_examples",
     "paperclip_enable_plugin",
     "paperclip_disable_plugin",
+    "paperclip_list_secrets",
+    "paperclip_create_secret",
+    "paperclip_update_secret",
+    "paperclip_rotate_secret",
   ];
 
   it("board-only tools have '⚠ Board-only:' description prefix", () => {
@@ -487,6 +496,10 @@ describe("ALL_TOOLS registry — description quality", () => {
       "paperclip_list_plugin_examples",
       "paperclip_enable_plugin",
       "paperclip_disable_plugin",
+      "paperclip_list_secrets",
+      "paperclip_create_secret",
+      "paperclip_update_secret",
+      "paperclip_rotate_secret",
     ];
     const bad: string[] = [];
     for (const name of boardOnlyTools) {
