@@ -1,7 +1,15 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
 import { validate, toJsonSchema, handleApiError, composeDescription } from "./validation.js";
-import { ResponseFormatSchema, formatJson, formatGenericList, applyCharLimit } from "./format.js";
+import {
+  ResponseFormatSchema,
+  PaginationLimitSchema,
+  PaginationOffsetSchema,
+  formatJson,
+  formatGenericList,
+  applyCharLimit,
+  paginate,
+} from "./format.js";
 
 const ListCommentsInput = z
   .object({
@@ -14,6 +22,8 @@ const ListCommentsInput = z
           "Note: the server-side `after` param is broken (returns 500); this tool implements a client-side workaround."
       ),
     order: z.enum(["asc", "desc"]).optional().describe("Sort order (default: asc)"),
+    limit: PaginationLimitSchema.describe("Max comments per page (1–100, default 50)"),
+    offset: PaginationOffsetSchema.describe("Number of comments to skip (default 0)"),
     response_format: ResponseFormatSchema.optional()
       .default("markdown")
       .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
@@ -51,7 +61,7 @@ export const commentTools: ToolDefinition[] = [
         "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
       ],
       returns:
-        "Array of comment objects: id, body, authorId, authorType, createdAt. When `after` is set, response includes _note about the client-side workaround.",
+        "Pagination envelope { items: Comment[], total, count, offset, limit, has_more, next_offset }. When `after` is used, total reflects the filtered (post-cursor) count.",
       examples: {
         useWhen: "reading new @-mention comments since the last heartbeat using the `after` cursor",
         dontUseWhen: "you need a single comment by ID — use paperclip_get_comment instead",
@@ -68,23 +78,21 @@ export const commentTools: ToolDefinition[] = [
       try {
         const input = validate(ListCommentsInput, args);
         const fmt = input.response_format ?? "markdown";
+        const hint =
+          "Response too large. Use limit/offset or the `after` cursor to narrow results.";
 
         if (input.after) {
           // Client-side workaround: server-side `after` cursor returns HTTP 500.
-          // Fetch all comments in ascending order and filter locally.
+          // Fetch all comments in ascending order, filter locally, then paginate.
           const path = `/api/issues/${input.issueId}/comments?order=asc&limit=500`;
           const all = await client.get<Comment[]>(path);
           const idx = all.findIndex((c) => c.id === input.after);
           const filtered = idx >= 0 ? all.slice(idx + 1) : all;
-          const result = {
-            _note:
-              "Client-side cursor workaround active: server-side `after` param is broken (HTTP 500). " +
-              "Fetched up to 500 comments and filtered locally.",
-            comments: filtered,
-          };
+          const envelope = paginate(filtered, { limit: input.limit, offset: input.offset });
           const text =
-            fmt === "json" ? formatJson(result) : formatGenericList(filtered, "Comments");
-          const hint = "Response too large. Use the `after` cursor to fetch fewer comments.";
+            fmt === "json"
+              ? formatJson(envelope)
+              : formatGenericList(envelope.items, "Comments", envelope);
           return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
         }
 
@@ -92,9 +100,12 @@ export const commentTools: ToolDefinition[] = [
         if (input.order) params.set("order", input.order);
         const qs = params.toString();
         const path = `/api/issues/${input.issueId}/comments${qs ? `?${qs}` : ""}`;
-        const data = await client.get<unknown>(path);
-        const text = fmt === "json" ? formatJson(data) : formatGenericList(data, "Comments");
-        const hint = "Response too large. Use the `after` cursor to fetch fewer comments.";
+        const all = await client.get<unknown[]>(path);
+        const envelope = paginate(all, { limit: input.limit, offset: input.offset });
+        const text =
+          fmt === "json"
+            ? formatJson(envelope)
+            : formatGenericList(envelope.items, "Comments", envelope);
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);

@@ -9,10 +9,13 @@ import {
 } from "./validation.js";
 import {
   ResponseFormatSchema,
+  PaginationLimitSchema,
+  PaginationOffsetSchema,
   formatJson,
   formatGenericList,
   formatResult,
   applyCharLimit,
+  paginate,
 } from "./format.js";
 
 // Basic 5-field cron regex: five whitespace-separated tokens
@@ -20,6 +23,8 @@ const CRON_REGEX = /^(\S+\s+){4}\S+$/;
 
 const ListRoutinesInput = z
   .object({
+    limit: PaginationLimitSchema.describe("Max routines per page (1–100, default 50)"),
+    offset: PaginationOffsetSchema.describe("Number of routines to skip (default 0)"),
     response_format: ResponseFormatSchema.optional()
       .default("markdown")
       .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
@@ -29,6 +34,17 @@ const ListRoutinesInput = z
 const RoutineIdInput = z
   .object({
     routineId: z.string().min(1).describe("Routine UUID"),
+    response_format: ResponseFormatSchema.optional()
+      .default("markdown")
+      .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
+  })
+  .strict();
+
+const ListRoutineRunsInput = z
+  .object({
+    routineId: z.string().min(1).describe("Routine UUID"),
+    limit: PaginationLimitSchema.describe("Max runs per page (1–100, default 50)"),
+    offset: PaginationOffsetSchema.describe("Number of runs to skip (default 0)"),
     response_format: ResponseFormatSchema.optional()
       .default("markdown")
       .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
@@ -115,7 +131,7 @@ export const routineTools: ToolDefinition[] = [
     description: composeDescription({
       summary: "List all routines defined for the current company.",
       returns:
-        "Array of routine objects: id, name, agentId, concurrencyPolicy, catchUpPolicy, createdAt.",
+        "Pagination envelope { items: Routine[], total, count, offset, limit, has_more, next_offset }. Each item: id, name, agentId, concurrencyPolicy, catchUpPolicy, createdAt.",
       examples: {
         useWhen: "finding routineIds before adding a trigger or checking routine status",
         dontUseWhen:
@@ -130,12 +146,15 @@ export const routineTools: ToolDefinition[] = [
     annotations: { title: "List company routines", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { response_format: fmt } = validate(ListRoutinesInput, args);
-        const data = await client.get<unknown>(`/api/companies/${client.companyId}/routines`);
+        const { response_format: fmt, limit, offset } = validate(ListRoutinesInput, args);
+        const all = await client.get<unknown[]>(`/api/companies/${client.companyId}/routines`);
+        const envelope = paginate(all, { limit, offset });
         const text =
-          (fmt ?? "markdown") === "json" ? formatJson(data) : formatGenericList(data, "Routines");
+          (fmt ?? "markdown") === "json"
+            ? formatJson(envelope)
+            : formatGenericList(envelope.items, "Routines", envelope);
         const hint =
-          "Response too large; the number of routines is unusually large. Consider deleting unused routines or contact the board.";
+          "Response too large. Use limit/offset to page. Consider deleting unused routines.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
@@ -424,7 +443,8 @@ export const routineTools: ToolDefinition[] = [
         '- routineId: string — Routine UUID (example: "rtn_abc123")',
         "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
       ],
-      returns: "Array of run objects: id, routineId, status, startedAt, finishedAt, triggerId.",
+      returns:
+        "Pagination envelope { items: Run[], total, count, offset, limit, has_more, next_offset }. Each item: id, routineId, status, startedAt, finishedAt, triggerId.",
       examples: {
         useWhen: "auditing whether a scheduled routine has been firing and completing successfully",
         dontUseWhen:
@@ -435,18 +455,24 @@ export const routineTools: ToolDefinition[] = [
         "- 404: routine not found → verify ID with paperclip_list_routines",
       ],
     }),
-    inputSchema: toJsonSchema(RoutineIdInput),
+    inputSchema: toJsonSchema(ListRoutineRunsInput),
     annotations: { title: "List routine run history", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { routineId, response_format: fmt } = validate(RoutineIdInput, args);
-        const data = await client.get<unknown>(`/api/routines/${routineId}/runs`);
+        const {
+          routineId,
+          response_format: fmt,
+          limit,
+          offset,
+        } = validate(ListRoutineRunsInput, args);
+        const all = await client.get<unknown[]>(`/api/routines/${routineId}/runs`);
+        const envelope = paginate(all, { limit, offset });
         const text =
           (fmt ?? "markdown") === "json"
-            ? formatJson(data)
-            : formatGenericList(data, "Routine Runs");
+            ? formatJson(envelope)
+            : formatGenericList(envelope.items, "Routine Runs", envelope);
         const hint =
-          "Response too large; this routine has an unusually long run history. Consider pruning old runs.";
+          "Response too large. Use limit/offset to page. This routine has an unusually long run history.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);

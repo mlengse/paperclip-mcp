@@ -12,16 +12,16 @@ import {
 import { PaperclipApiError } from "../errors.js";
 import {
   ResponseFormatSchema,
+  PaginationLimitSchema,
+  PaginationOffsetSchema,
   formatJson,
   formatIssueList,
   formatSingleIssue,
   formatGenericList,
   formatResult,
   applyCharLimit,
+  paginate,
 } from "./format.js";
-
-const ISSUES_MAX_LIMIT = 100;
-const ISSUES_DEFAULT_LIMIT = 50;
 
 const ListIssuesInput = z
   .object({
@@ -34,23 +34,10 @@ const ListIssuesInput = z
     goalId: z.string().optional().describe("Filter by goal ID"),
     labelId: z.string().optional().describe("Filter by label ID"),
     q: z.string().optional().describe("Full-text search query"),
-    limit: z
-      .number()
-      .int()
-      .min(1)
-      .max(ISSUES_MAX_LIMIT)
-      .default(ISSUES_DEFAULT_LIMIT)
-      .optional()
-      .describe(
-        `Maximum number of issues to return (1–${ISSUES_MAX_LIMIT}, default ${ISSUES_DEFAULT_LIMIT})`
-      ),
-    offset: z
-      .number()
-      .int()
-      .min(0)
-      .default(0)
-      .optional()
-      .describe("Number of issues to skip before returning results (default 0)"),
+    limit: PaginationLimitSchema.describe("Maximum number of issues to return (1–100, default 50)"),
+    offset: PaginationOffsetSchema.describe(
+      "Number of issues to skip before returning results (default 0)"
+    ),
     response_format: ResponseFormatSchema.optional()
       .default("markdown")
       .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
@@ -170,11 +157,11 @@ export const issueTools: ToolDefinition[] = [
         "- goalId: string (optional) — Filter by goal UUID",
         "- labelId: string (optional) — Filter by label UUID",
         '- q: string (optional) — Full-text search query (example: "auth bug")',
-        `- limit: integer (optional) — Max results to return, 1–${ISSUES_MAX_LIMIT} (default ${ISSUES_DEFAULT_LIMIT})`,
+        "- limit: integer (optional) — Max results to return, 1–100 (default 50)",
         "- offset: integer (optional) — Skip N results for pagination (default 0)",
       ],
       returns:
-        "Object: { issues: Issue[], total: number, limit: number, offset: number }. total is the unfiltered count for truncation detection.",
+        "Pagination envelope { items: Issue[], total, count, offset, limit, has_more, next_offset } with up to 50 issues per page (default, max 100).",
       examples: {
         useWhen: "scanning the board for todo issues assigned to a specific agent",
         dontUseWhen: "you need a single issue's full details — use paperclip_get_issue instead",
@@ -199,13 +186,10 @@ export const issueTools: ToolDefinition[] = [
         const qs = params.toString();
         const path = `/api/companies/${client.companyId}/issues${qs ? `?${qs}` : ""}`;
         const all = await client.get<unknown[]>(path);
-        const limit = input.limit ?? ISSUES_DEFAULT_LIMIT;
-        const offset = input.offset ?? 0;
-        const issues = all.slice(offset, offset + limit);
-        const envelope = { total: all.length, limit, offset };
+        const envelope = paginate(all, { limit: input.limit, offset: input.offset });
         const fmt = input.response_format ?? "markdown";
         const text =
-          fmt === "json" ? formatJson({ issues, ...envelope }) : formatIssueList(issues, envelope);
+          fmt === "json" ? formatJson(envelope) : formatIssueList(envelope.items, envelope);
         const hint = "Use filters (projectId, status, assigneeAgentId, offset) to narrow results.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {

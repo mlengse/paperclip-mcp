@@ -1,7 +1,15 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
 import { validate, toJsonSchema, handleApiError, composeDescription } from "./validation.js";
-import { ResponseFormatSchema, formatJson, formatGenericList, applyCharLimit } from "./format.js";
+import {
+  ResponseFormatSchema,
+  PaginationLimitSchema,
+  PaginationOffsetSchema,
+  formatJson,
+  formatGenericList,
+  applyCharLimit,
+  paginate,
+} from "./format.js";
 
 const ReportCostEventInput = z
   .object({
@@ -25,6 +33,8 @@ const GetActivityInput = z
     agentId: z.string().optional().describe("Filter by agent ID"),
     entityType: z.string().optional().describe("Filter by entity type (e.g. issue, approval)"),
     entityId: z.string().optional().describe("Filter by entity ID"),
+    limit: PaginationLimitSchema.describe("Max events per page (1–100, default 50)"),
+    offset: PaginationOffsetSchema.describe("Number of events to skip (default 0)"),
     response_format: ResponseFormatSchema.optional()
       .default("markdown")
       .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
@@ -51,7 +61,7 @@ export const activityTools: ToolDefinition[] = [
         "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
       ],
       returns:
-        "Array of activity events: id, agentId, entityType, entityId, action, occurredAt, metadata.",
+        "Pagination envelope { items: ActivityEvent[], total, count, offset, limit, has_more, next_offset }. Each item: id, agentId, entityType, entityId, action, occurredAt, metadata.",
       examples: {
         useWhen:
           "auditing what an agent did on a specific issue or reviewing recent company actions",
@@ -73,10 +83,15 @@ export const activityTools: ToolDefinition[] = [
         if (input.entityId) params.set("entityId", input.entityId);
         const qs = params.toString();
         const path = `/api/companies/${client.companyId}/activity${qs ? `?${qs}` : ""}`;
-        const data = await client.get<unknown>(path);
+        const all = await client.get<unknown[]>(path);
+        const envelope = paginate(all, { limit: input.limit, offset: input.offset });
         const fmt = input.response_format ?? "markdown";
-        const text = fmt === "json" ? formatJson(data) : formatGenericList(data, "Activity");
-        const hint = "Response too large. Filter by agentId, entityType, or entityId.";
+        const text =
+          fmt === "json"
+            ? formatJson(envelope)
+            : formatGenericList(envelope.items, "Activity", envelope);
+        const hint =
+          "Response too large. Filter by agentId, entityType, or entityId, or use limit/offset.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);

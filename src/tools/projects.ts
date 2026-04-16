@@ -1,10 +1,20 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
 import { validate, toJsonSchema, handleApiError, composeDescription } from "./validation.js";
-import { ResponseFormatSchema, formatJson, formatGenericList, applyCharLimit } from "./format.js";
+import {
+  ResponseFormatSchema,
+  PaginationLimitSchema,
+  PaginationOffsetSchema,
+  formatJson,
+  formatGenericList,
+  applyCharLimit,
+  paginate,
+} from "./format.js";
 
 const ListProjectsInput = z
   .object({
+    limit: PaginationLimitSchema.describe("Max projects per page (1–100, default 50)"),
+    offset: PaginationOffsetSchema.describe("Number of projects to skip (default 0)"),
     response_format: ResponseFormatSchema.optional()
       .default("markdown")
       .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
@@ -49,6 +59,8 @@ const UpdateProjectInput = z
 const ListWorkspacesInput = z
   .object({
     projectId: z.string().min(1).describe("Project UUID"),
+    limit: PaginationLimitSchema.describe("Max workspaces per page (1–100, default 50)"),
+    offset: PaginationOffsetSchema.describe("Number of workspaces to skip (default 0)"),
     response_format: ResponseFormatSchema.optional()
       .default("markdown")
       .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
@@ -83,7 +95,8 @@ export const projectTools: ToolDefinition[] = [
       args: [
         "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
       ],
-      returns: "Array of project objects: id, name, status, goalId, createdAt.",
+      returns:
+        "Pagination envelope { items: Project[], total, count, offset, limit, has_more, next_offset }. Each item: id, name, status, goalId, createdAt.",
       examples: {
         useWhen: "finding the projectId to link when creating a new issue",
         dontUseWhen:
@@ -98,11 +111,14 @@ export const projectTools: ToolDefinition[] = [
     annotations: { title: "List company projects", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { response_format: fmt } = validate(ListProjectsInput, args);
-        const data = await client.get<unknown>(`/api/companies/${client.companyId}/projects`);
+        const { response_format: fmt, limit, offset } = validate(ListProjectsInput, args);
+        const all = await client.get<unknown[]>(`/api/companies/${client.companyId}/projects`);
+        const envelope = paginate(all, { limit, offset });
         const text =
-          (fmt ?? "markdown") === "json" ? formatJson(data) : formatGenericList(data, "Projects");
-        const hint = "Response too large. Try filtering by status or goal.";
+          (fmt ?? "markdown") === "json"
+            ? formatJson(envelope)
+            : formatGenericList(envelope.items, "Projects", envelope);
+        const hint = "Response too large. Use limit/offset to page through results.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
@@ -246,7 +262,8 @@ export const projectTools: ToolDefinition[] = [
         '- projectId: string — Project UUID (example: "prj_abc123")',
         "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
       ],
-      returns: "Array of workspace objects: id, cwd, repoUrl, projectId, createdAt.",
+      returns:
+        "Pagination envelope { items: Workspace[], total, count, offset, limit, has_more, next_offset }. Each item: id, cwd, repoUrl, projectId, createdAt.",
       examples: {
         useWhen: "finding the workspace cwd or repoUrl before an agent starts executing in it",
         dontUseWhen:
@@ -261,12 +278,20 @@ export const projectTools: ToolDefinition[] = [
     annotations: { title: "List project workspaces", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { projectId, response_format: fmt } = validate(ListWorkspacesInput, args);
-        const data = await client.get<unknown>(`/api/projects/${projectId}/workspaces`);
+        const {
+          projectId,
+          response_format: fmt,
+          limit,
+          offset,
+        } = validate(ListWorkspacesInput, args);
+        const all = await client.get<unknown[]>(`/api/projects/${projectId}/workspaces`);
+        const envelope = paginate(all, { limit, offset });
         const text =
-          (fmt ?? "markdown") === "json" ? formatJson(data) : formatGenericList(data, "Workspaces");
+          (fmt ?? "markdown") === "json"
+            ? formatJson(envelope)
+            : formatGenericList(envelope.items, "Workspaces", envelope);
         const hint =
-          "Response too large; this project has an unusually large number of workspaces.";
+          "Response too large. Use limit/offset to page. This project has an unusually large number of workspaces.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);

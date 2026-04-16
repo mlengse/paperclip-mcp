@@ -9,13 +9,18 @@ import {
 } from "./validation.js";
 import {
   ResponseFormatSchema,
+  PaginationLimitSchema,
+  PaginationOffsetSchema,
   formatJson,
   formatGenericList,
   formatResult,
   applyCharLimit,
+  paginate,
 } from "./format.js";
 
 const ListDocumentsInput = IssueIdSchema.extend({
+  limit: PaginationLimitSchema.describe("Max documents per page (1–100, default 50)"),
+  offset: PaginationOffsetSchema.describe("Number of documents to skip (default 0)"),
   response_format: ResponseFormatSchema.optional()
     .default("markdown")
     .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
@@ -69,7 +74,7 @@ export const documentTools: ToolDefinition[] = [
       summary: "List all documents attached to an issue (e.g. plan, notes).",
       args: ['- issueId: string — Issue ID or identifier (example: "PAP-42")'],
       returns:
-        "Array of document stubs: key, title, format, createdAt, updatedAt. Body not included — use paperclip_get_document.",
+        "Pagination envelope { items: DocumentStub[], total, count, offset, limit, has_more, next_offset }. Body not included — use paperclip_get_document.",
       examples: {
         useWhen: "discovering which document keys exist on an issue before reading or updating one",
         dontUseWhen: "you already know the key — use paperclip_get_document directly",
@@ -83,13 +88,14 @@ export const documentTools: ToolDefinition[] = [
     annotations: { title: "List issue documents", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { issueId, response_format: fmt } = validate(ListDocumentsInput, args);
-        const data = await client.get<unknown[]>(`/api/issues/${issueId}/documents`);
-        const hint = `Use paperclip_list_documents with issueId "${issueId}" to retrieve the full list.`;
+        const { issueId, response_format: fmt, limit, offset } = validate(ListDocumentsInput, args);
+        const all = await client.get<unknown[]>(`/api/issues/${issueId}/documents`);
+        const envelope = paginate(all, { limit, offset });
+        const hint = `Use limit/offset to page through documents on issue "${issueId}".`;
         const text =
           fmt === "json"
-            ? applyCharLimit(formatJson(data), hint)
-            : applyCharLimit(formatGenericList(data, "Documents"), hint);
+            ? applyCharLimit(formatJson(envelope), hint)
+            : applyCharLimit(formatGenericList(envelope.items, "Documents", envelope), hint);
         return { content: [{ type: "text", text }] };
       } catch (err) {
         return handleApiError(err);

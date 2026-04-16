@@ -143,7 +143,7 @@ export function largeGoalList(count = 300): GoalLike[] {
   return Array.from({ length: count }, (_, i) =>
     goalFixture({
       id: `goal-${i + 1}`,
-      title: `Goal ${i + 1} — ${"x".repeat(100)}`,
+      title: `Goal ${i + 1} — ${"x".repeat(300)}`,
     })
   );
 }
@@ -172,7 +172,7 @@ export function largeProjectList(count = 300): ProjectLike[] {
   return Array.from({ length: count }, (_, i) =>
     projectFixture({
       id: `proj-${i + 1}`,
-      name: `Project ${i + 1} — ${"x".repeat(100)}`,
+      name: `Project ${i + 1} — ${"x".repeat(300)}`,
     })
   );
 }
@@ -199,7 +199,7 @@ export function largeLabelList(count = 500): LabelLike[] {
   return Array.from({ length: count }, (_, i) =>
     labelFixture({
       id: `label-${i + 1}`,
-      name: `label-${i + 1}-${"x".repeat(60)}`,
+      name: `label-${i + 1}-${"x".repeat(300)}`,
     })
   );
 }
@@ -230,7 +230,7 @@ export function largeCommentList(count = 300): CommentLike[] {
   return Array.from({ length: count }, (_, i) =>
     commentFixture({
       id: `comment-${i + 1}`,
-      body: `Comment ${i + 1} — ${"x".repeat(100)}`,
+      body: `Comment ${i + 1} — ${"x".repeat(300)}`,
     })
   );
 }
@@ -242,7 +242,7 @@ export function largeApprovalList(count = 300): ApprovalLike[] {
   return Array.from({ length: count }, (_, i) =>
     approvalFixture({
       id: `appr-${i + 1}`,
-      payload: { name: `Agent ${i + 1}`, description: "x".repeat(100) },
+      payload: { name: `Agent ${i + 1}`, description: "x".repeat(300) },
     })
   );
 }
@@ -281,7 +281,7 @@ export function largeActivityList(count = 500): ActivityLike[] {
     action: "updated",
     agentId: "agent-1",
     createdAt: "2026-01-01T00:00:00.000Z",
-    detail: "x".repeat(100),
+    detail: "x".repeat(300),
   }));
 }
 
@@ -311,7 +311,7 @@ export function largeRoutineList(count = 300): RoutineLike[] {
   return Array.from({ length: count }, (_, i) =>
     routineFixture({
       id: `routine-${i + 1}`,
-      name: `Routine ${i + 1} — ${"x".repeat(100)}`,
+      name: `Routine ${i + 1} — ${"x".repeat(300)}`,
     })
   );
 }
@@ -323,6 +323,6 @@ export function largeRoutineRunList(count = 500): Record<string, unknown>[] {
     status: "completed",
     startedAt: "2026-01-01T00:00:00.000Z",
     finishedAt: "2026-01-01T00:05:00.000Z",
-    log: "x".repeat(100),
+    log: "x".repeat(300),
   }));
 }

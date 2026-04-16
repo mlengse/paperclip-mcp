@@ -9,6 +9,56 @@ export type ResponseFormat = "markdown" | "json";
 export const ResponseFormatSchema = z.enum(["markdown", "json"]);
 
 // ---------------------------------------------------------------------------
+// Pagination schemas — shared across all list_* tools
+// ---------------------------------------------------------------------------
+export const PaginationLimitSchema = z.number().int().min(1).max(100).optional().default(50);
+export const PaginationOffsetSchema = z.number().int().min(0).optional().default(0);
+
+// ---------------------------------------------------------------------------
+// PaginationEnvelope — canonical shape for all list_* responses
+// ---------------------------------------------------------------------------
+export interface PaginationEnvelope<T> {
+  items: T[];
+  total: number;
+  count: number;
+  offset: number;
+  limit: number;
+  has_more: boolean;
+  next_offset?: number;
+}
+
+export interface PaginationInput {
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * Slice `items` according to `limit`/`offset` and return a PaginationEnvelope.
+ *
+ * - total  = full array length before slicing
+ * - count  = number of items in this page
+ * - has_more = true if more items exist beyond this page
+ * - next_offset = offset to pass for the next page (undefined at end-of-list)
+ */
+export function paginate<T>(items: T[], input: PaginationInput): PaginationEnvelope<T> {
+  const limit = input.limit ?? 50;
+  const offset = input.offset ?? 0;
+  const total = items.length;
+  const slice = items.slice(offset, offset + limit);
+  const count = slice.length;
+  const hasMore = offset + count < total;
+  return {
+    items: slice,
+    total,
+    count,
+    offset,
+    limit,
+    has_more: hasMore,
+    next_offset: hasMore ? offset + count : undefined,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // JSON formatter
 // ---------------------------------------------------------------------------
 export function formatJson(data: unknown): string {
@@ -62,9 +112,17 @@ interface AgentRecord {
   title?: string | null;
 }
 
-export function formatAgentList(agents: unknown): string {
+export function formatAgentList(
+  agents: unknown,
+  envelope?: Pick<PaginationEnvelope<unknown>, "total" | "count" | "offset" | "has_more">
+): string {
   const list = Array.isArray(agents) ? (agents as AgentRecord[]) : [];
-  const header = `## Agents (${list.length})`;
+  let header: string;
+  if (envelope) {
+    header = `## Agents (${envelope.count} of ${envelope.total}, offset ${envelope.offset})`;
+  } else {
+    header = `## Agents (${list.length})`;
+  }
   if (list.length === 0) return `${header}\n\n_No agents found._`;
   const lines = list.map((a) => {
     const name = a.name ?? "Unknown";
@@ -93,19 +151,21 @@ interface IssueRecord {
 
 interface IssueEnvelope {
   total?: number;
+  count?: number;
   limit?: number;
   offset?: number;
+  has_more?: boolean;
 }
 
 export function formatIssueList(issues: unknown, envelope?: IssueEnvelope): string {
   const list = Array.isArray(issues) ? (issues as IssueRecord[]) : [];
   let header = `## Issues`;
   if (envelope) {
-    const { total, limit, offset } = envelope;
+    const { total, count, offset } = envelope;
+    const displayCount = count ?? list.length;
     const parts: string[] = [];
-    if (total !== undefined) parts.push(`total: ${total}`);
-    if (limit !== undefined) parts.push(`showing ${list.length} of ${limit ?? list.length}`);
-    if (offset !== undefined) parts.push(`at offset ${offset}`);
+    if (total !== undefined) parts.push(`${displayCount} of ${total}`);
+    if (offset !== undefined) parts.push(`offset ${offset}`);
     if (parts.length > 0) header += ` (${parts.join(", ")})`;
   } else {
     header += ` (${list.length})`;
@@ -272,9 +332,18 @@ export function formatResult(data: unknown): string {
 // ---------------------------------------------------------------------------
 // Generic list fallback — for tools without a dedicated formatter
 // ---------------------------------------------------------------------------
-export function formatGenericList(data: unknown, label = "Items"): string {
+export function formatGenericList(
+  data: unknown,
+  label = "Items",
+  envelope?: Pick<PaginationEnvelope<unknown>, "total" | "count" | "offset" | "has_more">
+): string {
   const list = Array.isArray(data) ? data : [];
-  const header = `## ${label} (${list.length})`;
+  let header: string;
+  if (envelope) {
+    header = `## ${label} (${envelope.count} of ${envelope.total}, offset ${envelope.offset})`;
+  } else {
+    header = `## ${label} (${list.length})`;
+  }
   if (list.length === 0) return `${header}\n\n_None found._`;
   const lines = list.map((item: unknown) => {
     if (typeof item === "object" && item !== null) {

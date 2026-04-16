@@ -1,10 +1,20 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
 import { validate, toJsonSchema, handleApiError, composeDescription } from "./validation.js";
-import { ResponseFormatSchema, formatJson, formatGenericList, applyCharLimit } from "./format.js";
+import {
+  ResponseFormatSchema,
+  PaginationLimitSchema,
+  PaginationOffsetSchema,
+  formatJson,
+  formatGenericList,
+  applyCharLimit,
+  paginate,
+} from "./format.js";
 
 const ListGoalsInput = z
   .object({
+    limit: PaginationLimitSchema.describe("Max goals to return per page (1–100, default 50)"),
+    offset: PaginationOffsetSchema.describe("Number of goals to skip (default 0)"),
     response_format: ResponseFormatSchema.optional()
       .default("markdown")
       .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
@@ -45,9 +55,12 @@ export const goalTools: ToolDefinition[] = [
     description: composeDescription({
       summary: "List all goals for the current company.",
       args: [
+        "- limit: integer (optional) — Max goals per page, 1–100 (default 50)",
+        "- offset: integer (optional) — Skip N goals for pagination (default 0)",
         "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
       ],
-      returns: "Array of goal objects: id, title, status, level, parentId, createdAt.",
+      returns:
+        "Pagination envelope { items: Goal[], total, count, offset, limit, has_more, next_offset } with up to 50 goals per page (default, max 100).",
       examples: {
         useWhen: "finding the goalId to link when creating a new issue or project",
         dontUseWhen: "you need a single goal's full details — use paperclip_get_goal instead",
@@ -61,12 +74,15 @@ export const goalTools: ToolDefinition[] = [
     annotations: { title: "List company goals", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { response_format: fmt } = validate(ListGoalsInput, args);
-        const data = await client.get<unknown>(`/api/companies/${client.companyId}/goals`);
-        const text =
-          (fmt ?? "markdown") === "json" ? formatJson(data) : formatGenericList(data, "Goals");
+        const { response_format: fmt, limit, offset } = validate(ListGoalsInput, args);
+        const all = await client.get<unknown[]>(`/api/companies/${client.companyId}/goals`);
+        const envelope = paginate(all, { limit, offset });
         const hint =
-          "Response too large; the number of goals is unusually large. Consider archiving completed goals or contact the board.";
+          "Response too large; use limit/offset to page through results or archive completed goals.";
+        const text =
+          (fmt ?? "markdown") === "json"
+            ? formatJson(envelope)
+            : formatGenericList(envelope.items, "Goals", envelope);
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);

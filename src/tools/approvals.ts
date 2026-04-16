@@ -7,7 +7,15 @@ import {
   ApprovalTypeSchema,
   composeDescription,
 } from "./validation.js";
-import { ResponseFormatSchema, formatJson, formatGenericList, applyCharLimit } from "./format.js";
+import {
+  ResponseFormatSchema,
+  PaginationLimitSchema,
+  PaginationOffsetSchema,
+  formatJson,
+  formatGenericList,
+  applyCharLimit,
+  paginate,
+} from "./format.js";
 
 const ApprovalIdInput = z
   .object({
@@ -18,6 +26,8 @@ const ApprovalIdInput = z
 const ListApprovalsInput = z
   .object({
     status: z.string().optional().describe("Filter by status (e.g. 'pending,approved')"),
+    limit: PaginationLimitSchema.describe("Max approvals per page (1–100, default 50)"),
+    offset: PaginationOffsetSchema.describe("Number of approvals to skip (default 0)"),
     response_format: ResponseFormatSchema.optional()
       .default("markdown")
       .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
@@ -36,6 +46,8 @@ const GetApprovalInput = z
 const ListApprovalCommentsInput = z
   .object({
     approvalId: z.string().min(1).describe("Approval UUID"),
+    limit: PaginationLimitSchema.describe("Max comments per page (1–100, default 50)"),
+    offset: PaginationOffsetSchema.describe("Number of comments to skip (default 0)"),
     response_format: ResponseFormatSchema.optional()
       .default("markdown")
       .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
@@ -105,7 +117,7 @@ export const approvalTools: ToolDefinition[] = [
         '- status: string (optional) — Comma-separated status filter (example: "pending,approved")',
       ],
       returns:
-        "Array of approval objects: id, type, status, payload, requestedByAgentId, createdAt.",
+        "Pagination envelope { items: Approval[], total, count, offset, limit, has_more, next_offset }. Each item: id, type, status, payload, requestedByAgentId, createdAt.",
       examples: {
         useWhen: "scanning for pending approval requests before escalating or following up",
         dontUseWhen: "you need a single approval's details — use paperclip_get_approval instead",
@@ -124,10 +136,14 @@ export const approvalTools: ToolDefinition[] = [
         if (input.status) params.set("status", input.status);
         const qs = params.toString();
         const path = `/api/companies/${client.companyId}/approvals${qs ? `?${qs}` : ""}`;
-        const data = await client.get<unknown>(path);
+        const all = await client.get<unknown[]>(path);
+        const envelope = paginate(all, { limit: input.limit, offset: input.offset });
         const fmt = input.response_format ?? "markdown";
-        const text = fmt === "json" ? formatJson(data) : formatGenericList(data, "Approvals");
-        const hint = "Response too large. Filter by status to narrow results.";
+        const text =
+          fmt === "json"
+            ? formatJson(envelope)
+            : formatGenericList(envelope.items, "Approvals", envelope);
+        const hint = "Response too large. Filter by status or use limit/offset to narrow results.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
@@ -378,7 +394,8 @@ export const approvalTools: ToolDefinition[] = [
     description: composeDescription({
       summary: "List comments on an approval request.",
       args: ['- approvalId: string — Approval UUID (example: "apr_abc123")'],
-      returns: "Array of comment objects: id, body, authorId, authorType, createdAt.",
+      returns:
+        "Pagination envelope { items: Comment[], total, count, offset, limit, has_more, next_offset }. Each item: id, body, authorId, authorType, createdAt.",
       examples: {
         useWhen: "reading board feedback before resubmitting an approval",
         dontUseWhen:
@@ -397,14 +414,20 @@ export const approvalTools: ToolDefinition[] = [
     },
     async handler(args, client) {
       try {
-        const { approvalId, response_format: fmt } = validate(ListApprovalCommentsInput, args);
-        const data = await client.get<unknown>(`/api/approvals/${approvalId}/comments`);
+        const {
+          approvalId,
+          response_format: fmt,
+          limit,
+          offset,
+        } = validate(ListApprovalCommentsInput, args);
+        const all = await client.get<unknown[]>(`/api/approvals/${approvalId}/comments`);
+        const envelope = paginate(all, { limit, offset });
         const text =
           (fmt ?? "markdown") === "json"
-            ? formatJson(data)
-            : formatGenericList(data, "Approval Comments");
+            ? formatJson(envelope)
+            : formatGenericList(envelope.items, "Approval Comments", envelope);
         const hint =
-          "Response too large. This approval may have an unusually high number of comments.";
+          "Response too large. Use limit/offset to page. This approval may have an unusually high number of comments.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);

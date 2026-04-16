@@ -3,11 +3,14 @@ import type { ToolDefinition } from "./index.js";
 import { validate, toJsonSchema, handleApiError, composeDescription } from "./validation.js";
 import {
   ResponseFormatSchema,
+  PaginationLimitSchema,
+  PaginationOffsetSchema,
   formatJson,
   formatAgentList,
   formatOrgChart,
   formatGenericList,
   applyCharLimit,
+  paginate,
 } from "./format.js";
 
 const AgentIdInput = z
@@ -18,6 +21,8 @@ const AgentIdInput = z
 
 const ListAgentsInput = z
   .object({
+    limit: PaginationLimitSchema.describe("Max agents per page (1–100, default 50)"),
+    offset: PaginationOffsetSchema.describe("Number of agents to skip (default 0)"),
     response_format: ResponseFormatSchema.optional()
       .default("markdown")
       .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
@@ -172,6 +177,8 @@ const ConfigRevisionInput = z
 const ListAgentConfigRevisionsInput = z
   .object({
     agentId: z.string().min(1).describe("Agent UUID"),
+    limit: PaginationLimitSchema.describe("Max revisions per page (1–100, default 50)"),
+    offset: PaginationOffsetSchema.describe("Number of revisions to skip (default 0)"),
     response_format: ResponseFormatSchema.optional()
       .default("markdown")
       .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
@@ -180,6 +187,8 @@ const ListAgentConfigRevisionsInput = z
 
 const ListCompanySkillsInput = z
   .object({
+    limit: PaginationLimitSchema.describe("Max skills per page (1–100, default 50)"),
+    offset: PaginationOffsetSchema.describe("Number of skills to skip (default 0)"),
     response_format: ResponseFormatSchema.optional()
       .default("markdown")
       .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
@@ -213,7 +222,8 @@ export const agentTools: ToolDefinition[] = [
     name: "paperclip_list_agents",
     description: composeDescription({
       summary: "List all agents in the current company.",
-      returns: "Array of agent records: id, name, urlKey, role, status.",
+      returns:
+        "Pagination envelope { items: Agent[], total, count, offset, limit, has_more, next_offset } with up to 50 agents per page (default, max 100).",
       examples: {
         useWhen:
           "resolving an agent name to a UUID before assigning an issue or invoking a heartbeat",
@@ -228,10 +238,14 @@ export const agentTools: ToolDefinition[] = [
     annotations: { title: "List company agents", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { response_format: fmt } = validate(ListAgentsInput, args);
-        const data = await client.get<unknown>(`/api/companies/${client.companyId}/agents`);
-        const text = (fmt ?? "markdown") === "json" ? formatJson(data) : formatAgentList(data);
-        const hint = "Response too large. Use filters (status, role) to narrow results.";
+        const { response_format: fmt, limit, offset } = validate(ListAgentsInput, args);
+        const all = await client.get<unknown[]>(`/api/companies/${client.companyId}/agents`);
+        const envelope = paginate(all, { limit, offset });
+        const hint = "Response too large. Use limit/offset to page through agents.";
+        const text =
+          (fmt ?? "markdown") === "json"
+            ? formatJson(envelope)
+            : formatAgentList(envelope.items, envelope);
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
@@ -609,7 +623,8 @@ export const agentTools: ToolDefinition[] = [
     description: composeDescription({
       summary: "List the config revision history for an agent.",
       args: ['- agentId: string — Agent UUID (example: "agt_abc123")'],
-      returns: "Array of revision records: revisionId, changedAt, changedByAgentId, summary.",
+      returns:
+        "Pagination envelope { items: Revision[], total, count, offset, limit, has_more, next_offset } with up to 50 revisions per page.",
       examples: {
         useWhen: "auditing recent config changes or finding a revisionId to roll back to",
         dontUseWhen:
@@ -628,14 +643,19 @@ export const agentTools: ToolDefinition[] = [
     },
     async handler(args, client) {
       try {
-        const { agentId, response_format: fmt } = validate(ListAgentConfigRevisionsInput, args);
-        const data = await client.get<unknown>(`/api/agents/${agentId}/config-revisions`);
+        const {
+          agentId,
+          response_format: fmt,
+          limit,
+          offset,
+        } = validate(ListAgentConfigRevisionsInput, args);
+        const all = await client.get<unknown[]>(`/api/agents/${agentId}/config-revisions`);
+        const envelope = paginate(all, { limit, offset });
+        const hint = "Use limit/offset to page through config revisions.";
         const text =
           (fmt ?? "markdown") === "json"
-            ? formatJson(data)
-            : formatGenericList(data, "Config Revisions");
-        const hint =
-          "Response too large. There may be an unusually high number of config revisions for this agent.";
+            ? formatJson(envelope)
+            : formatGenericList(envelope.items, "Config Revisions", envelope);
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
@@ -819,7 +839,8 @@ export const agentTools: ToolDefinition[] = [
     name: "paperclip_list_company_skills",
     description: composeDescription({
       summary: "List all skills installed at the company level.",
-      returns: "Array of skill records: id, name, version, description, installedAt.",
+      returns:
+        "Pagination envelope { items: Skill[], total, count, offset, limit, has_more, next_offset } with up to 50 skills per page.",
       examples: {
         useWhen: "checking which skills are available before syncing them to an agent",
         dontUseWhen:
@@ -834,14 +855,14 @@ export const agentTools: ToolDefinition[] = [
     annotations: { title: "List company skills", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { response_format: fmt } = validate(ListCompanySkillsInput, args);
-        const data = await client.get<unknown>(`/api/companies/${client.companyId}/skills`);
+        const { response_format: fmt, limit, offset } = validate(ListCompanySkillsInput, args);
+        const all = await client.get<unknown[]>(`/api/companies/${client.companyId}/skills`);
+        const envelope = paginate(all, { limit, offset });
+        const hint = "Use limit/offset to page through company skills.";
         const text =
           (fmt ?? "markdown") === "json"
-            ? formatJson(data)
-            : formatGenericList(data, "Company Skills");
-        const hint =
-          "Response too large. There may be an unusually high number of skills installed at the company level.";
+            ? formatJson(envelope)
+            : formatGenericList(envelope.items, "Company Skills", envelope);
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);

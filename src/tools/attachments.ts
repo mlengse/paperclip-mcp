@@ -11,13 +11,18 @@ import {
 } from "./validation.js";
 import {
   ResponseFormatSchema,
+  PaginationLimitSchema,
+  PaginationOffsetSchema,
   formatJson,
   formatGenericList,
   formatResult,
   applyCharLimit,
+  paginate,
 } from "./format.js";
 
 const ListAttachmentsInput = IssueIdSchema.extend({
+  limit: PaginationLimitSchema.describe("Max attachments per page (1–100, default 50)"),
+  offset: PaginationOffsetSchema.describe("Number of attachments to skip (default 0)"),
   response_format: ResponseFormatSchema.optional()
     .default("markdown")
     .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
@@ -59,7 +64,8 @@ export const attachmentTools: ToolDefinition[] = [
     description: composeDescription({
       summary: "List all attachments on an issue.",
       args: ['- issueId: string — Issue ID or identifier (example: "PAP-42")'],
-      returns: "Array of attachment stubs: id, filename, mimeType, size, createdAt.",
+      returns:
+        "Pagination envelope { items: Attachment[], total, count, offset, limit, has_more, next_offset }. Each item: id, filename, mimeType, size, createdAt.",
       examples: {
         useWhen: "discovering attachment IDs before downloading or deleting a file",
         dontUseWhen:
@@ -74,13 +80,19 @@ export const attachmentTools: ToolDefinition[] = [
     annotations: { title: "List issue attachments", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { issueId, response_format: fmt } = validate(ListAttachmentsInput, args);
-        const data = await client.get<unknown[]>(`/api/issues/${issueId}/attachments`);
-        const hint = `Use paperclip_list_attachments with issueId "${issueId}" to retrieve the full list.`;
+        const {
+          issueId,
+          response_format: fmt,
+          limit,
+          offset,
+        } = validate(ListAttachmentsInput, args);
+        const all = await client.get<unknown[]>(`/api/issues/${issueId}/attachments`);
+        const envelope = paginate(all, { limit, offset });
+        const hint = `Use limit/offset to page through attachments on issue "${issueId}".`;
         const text =
           fmt === "json"
-            ? applyCharLimit(formatJson(data), hint)
-            : applyCharLimit(formatGenericList(data, "Attachments"), hint);
+            ? applyCharLimit(formatJson(envelope), hint)
+            : applyCharLimit(formatGenericList(envelope.items, "Attachments", envelope), hint);
         return { content: [{ type: "text", text }] };
       } catch (err) {
         return handleApiError(err);

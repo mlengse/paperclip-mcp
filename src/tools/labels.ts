@@ -1,12 +1,22 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
 import { validate, toJsonSchema, handleApiError, composeDescription } from "./validation.js";
-import { ResponseFormatSchema, formatJson, formatGenericList, applyCharLimit } from "./format.js";
+import {
+  ResponseFormatSchema,
+  PaginationLimitSchema,
+  PaginationOffsetSchema,
+  formatJson,
+  formatGenericList,
+  applyCharLimit,
+  paginate,
+} from "./format.js";
 
 const HEX_COLOR_REGEX = /^#[0-9a-fA-F]{6}$/;
 
 const ListLabelsInput = z
   .object({
+    limit: PaginationLimitSchema.describe("Max labels per page (1–100, default 50)"),
+    offset: PaginationOffsetSchema.describe("Number of labels to skip (default 0)"),
     response_format: ResponseFormatSchema.optional()
       .default("markdown")
       .describe("Output format: 'markdown' (default, human-readable) or 'json' (structured)"),
@@ -32,7 +42,8 @@ export const labelTools: ToolDefinition[] = [
       args: [
         "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
       ],
-      returns: "Array of label objects: id, name, color (hex), createdAt.",
+      returns:
+        "Pagination envelope { items: Label[], total, count, offset, limit, has_more, next_offset }. Each item: id, name, color (hex), createdAt.",
       examples: {
         useWhen:
           "bootstrapping the label taxonomy at the start of a run to build a name→UUID cache",
@@ -47,12 +58,15 @@ export const labelTools: ToolDefinition[] = [
     annotations: { title: "List company labels", readOnlyHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
-        const { response_format: fmt } = validate(ListLabelsInput, args);
-        const data = await client.get<unknown>(`/api/companies/${client.companyId}/labels`);
+        const { response_format: fmt, limit, offset } = validate(ListLabelsInput, args);
+        const all = await client.get<unknown[]>(`/api/companies/${client.companyId}/labels`);
+        const envelope = paginate(all, { limit, offset });
         const text =
-          (fmt ?? "markdown") === "json" ? formatJson(data) : formatGenericList(data, "Labels");
+          (fmt ?? "markdown") === "json"
+            ? formatJson(envelope)
+            : formatGenericList(envelope.items, "Labels", envelope);
         const hint =
-          "Response too large; the company has an unusually large number of labels. Consider filtering by name.";
+          "Response too large. Use limit/offset to page. The company has an unusually large number of labels.";
         return { content: [{ type: "text", text: applyCharLimit(text, hint) }] };
       } catch (err) {
         return handleApiError(err);
