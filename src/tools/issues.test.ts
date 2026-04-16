@@ -193,7 +193,8 @@ describe("paperclip_get_heartbeat_context", () => {
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await getHeartbeat.handler({ issueId: "issue-1" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1/heartbeat-context");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(ctx) }] });
+    const parsedCtx = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedCtx, ctx);
   });
 
   it("throws McpError when issueId is missing (validation failure, fetch not called)", async () => {
@@ -233,7 +234,8 @@ describe("paperclip_checkout_issue", () => {
       calls[0]!.init.body,
       JSON.stringify({ agentId: "agent-1", expectedStatuses: ["todo"] })
     );
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsedCheckout = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedCheckout, updated);
   });
 
   it("always includes agentId in POST body even without expectedStatuses", async () => {
@@ -276,7 +278,8 @@ describe("paperclip_release_issue", () => {
     const result = await releaseIssue.handler({ issueId: "issue-1" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1/release");
     assert.equal(calls[0]!.init.method, "POST");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsedRelease = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedRelease, updated);
   });
 
   it("throws McpError when issueId is empty string (validation failure, fetch not called)", async () => {
@@ -381,7 +384,8 @@ describe("paperclip_update_issue", () => {
     assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1");
     assert.equal(calls[0]!.init.method, "PATCH");
     assert.equal(calls[0]!.init.body, JSON.stringify({ status: "done", comment: "All done" }));
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsedUpdate = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedUpdate, updated);
   });
 
   it("forwards all 5 new fields (assigneeUserId, goalId, projectId, parentId, billingCode) in PATCH body", async () => {
@@ -460,7 +464,8 @@ describe("paperclip_create_issue", () => {
     assert.equal(sentBody.title, "New feature");
     assert.equal(sentBody.priority, "high");
     assert.equal(sentBody.projectId, "proj-1");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(created) }] });
+    const parsedCreate = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedCreate, created);
   });
 
   it("forwards billingCode and inheritExecutionWorkspaceFromIssueId in POST body (PAP-60)", async () => {

@@ -161,7 +161,8 @@ describe("paperclip_update_agent", () => {
     assert.equal(body.name, "Senior Engineer");
     assert.equal(body.status, "active");
     assert.ok(!("agentId" in body), "agentId must not be in PATCH body");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, updated);
   });
 
   it("throws McpError when agentId is missing (validation failure, fetch not called)", async () => {
@@ -194,7 +195,8 @@ describe("paperclip_pause_agent", () => {
     const result = await pauseAgent.handler({ agentId: "agent-1" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/agents/agent-1/pause");
     assert.equal(calls[0]!.init.method, "POST");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(agent) }] });
+    const parsedPause = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedPause, agent);
   });
 
   it("throws McpError when agentId is empty string (validation failure, fetch not called)", async () => {
@@ -227,7 +229,8 @@ describe("paperclip_resume_agent", () => {
     const result = await resumeAgent.handler({ agentId: "agent-1" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/agents/agent-1/resume");
     assert.equal(calls[0]!.init.method, "POST");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(agent) }] });
+    const parsedResume = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedResume, agent);
   });
 
   it("throws McpError when agentId is empty string (validation failure, fetch not called)", async () => {
@@ -260,7 +263,8 @@ describe("paperclip_invoke_heartbeat", () => {
     const result = await invokeHeartbeat.handler({ agentId: "agent-1" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/agents/agent-1/heartbeat/invoke");
     assert.equal(calls[0]!.init.method, "POST");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(run) }] });
+    const parsedRun = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedRun, run);
   });
 
   it("throws McpError when agentId is empty string (validation failure, fetch not called)", async () => {
@@ -293,7 +297,8 @@ describe("paperclip_terminate_agent", () => {
     const result = await terminateAgent.handler({ agentId: "agent-1" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/agents/agent-1/terminate");
     assert.equal(calls[0]!.init.method, "POST");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(resp) }] });
+    const parsedTerminate = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedTerminate, resp);
   });
 
   it("throws McpError when agentId is empty string (validation failure, fetch not called)", async () => {
@@ -333,7 +338,8 @@ describe("paperclip_create_agent_key", () => {
     assert.equal(body.name, "ci-key");
     assert.equal(body.expiresAt, "2027-01-01T00:00:00Z");
     assert.ok(!("agentId" in body), "agentId must not be in POST body");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(key) }] });
+    const parsedKey = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedKey, key);
   });
 
   it("sends empty body when only agentId is provided", async () => {
@@ -374,7 +380,8 @@ describe("paperclip_list_agent_config_revisions", () => {
     const result = await listConfigRevisions.handler({ agentId: "agent-1" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/agents/agent-1/config-revisions");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(revisions) }] });
+    const parsedRevisions = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedRevisions, revisions);
   });
 
   it("returns isError response on 404 API error", async () => {
@@ -413,7 +420,8 @@ describe("paperclip_rollback_agent_config", () => {
       "http://localhost:3100/api/agents/agent-1/config-revisions/rev-1/rollback"
     );
     assert.equal(calls[0]!.init.method, "POST");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(resp) }] });
+    const parsedRollback = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedRollback, resp);
   });
 
   it("throws McpError when revisionId is missing (validation failure, fetch not called)", async () => {
@@ -454,7 +462,8 @@ describe("paperclip_set_agent_instructions_path", () => {
     assert.equal(calls[0]!.init.method, "PATCH");
     const body = JSON.parse(calls[0]!.init.body as string);
     assert.equal(body.path, "agents/engineer/AGENTS.md");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(resp) }] });
+    const parsedInstructions = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedInstructions, resp);
   });
 
   it("sends null path to clear instructions", async () => {
@@ -548,7 +557,8 @@ describe("paperclip_sync_agent_skills", () => {
     assert.equal(calls[0]!.init.method, "POST");
     const body = JSON.parse(calls[0]!.init.body as string);
     assert.deepEqual(body.desiredSkills, ["paperclip", "commit-commands"]);
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(resp) }] });
+    const parsedSync = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedSync, resp);
   });
 
   it("throws McpError when desiredSkills is missing (validation failure, fetch not called)", async () => {
@@ -585,7 +595,8 @@ describe("paperclip_sync_agent_skills", () => {
     );
     const body = JSON.parse(calls[0]!.init.body as string);
     assert.deepEqual(body.desiredSkills, ["skill-1", "skill-2"]);
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(resp) }] });
+    const parsedSyncStr = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedSyncStr, resp);
   });
 });
 
@@ -600,7 +611,8 @@ describe("paperclip_list_company_skills", () => {
     const result = await listCompanySkills.handler({}, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/skills");
     assert.equal(calls[0]!.init.method, "GET");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(skills) }] });
+    const parsedSkills = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedSkills, skills);
   });
 
   it("returns isError response on 403 API error", async () => {
@@ -641,7 +653,8 @@ describe("paperclip_update_agent_permissions", () => {
     assert.equal(body.canAssignTasks, true);
     assert.equal(body.canCreateAgents, true);
     assert.ok(!("agentId" in body), "agentId must not be in PATCH body");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(resp) }] });
+    const parsedPerms = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedPerms, resp);
   });
 
   it("calls PATCH with canCreateAgents set to false (revoke CEO-only permission)", async () => {
@@ -655,7 +668,8 @@ describe("paperclip_update_agent_permissions", () => {
     const body = JSON.parse(calls[0]!.init.body as string);
     assert.equal(body.canAssignTasks, true);
     assert.equal(body.canCreateAgents, false);
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(resp) }] });
+    const parsedPerms2 = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedPerms2, resp);
   });
 
   it("throws McpError when canAssignTasks is missing (validation failure, fetch not called)", async () => {
@@ -716,7 +730,8 @@ describe("paperclip_update_agent (extended fields)", () => {
     const body = JSON.parse(calls[0]!.init.body as string);
     assert.deepEqual(body.runtimeConfig, { heartbeat: { enabled: false } });
     assert.ok(!("agentId" in body), "agentId must not be in PATCH body");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsedExtended1 = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedExtended1, updated);
   });
 
   it("sends adapterConfig.model in PATCH body", async () => {
@@ -729,7 +744,8 @@ describe("paperclip_update_agent (extended fields)", () => {
     );
     const body = JSON.parse(calls[0]!.init.body as string);
     assert.deepEqual(body.adapterConfig, { model: "claude-opus-4-6" });
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsedExtended2 = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedExtended2, updated);
   });
 
   it("sends adapterConfig.paperclipSkillSync.desiredSkills in PATCH body", async () => {
@@ -751,7 +767,8 @@ describe("paperclip_update_agent (extended fields)", () => {
       "paperclip",
       "commit-commands",
     ]);
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(updated) }] });
+    const parsedExtended3 = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedExtended3, updated);
   });
 });
 

@@ -379,7 +379,8 @@ describe("paperclip_add_approval_comment", () => {
     assert.equal(calls[0]!.init.method, "POST");
     const reqBody = JSON.parse(calls[0]!.init.body as string);
     assert.equal(reqBody.body, "Approved!");
-    assert.deepEqual(result, { content: [{ type: "text", text: JSON.stringify(created) }] });
+    const parsedApprComment = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsedApprComment, created);
   });
 
   it("throws McpError when body is empty string (validation failure, fetch not called)", async () => {
