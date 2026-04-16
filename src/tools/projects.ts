@@ -2,43 +2,56 @@ import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
 import { validate, toJsonSchema, handleApiError, NoInput } from "./validation.js";
 
-const ProjectIdInput = z.object({
-  projectId: z.string().min(1).describe("Project UUID"),
-});
+const ProjectIdInput = z
+  .object({
+    projectId: z.string().min(1).describe("Project UUID"),
+  })
+  .strict();
 
-const CreateProjectInput = z.object({
-  name: z.string().min(1).describe("Project name"),
-  description: z.string().optional().describe("Project description (markdown)"),
-  status: z.string().optional().describe("Initial status (default: active)"),
-  goalId: z.string().optional().describe("Goal UUID to link the project to"),
-  workspace: z
-    .object({
-      cwd: z.string().optional().describe("Local working directory path"),
-      repoUrl: z.string().optional().describe("Remote repository URL"),
-    })
-    .optional()
-    .describe("Optional workspace config to create alongside the project"),
-});
+const CreateProjectInput = z
+  .object({
+    name: z.string().min(1).describe("Project name"),
+    description: z.string().optional().describe("Project description (markdown)"),
+    status: z.string().optional().describe("Initial status (e.g. active)"),
+    goalId: z.string().optional().describe("Goal UUID to link the project to"),
+    workspace: z
+      .object({
+        cwd: z.string().optional().describe("Local working directory path"),
+        repoUrl: z.string().optional().describe("Remote repository URL"),
+      })
+      .optional()
+      .describe("Optional workspace config to create alongside the project"),
+  })
+  .strict();
 
-const UpdateProjectInput = z.object({
-  projectId: z.string().min(1).describe("Project UUID"),
-  name: z.string().optional().describe("New name"),
-  description: z.string().optional().describe("New description (markdown)"),
-  status: z.string().optional().describe("New status"),
-});
+const UpdateProjectInput = z
+  .object({
+    projectId: z.string().min(1).describe("Project UUID"),
+    name: z.string().optional().describe("New name"),
+    description: z.string().optional().describe("New description (markdown)"),
+    status: z.string().optional().describe("New status (e.g. active, archived)"),
+  })
+  .strict();
 
-const CreateWorkspaceInput = z.object({
-  projectId: z.string().min(1).describe("Project UUID"),
-  cwd: z.string().optional().describe("Local working directory path"),
-  repoUrl: z.string().optional().describe("Remote repository URL"),
-});
+const CreateWorkspaceInput = z
+  .object({
+    projectId: z.string().min(1).describe("Project UUID"),
+    cwd: z.string().optional().describe("Local working directory path"),
+    repoUrl: z.string().optional().describe("Remote repository URL"),
+  })
+  .strict()
+  .refine((d) => d.cwd !== undefined || d.repoUrl !== undefined, {
+    message: "Must provide at least one of 'cwd' or 'repoUrl'.",
+  });
 
-const UpdateWorkspaceInput = z.object({
-  projectId: z.string().min(1).describe("Project UUID"),
-  workspaceId: z.string().min(1).describe("Workspace UUID"),
-  cwd: z.string().optional().describe("New local working directory path"),
-  repoUrl: z.string().optional().describe("New remote repository URL"),
-});
+const UpdateWorkspaceInput = z
+  .object({
+    projectId: z.string().min(1).describe("Project UUID"),
+    workspaceId: z.string().min(1).describe("Workspace UUID"),
+    cwd: z.string().optional().describe("New local working directory path"),
+    repoUrl: z.string().optional().describe("New remote repository URL"),
+  })
+  .strict();
 
 export const projectTools: ToolDefinition[] = [
   {

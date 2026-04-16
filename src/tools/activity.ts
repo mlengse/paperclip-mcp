@@ -2,21 +2,30 @@ import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
 import { validate, toJsonSchema, NoInput, handleApiError } from "./validation.js";
 
-const ReportCostEventInput = z.object({
-  agentId: z.string().describe("ID of the agent that incurred the cost"),
-  provider: z.string().describe("LLM provider name (e.g. anthropic, openai)"),
-  model: z.string().describe("Model name (e.g. claude-sonnet-4-6)"),
-  inputTokens: z.number().int().nonnegative().describe("Number of input tokens consumed"),
-  outputTokens: z.number().int().nonnegative().describe("Number of output tokens generated"),
-  costCents: z.number().nonnegative().describe("Total cost in cents"),
-  occurredAt: z.string().describe("ISO 8601 timestamp of when the cost was incurred"),
-});
+const ReportCostEventInput = z
+  .object({
+    agentId: z.string().describe("ID of the agent that incurred the cost"),
+    provider: z.string().describe("LLM provider name (e.g. anthropic, openai)"),
+    model: z.string().describe("Model name (e.g. claude-sonnet-4-6)"),
+    inputTokens: z.number().int().nonnegative().describe("Number of input tokens consumed"),
+    outputTokens: z.number().int().nonnegative().describe("Number of output tokens generated"),
+    costCents: z.number().nonnegative().describe("Total cost in cents"),
+    occurredAt: z
+      .string()
+      .datetime({
+        message: "Must be a valid ISO 8601 datetime string (e.g. '2026-04-16T12:00:00.000Z')",
+      })
+      .describe("ISO 8601 timestamp of when the cost was incurred"),
+  })
+  .strict();
 
-const GetActivityInput = z.object({
-  agentId: z.string().optional().describe("Filter by agent ID"),
-  entityType: z.string().optional().describe("Filter by entity type (e.g. issue, approval)"),
-  entityId: z.string().optional().describe("Filter by entity ID"),
-});
+const GetActivityInput = z
+  .object({
+    agentId: z.string().optional().describe("Filter by agent ID"),
+    entityType: z.string().optional().describe("Filter by entity type (e.g. issue, approval)"),
+    entityId: z.string().optional().describe("Filter by entity ID"),
+  })
+  .strict();
 
 export const activityTools: ToolDefinition[] = [
   {

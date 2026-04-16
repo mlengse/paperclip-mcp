@@ -2,24 +2,30 @@ import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
 import { validate, toJsonSchema, handleApiError, NoInput } from "./validation.js";
 
-const GoalIdInput = z.object({
-  goalId: z.string().min(1).describe("Goal UUID"),
-});
+const GoalIdInput = z
+  .object({
+    goalId: z.string().min(1).describe("Goal UUID"),
+  })
+  .strict();
 
-const CreateGoalInput = z.object({
-  title: z.string().min(1).describe("Goal title"),
-  description: z.string().optional().describe("Goal description (markdown)"),
-  status: z.string().optional().describe("Initial status (default: active)"),
-  level: z.string().optional().describe("Goal level (e.g. company, team)"),
-  parentId: z.string().optional().describe("Parent goal UUID"),
-});
+const CreateGoalInput = z
+  .object({
+    title: z.string().min(1).describe("Goal title"),
+    description: z.string().optional().describe("Goal description (markdown)"),
+    status: z.string().optional().describe("Initial status (e.g. active)"),
+    level: z.string().optional().describe("Goal level (e.g. company, team)"),
+    parentId: z.string().optional().describe("Parent goal UUID"),
+  })
+  .strict();
 
-const UpdateGoalInput = z.object({
-  goalId: z.string().min(1).describe("Goal UUID"),
-  title: z.string().optional().describe("New title"),
-  description: z.string().optional().describe("New description (markdown)"),
-  status: z.string().optional().describe("New status"),
-});
+const UpdateGoalInput = z
+  .object({
+    goalId: z.string().min(1).describe("Goal UUID"),
+    title: z.string().optional().describe("New title"),
+    description: z.string().optional().describe("New description (markdown)"),
+    status: z.string().optional().describe("New status (e.g. active, completed)"),
+  })
+  .strict();
 
 export const goalTools: ToolDefinition[] = [
   {

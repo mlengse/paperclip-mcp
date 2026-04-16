@@ -2,32 +2,38 @@ import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
 import { validate, toJsonSchema, handleApiError } from "./validation.js";
 
-const ListCommentsInput = z.object({
-  issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-21)"),
-  after: z
-    .string()
-    .optional()
-    .describe(
-      "Comment ID cursor — returns only comments posted after this ID. " +
-        "Note: the server-side `after` param is broken (returns 500); this tool implements a client-side workaround."
-    ),
-  order: z.enum(["asc", "desc"]).optional().describe("Sort order (default: asc)"),
-});
+const ListCommentsInput = z
+  .object({
+    issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-21)"),
+    after: z
+      .string()
+      .optional()
+      .describe(
+        "Comment ID cursor — returns only comments posted after this ID. " +
+          "Note: the server-side `after` param is broken (returns 500); this tool implements a client-side workaround."
+      ),
+    order: z.enum(["asc", "desc"]).optional().describe("Sort order (default: asc)"),
+  })
+  .strict();
 
-const AddCommentInput = z.object({
-  issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-21)"),
-  body: z.string().min(1).describe("Comment body (markdown)"),
-});
+const AddCommentInput = z
+  .object({
+    issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-21)"),
+    body: z.string().min(1).describe("Comment body (markdown)"),
+  })
+  .strict();
 
 interface Comment {
   id: string;
   [key: string]: unknown;
 }
 
-const GetCommentInput = z.object({
-  issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-21)"),
-  commentId: z.string().min(1).describe("Comment UUID to fetch"),
-});
+const GetCommentInput = z
+  .object({
+    issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-21)"),
+    commentId: z.string().min(1).describe("Comment UUID to fetch"),
+  })
+  .strict();
 
 export const commentTools: ToolDefinition[] = [
   {

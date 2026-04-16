@@ -2,29 +2,35 @@ import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
 import { validate, toJsonSchema, IssueIdSchema, handleApiError } from "./validation.js";
 
-const ListDocumentsInput = IssueIdSchema;
+const ListDocumentsInput = IssueIdSchema.strict();
 
-const GetDocumentInput = z.object({
-  issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-22)"),
-  key: z.string().min(1).describe("Document key (e.g. `plan`)"),
-});
+const GetDocumentInput = z
+  .object({
+    issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-22)"),
+    key: z.string().min(1).describe("Document key (e.g. `plan`)"),
+  })
+  .strict();
 
-const UpsertDocumentInput = z.object({
-  issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-22)"),
-  key: z.string().min(1).describe("Document key (e.g. `plan`)"),
-  title: z.string().min(1).describe("Document title"),
-  body: z.string().min(1).describe("Document body (markdown)"),
-  format: z.enum(["markdown"]).optional().describe("Document format (default: markdown)"),
-  baseRevisionId: z
-    .string()
-    .optional()
-    .describe("Current revision ID for optimistic concurrency — omit on first create"),
-});
+const UpsertDocumentInput = z
+  .object({
+    issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-22)"),
+    key: z.string().min(1).describe("Document key (e.g. `plan`)"),
+    title: z.string().min(1).describe("Document title"),
+    body: z.string().min(1).describe("Document body (markdown)"),
+    format: z.enum(["markdown"]).optional().describe("Document format (default: markdown)"),
+    baseRevisionId: z
+      .string()
+      .optional()
+      .describe("Current revision ID for optimistic concurrency — omit on first create"),
+  })
+  .strict();
 
-const DocumentKeyInput = z.object({
-  issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-22)"),
-  key: z.string().min(1).describe("Document key (e.g. `plan`)"),
-});
+const DocumentKeyInput = z
+  .object({
+    issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-22)"),
+    key: z.string().min(1).describe("Document key (e.g. `plan`)"),
+  })
+  .strict();
 
 export const documentTools: ToolDefinition[] = [
   {

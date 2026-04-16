@@ -1,58 +1,87 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import { validate, toJsonSchema, NoInput, handleApiError } from "./validation.js";
+import {
+  validate,
+  toJsonSchema,
+  NoInput,
+  handleApiError,
+  RoutineTriggerTypeSchema,
+} from "./validation.js";
 
-const RoutineIdInput = z.object({
-  routineId: z.string().min(1).describe("Routine UUID"),
-});
+// Basic 5-field cron regex: five whitespace-separated tokens
+const CRON_REGEX = /^(\S+\s+){4}\S+$/;
 
-const TriggerIdInput = z.object({
-  triggerId: z.string().min(1).describe("Routine trigger UUID"),
-});
+const RoutineIdInput = z
+  .object({
+    routineId: z.string().min(1).describe("Routine UUID"),
+  })
+  .strict();
 
-const CreateRoutineInput = z.object({
-  agentId: z.string().min(1).describe("Agent UUID to run the routine"),
-  name: z.string().min(1).describe("Routine name"),
-  description: z.string().optional().describe("Routine description"),
-  concurrencyPolicy: z
-    .string()
-    .optional()
-    .describe("Concurrency policy (e.g. allow, forbid, replace)"),
-  catchUpPolicy: z
-    .string()
-    .optional()
-    .describe("Catch-up policy for missed runs (e.g. skip, run_once)"),
-});
+const TriggerIdInput = z
+  .object({
+    triggerId: z.string().min(1).describe("Routine trigger UUID"),
+  })
+  .strict();
 
-const UpdateRoutineInput = z.object({
-  routineId: z.string().min(1).describe("Routine UUID"),
-  name: z.string().optional().describe("New name"),
-  description: z.string().optional().describe("New description"),
-  concurrencyPolicy: z.string().optional().describe("New concurrency policy"),
-  catchUpPolicy: z.string().optional().describe("New catch-up policy"),
-});
+const CreateRoutineInput = z
+  .object({
+    agentId: z.string().min(1).describe("Agent UUID to run the routine"),
+    name: z.string().min(1).describe("Routine name"),
+    description: z.string().optional().describe("Routine description"),
+    concurrencyPolicy: z
+      .string()
+      .optional()
+      .describe("Concurrency policy (e.g. allow, forbid, replace)"),
+    catchUpPolicy: z
+      .string()
+      .optional()
+      .describe("Catch-up policy for missed runs (e.g. skip, run_once)"),
+  })
+  .strict();
 
-const AddTriggerInput = z.object({
-  routineId: z.string().min(1).describe("Routine UUID"),
-  type: z.enum(["schedule", "webhook", "api"]).describe("Trigger type"),
-  config: z
-    .object({
-      cron: z.string().optional().describe("Cron expression for schedule triggers"),
-    })
-    .optional()
-    .describe("Trigger configuration"),
-});
+const UpdateRoutineInput = z
+  .object({
+    routineId: z.string().min(1).describe("Routine UUID"),
+    name: z.string().optional().describe("New name"),
+    description: z.string().optional().describe("New description"),
+    concurrencyPolicy: z.string().optional().describe("New concurrency policy"),
+    catchUpPolicy: z.string().optional().describe("New catch-up policy"),
+  })
+  .strict();
 
-const UpdateTriggerInput = z.object({
-  triggerId: z.string().min(1).describe("Routine trigger UUID"),
-  type: z.enum(["schedule", "webhook", "api"]).optional().describe("New trigger type"),
-  config: z
-    .object({
-      cron: z.string().optional().describe("New cron expression for schedule triggers"),
-    })
-    .optional()
-    .describe("New trigger configuration"),
-});
+const AddTriggerInput = z
+  .object({
+    routineId: z.string().min(1).describe("Routine UUID"),
+    type: RoutineTriggerTypeSchema.describe("Trigger type: schedule | webhook | api"),
+    config: z
+      .object({
+        cron: z
+          .string()
+          .regex(CRON_REGEX, "Must be a valid 5-field cron expression (e.g. '*/5 * * * *')")
+          .optional()
+          .describe("5-field cron expression for schedule triggers (e.g. '*/5 * * * *')"),
+      })
+      .optional()
+      .describe("Trigger configuration"),
+  })
+  .strict();
+
+const UpdateTriggerInput = z
+  .object({
+    triggerId: z.string().min(1).describe("Routine trigger UUID"),
+    type: RoutineTriggerTypeSchema.optional().describe("New trigger type"),
+    config: z
+      .object({
+        cron: z
+          .string()
+          .regex(CRON_REGEX, "Must be a valid 5-field cron expression (e.g. '*/5 * * * *')")
+          .optional()
+          .describe("New 5-field cron expression for schedule triggers"),
+      })
+      .optional()
+      .describe("New trigger configuration"),
+  })
+  .strict();
 
 export const routineTools: ToolDefinition[] = [
   {

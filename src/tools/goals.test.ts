@@ -174,3 +174,36 @@ describe("paperclip_update_goal", () => {
     assert.ok(result.content[0]!.text.includes("422"));
   });
 });
+
+// Stage 2 TDD: A5 (.strict() rejects unknown fields)
+// Note: Goal and Project status fields use domain-specific values (active, completed, archived)
+// that are distinct from the issue StatusSchema. They use z.string() with .strict() applied.
+describe("[stage-2] paperclip_create_goal — A5: strict", () => {
+  it("A5: rejects unknown extra field (strict) for create_goal", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => createGoal.handler({ title: "Test", unknownField: "oops" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});
+
+describe("[stage-2] paperclip_update_goal — A5: strict", () => {
+  it("A5: rejects unknown extra field (strict) for update_goal", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => updateGoal.handler({ goalId: "goal-1", unknownField: "oops" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});

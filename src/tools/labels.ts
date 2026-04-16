@@ -2,10 +2,18 @@ import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
 import { validate, toJsonSchema, handleApiError, NoInput } from "./validation.js";
 
-const CreateLabelInput = z.object({
-  name: z.string().min(1).describe("Label name (e.g. 'source:agent', 'type:bug')"),
-  color: z.string().optional().describe("Hex color string (e.g. '#6366f1')"),
-});
+const HEX_COLOR_REGEX = /^#[0-9a-fA-F]{6}$/;
+
+const CreateLabelInput = z
+  .object({
+    name: z.string().min(1).describe("Label name (e.g. 'source:agent', 'type:bug')"),
+    color: z
+      .string()
+      .regex(HEX_COLOR_REGEX, "Must be a valid 6-digit hex color string (e.g. '#6366f1')")
+      .optional()
+      .describe("6-digit hex color string (e.g. '#6366f1')"),
+  })
+  .strict();
 
 export const labelTools: ToolDefinition[] = [
   {

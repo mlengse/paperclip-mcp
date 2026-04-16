@@ -1,56 +1,72 @@
 import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
-import { validate, toJsonSchema, handleApiError } from "./validation.js";
+import { validate, toJsonSchema, handleApiError, ApprovalTypeSchema } from "./validation.js";
 
-const ApprovalIdInput = z.object({
-  approvalId: z.string().min(1).describe("Approval UUID"),
-});
+const ApprovalIdInput = z
+  .object({
+    approvalId: z.string().min(1).describe("Approval UUID"),
+  })
+  .strict();
 
-const ListApprovalsInput = z.object({
-  status: z.string().optional().describe("Filter by status (e.g. 'pending,approved')"),
-});
+const ListApprovalsInput = z
+  .object({
+    status: z.string().optional().describe("Filter by status (e.g. 'pending,approved')"),
+  })
+  .strict();
 
-const CreateApprovalInput = z.object({
-  type: z
-    .enum(["hire_agent", "approve_ceo_strategy", "budget_override_required"])
-    .describe("Approval type: hire_agent | approve_ceo_strategy | budget_override_required"),
-  payload: z
-    .record(z.string(), z.unknown())
-    .describe("Type-specific payload object (required by the API)"),
-  requestedByAgentId: z
-    .string()
-    .optional()
-    .describe("Agent UUID of the requester (defaults to caller)"),
-});
+const CreateApprovalInput = z
+  .object({
+    type: ApprovalTypeSchema.describe(
+      "Approval type: hire_agent | approve_ceo_strategy | budget_override_required"
+    ),
+    payload: z
+      .record(z.string(), z.unknown())
+      .describe("Type-specific payload object (required by the API)"),
+    requestedByAgentId: z
+      .string()
+      .optional()
+      .describe("Agent UUID of the requester (defaults to caller)"),
+  })
+  .strict();
 
-const ApprovalCommentInput = z.object({
-  approvalId: z.string().min(1).describe("Approval UUID"),
-  body: z.string().min(1).describe("Comment body (markdown)"),
-});
+const ApprovalCommentInput = z
+  .object({
+    approvalId: z.string().min(1).describe("Approval UUID"),
+    body: z.string().min(1).describe("Comment body (markdown)"),
+  })
+  .strict();
 
-const RejectInput = z.object({
-  approvalId: z.string().min(1).describe("Approval UUID"),
-  reason: z.string().optional().describe("Reason for rejection"),
-});
+const RejectInput = z
+  .object({
+    approvalId: z.string().min(1).describe("Approval UUID"),
+    reason: z.string().optional().describe("Reason for rejection"),
+  })
+  .strict();
 
-const RequestRevisionInput = z.object({
-  approvalId: z.string().min(1).describe("Approval UUID"),
-  feedback: z.string().optional().describe("Feedback on what needs to change"),
-});
+const RequestRevisionInput = z
+  .object({
+    approvalId: z.string().min(1).describe("Approval UUID"),
+    feedback: z.string().optional().describe("Feedback on what needs to change"),
+  })
+  .strict();
 
-const ResubmitInput = z.object({
-  approvalId: z.string().min(1).describe("Approval UUID"),
-  comment: z.string().optional().describe("Summary of changes made"),
-});
+const ResubmitInput = z
+  .object({
+    approvalId: z.string().min(1).describe("Approval UUID"),
+    comment: z.string().optional().describe("Summary of changes made"),
+  })
+  .strict();
 
-const CreateAgentHireInput = z.object({
-  name: z.string().min(1).describe("Agent display name"),
-  role: z.string().min(1).describe("Agent role (e.g. engineer, cto)"),
-  title: z.string().optional().describe("Job title"),
-  capabilities: z.string().optional().describe("Free-text capability description"),
-  goalId: z.string().optional().describe("Goal UUID to link the hire to"),
-  projectId: z.string().optional().describe("Project UUID to associate"),
-});
+const CreateAgentHireInput = z
+  .object({
+    name: z.string().min(1).describe("Agent display name"),
+    role: z.string().min(1).describe("Agent role (e.g. engineer, cto)"),
+    title: z.string().optional().describe("Job title"),
+    capabilities: z.string().optional().describe("Free-text capability description"),
+    goalId: z.string().optional().describe("Goal UUID to link the hire to"),
+    projectId: z.string().optional().describe("Project UUID to associate"),
+  })
+  .strict();
 
 export const approvalTools: ToolDefinition[] = [
   {

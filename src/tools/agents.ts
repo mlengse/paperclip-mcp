@@ -2,137 +2,157 @@ import { z } from "zod";
 import type { ToolDefinition } from "./index.js";
 import { validate, toJsonSchema, NoInput, handleApiError } from "./validation.js";
 
-const AgentIdInput = z.object({
-  agentId: z.string().min(1).describe("Agent UUID"),
-});
+const AgentIdInput = z
+  .object({
+    agentId: z.string().min(1).describe("Agent UUID"),
+  })
+  .strict();
 
-const UpdateAgentInput = z.object({
-  agentId: z.string().min(1).describe("Agent UUID"),
-  name: z.string().optional().describe("New display name"),
-  title: z.string().optional().describe("New job title"),
-  capabilities: z.string().optional().describe("Updated capability description"),
-  status: z.string().optional().describe("New status (e.g. active, paused)"),
-  runtimeConfig: z
-    .object({
-      heartbeat: z
-        .object({
-          enabled: z.boolean().optional().describe("Enable or disable scheduled heartbeats"),
-          intervalSec: z
-            .number()
-            .int()
-            .positive()
-            .optional()
-            .describe("Heartbeat interval in seconds"),
-          cooldownSec: z
-            .number()
-            .int()
-            .nonnegative()
-            .optional()
-            .describe("Minimum seconds between heartbeat runs"),
-          maxConcurrentRuns: z
-            .number()
-            .int()
-            .positive()
-            .optional()
-            .describe("Maximum concurrent heartbeat runs allowed"),
-          wakeOnDemand: z
-            .boolean()
-            .optional()
-            .describe("Allow on-demand heartbeat invocation via the invoke endpoint"),
-        })
-        .optional()
-        .describe("Heartbeat scheduling settings"),
-    })
-    .optional()
-    .describe("Agent runtime configuration"),
-  adapterConfig: z
-    .object({
-      model: z.string().optional().describe("LLM model identifier (e.g. claude-sonnet-4-6)"),
-      cwd: z.string().optional().describe("Working directory for the agent process"),
-      maxTurnsPerRun: z
-        .number()
-        .int()
-        .positive()
-        .optional()
-        .describe("Maximum LLM turns per heartbeat run"),
-      timeoutSec: z
-        .number()
-        .int()
-        .positive()
-        .optional()
-        .describe("Hard timeout in seconds for a heartbeat run"),
-      graceSec: z
-        .number()
-        .int()
-        .nonnegative()
-        .optional()
-        .describe("Grace period in seconds before hard termination after timeout"),
-      instructionsFilePath: z
-        .string()
-        .optional()
-        .describe("Path to the AGENTS.md instructions file"),
-      instructionsRootPath: z
-        .string()
-        .optional()
-        .describe("Root path used for resolving relative instruction paths"),
-      instructionsBundleMode: z
-        .string()
-        .optional()
-        .describe("Instruction bundling mode (e.g. concat, merge)"),
-      dangerouslySkipPermissions: z
-        .boolean()
-        .optional()
-        .describe("Skip permission checks — dangerous, use only in trusted sandboxes"),
-      paperclipSkillSync: z
-        .object({
-          desiredSkills: z
-            .array(z.string())
-            .optional()
-            .describe("Skill names the agent should have installed"),
-        })
-        .optional()
-        .describe("Paperclip skill auto-sync configuration"),
-    })
-    .optional()
-    .describe("Adapter configuration for the agent process"),
-});
+const UpdateAgentInput = z
+  .object({
+    agentId: z.string().min(1).describe("Agent UUID"),
+    name: z.string().optional().describe("New display name"),
+    title: z.string().optional().describe("New job title"),
+    capabilities: z.string().optional().describe("Updated capability description"),
+    status: z.string().optional().describe("New status (e.g. active, paused)"),
+    runtimeConfig: z
+      .object({
+        heartbeat: z
+          .object({
+            enabled: z.boolean().optional().describe("Enable or disable scheduled heartbeats"),
+            intervalSec: z
+              .number()
+              .int()
+              .positive()
+              .optional()
+              .describe("Heartbeat interval in seconds"),
+            cooldownSec: z
+              .number()
+              .int()
+              .nonnegative()
+              .optional()
+              .describe("Minimum seconds between heartbeat runs"),
+            maxConcurrentRuns: z
+              .number()
+              .int()
+              .positive()
+              .optional()
+              .describe("Maximum concurrent heartbeat runs allowed"),
+            wakeOnDemand: z
+              .boolean()
+              .optional()
+              .describe("Allow on-demand heartbeat invocation via the invoke endpoint"),
+          })
+          .optional()
+          .describe("Heartbeat scheduling settings"),
+      })
+      .optional()
+      .describe("Agent runtime configuration"),
+    adapterConfig: z
+      .object({
+        model: z.string().optional().describe("LLM model identifier (e.g. claude-sonnet-4-6)"),
+        cwd: z.string().optional().describe("Working directory for the agent process"),
+        maxTurnsPerRun: z
+          .number()
+          .int()
+          .positive()
+          .optional()
+          .describe("Maximum LLM turns per heartbeat run"),
+        timeoutSec: z
+          .number()
+          .int()
+          .positive()
+          .optional()
+          .describe("Hard timeout in seconds for a heartbeat run"),
+        graceSec: z
+          .number()
+          .int()
+          .nonnegative()
+          .optional()
+          .describe("Grace period in seconds before hard termination after timeout"),
+        instructionsFilePath: z
+          .string()
+          .optional()
+          .describe("Path to the AGENTS.md instructions file"),
+        instructionsRootPath: z
+          .string()
+          .optional()
+          .describe("Root path used for resolving relative instruction paths"),
+        instructionsBundleMode: z
+          .string()
+          .optional()
+          .describe("Instruction bundling mode (e.g. concat, merge)"),
+        dangerouslySkipPermissions: z
+          .boolean()
+          .optional()
+          .describe("Skip permission checks — dangerous, use only in trusted sandboxes"),
+        paperclipSkillSync: z
+          .object({
+            desiredSkills: z
+              .array(z.string())
+              .optional()
+              .describe("Skill names the agent should have installed"),
+          })
+          .optional()
+          .describe("Paperclip skill auto-sync configuration"),
+      })
+      .optional()
+      .describe("Adapter configuration for the agent process"),
+  })
+  .strict();
 
-const UpdateAgentPermissionsInput = z.object({
-  agentId: z.string().min(1).describe("Agent UUID"),
-  canAssignTasks: z.boolean().describe("Allow this agent to assign tasks to other agents"),
-  canCreateAgents: z
-    .boolean()
-    .describe("Allow this agent to create new agents (reserved for CEO by governance policy)"),
-});
+const UpdateAgentPermissionsInput = z
+  .object({
+    agentId: z.string().min(1).describe("Agent UUID"),
+    canAssignTasks: z.boolean().describe("Allow this agent to assign tasks to other agents"),
+    canCreateAgents: z
+      .boolean()
+      .describe("Allow this agent to create new agents (reserved for CEO by governance policy)"),
+  })
+  .strict();
 
-const CreateAgentKeyInput = z.object({
-  agentId: z.string().min(1).describe("Agent UUID"),
-  name: z.string().optional().describe("Key label"),
-  expiresAt: z.string().optional().describe("ISO 8601 expiry date"),
-});
+const CreateAgentKeyInput = z
+  .object({
+    agentId: z.string().min(1).describe("Agent UUID"),
+    name: z.string().optional().describe("Key label"),
+    expiresAt: z
+      .string()
+      .datetime({
+        message: "Must be a valid ISO 8601 datetime string (e.g. '2027-01-01T00:00:00.000Z')",
+      })
+      .optional()
+      .describe("ISO 8601 expiry datetime (e.g. '2027-01-01T00:00:00.000Z')"),
+  })
+  .strict();
 
-const ConfigRevisionInput = z.object({
-  agentId: z.string().min(1).describe("Agent UUID"),
-  revisionId: z.string().min(1).describe("Config revision UUID"),
-});
+const ConfigRevisionInput = z
+  .object({
+    agentId: z.string().min(1).describe("Agent UUID"),
+    revisionId: z.string().min(1).describe("Config revision UUID"),
+  })
+  .strict();
 
-const SetInstructionsPathInput = z.object({
-  agentId: z.string().min(1).describe("Agent UUID"),
-  path: z.string().nullable().describe("Path to AGENTS.md file, or null to clear"),
-  adapterConfigKey: z
-    .string()
-    .optional()
-    .describe("Adapter config key override for non-standard adapters"),
-});
+const SetInstructionsPathInput = z
+  .object({
+    agentId: z.string().min(1).describe("Agent UUID"),
+    path: z.string().nullable().describe("Path to AGENTS.md file, or null to clear"),
+    adapterConfigKey: z
+      .string()
+      .optional()
+      .describe("Adapter config key override for non-standard adapters"),
+  })
+  .strict();
 
 const jsonArrayPreprocess = (v: unknown) => (typeof v === "string" ? JSON.parse(v) : v);
 
-const SyncAgentSkillsInput = z.object({
-  agentId: z.string().min(1).describe("Agent UUID"),
-  desiredSkills: z
-    .preprocess(jsonArrayPreprocess, z.array(z.string()))
-    .describe("List of skill names to sync onto the agent"),
-});
+const SyncAgentSkillsInput = z
+  .object({
+    agentId: z.string().min(1).describe("Agent UUID"),
+    desiredSkills: z
+      .preprocess(jsonArrayPreprocess, z.array(z.string()))
+      .describe("List of skill names to sync onto the agent"),
+  })
+  .strict();
 
 export const agentTools: ToolDefinition[] = [
   {

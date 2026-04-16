@@ -242,12 +242,27 @@ describe("paperclip_create_workspace", () => {
     assert.equal(calls.length, 0);
   });
 
-  it("returns isError response on 400 API error", async () => {
+  it("returns isError response on 400 API error (with valid cwd/repoUrl to reach API)", async () => {
+    // Note: after Stage 2, { projectId } with no cwd/repoUrl fails .refine() before reaching API.
+    // Use a valid cwd to test the 400 API error path.
     const { fn } = mockFetch(400, { message: "Bad request" });
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await createWorkspace.handler({ projectId: "proj-1" }, client);
+    const result = await createWorkspace.handler({ projectId: "proj-1", cwd: "/app" }, client);
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("400"));
+  });
+
+  it("throws McpError when neither cwd nor repoUrl is provided (.refine())", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => createWorkspace.handler({ projectId: "proj-1" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
   });
 });
 
@@ -290,5 +305,69 @@ describe("paperclip_update_workspace", () => {
     );
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("404"));
+  });
+});
+
+// Stage 2 TDD: A5 (.strict() rejects unknown fields) + .refine()
+// Note: Project status uses domain-specific values (active, archived) distinct from issue StatusSchema.
+describe("[stage-2] paperclip_create_project — A5: strict", () => {
+  it("A5: rejects unknown extra field (strict) for create_project", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => createProject.handler({ name: "Test", unknownField: "oops" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});
+
+describe("[stage-2] paperclip_update_project — A5: strict", () => {
+  it("A5: rejects unknown extra field (strict) for update_project", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => updateProject.handler({ projectId: "proj-1", unknownField: "oops" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});
+
+describe("[stage-2] paperclip_create_workspace — .refine() cwd||repoUrl", () => {
+  it("refine: rejects when neither cwd nor repoUrl is provided", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => createWorkspace.handler({ projectId: "proj-1" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError, `Expected McpError, got: ${String(err)}`);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("refine: accepts when only cwd is provided", async () => {
+    const { fn } = mockFetch(200, { id: "ws-1" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await createWorkspace.handler({ projectId: "proj-1", cwd: "/app" }, client);
+    assert.equal(result.isError, undefined);
+  });
+
+  it("refine: accepts when only repoUrl is provided", async () => {
+    const { fn } = mockFetch(200, { id: "ws-1" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await createWorkspace.handler(
+      { projectId: "proj-1", repoUrl: "https://github.com/org/repo" },
+      client
+    );
+    assert.equal(result.isError, undefined);
   });
 });

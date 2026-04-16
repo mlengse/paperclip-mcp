@@ -4,24 +4,28 @@ import { basename } from "node:path";
 import type { ToolDefinition } from "./index.js";
 import { validate, toJsonSchema, IssueIdSchema, handleApiError } from "./validation.js";
 
-const ListAttachmentsInput = IssueIdSchema;
+const ListAttachmentsInput = IssueIdSchema.strict();
 
-const UploadAttachmentInput = z.object({
-  issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-22)"),
-  filePath: z.string().min(1).describe("Absolute path to the local file to upload"),
-  filename: z
-    .string()
-    .optional()
-    .describe("Override filename in the upload (defaults to basename of filePath)"),
-  mimeType: z
-    .string()
-    .optional()
-    .describe("MIME type of the file (e.g. text/plain, application/pdf)"),
-});
+const UploadAttachmentInput = z
+  .object({
+    issueId: z.string().min(1).describe("Issue ID or identifier (e.g. PAP-22)"),
+    filePath: z.string().min(1).describe("Absolute path to the local file to upload"),
+    filename: z
+      .string()
+      .optional()
+      .describe("Override filename in the upload (defaults to basename of filePath)"),
+    mimeType: z
+      .string()
+      .optional()
+      .describe("MIME type of the file (e.g. text/plain, application/pdf)"),
+  })
+  .strict();
 
-const AttachmentIdInput = z.object({
-  attachmentId: z.string().min(1).describe("Attachment UUID"),
-});
+const AttachmentIdInput = z
+  .object({
+    attachmentId: z.string().min(1).describe("Attachment UUID"),
+  })
+  .strict();
 
 export const attachmentTools: ToolDefinition[] = [
   {
