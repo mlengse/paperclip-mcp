@@ -290,7 +290,12 @@ export const issueTools: ToolDefinition[] = [
     description:
       "Update an issue's status, priority, title, description, assignee, goal, project, parent, billing code, execution lock fields, or add a comment. Run ID header is injected automatically.",
     inputSchema: toJsonSchema(UpdateIssueInput),
-    annotations: { title: "Update issue fields", destructiveHint: true, openWorldHint: false },
+    annotations: {
+      title: "Update issue fields",
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
     async handler(args, client) {
       try {
         const { issueId, ...rest } = validate(UpdateIssueInput, args);

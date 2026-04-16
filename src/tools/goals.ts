@@ -84,7 +84,12 @@ export const goalTools: ToolDefinition[] = [
     description:
       "Update a goal's title, description, or status. Run ID header is injected automatically.",
     inputSchema: toJsonSchema(UpdateGoalInput),
-    annotations: { title: "Update goal fields", destructiveHint: true, openWorldHint: false },
+    annotations: {
+      title: "Update goal fields",
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
     async handler(args, client) {
       try {
         const { goalId, ...rest } = validate(UpdateGoalInput, args);

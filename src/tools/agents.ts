@@ -199,6 +199,7 @@ export const agentTools: ToolDefinition[] = [
     annotations: {
       title: "Update agent configuration",
       destructiveHint: true,
+      idempotentHint: true,
       openWorldHint: false,
     },
     async handler(args, client) {
@@ -218,9 +219,14 @@ export const agentTools: ToolDefinition[] = [
   {
     name: "paperclip_update_agent_permissions",
     description:
-      "Update an agent's permissions (canAssignTasks, canCreateAgents). Both fields are required — the API enforces this. Run ID header is injected automatically.",
+      "⚠ Board-only: Update an agent's permissions (canAssignTasks, canCreateAgents). Both fields are required — the API enforces this. Run ID header is injected automatically.",
     inputSchema: toJsonSchema(UpdateAgentPermissionsInput),
-    annotations: { title: "Update agent permissions", destructiveHint: true, openWorldHint: false },
+    annotations: {
+      title: "Update agent permissions",
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
     async handler(args, client) {
       try {
         const { agentId, canAssignTasks, canCreateAgents } = validate(
@@ -241,7 +247,7 @@ export const agentTools: ToolDefinition[] = [
     name: "paperclip_pause_agent",
     description: "Pause an agent, preventing it from starting new heartbeat runs.",
     inputSchema: toJsonSchema(AgentIdInput),
-    annotations: { title: "Pause agent", destructiveHint: true, openWorldHint: false },
+    annotations: { title: "Pause agent", idempotentHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { agentId } = validate(AgentIdInput, args);
@@ -256,7 +262,7 @@ export const agentTools: ToolDefinition[] = [
     name: "paperclip_resume_agent",
     description: "Resume a paused agent, allowing it to start new heartbeat runs.",
     inputSchema: toJsonSchema(AgentIdInput),
-    annotations: { title: "Resume paused agent", destructiveHint: false, openWorldHint: false },
+    annotations: { title: "Resume paused agent", idempotentHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { agentId } = validate(AgentIdInput, args);
@@ -290,7 +296,7 @@ export const agentTools: ToolDefinition[] = [
   {
     name: "paperclip_terminate_agent",
     description:
-      "Permanently deactivate an agent. WARNING: This action is irreversible. The agent cannot be reactivated after termination. Run ID header is injected automatically.",
+      "⚠ Board-only: Permanently deactivate an agent. WARNING: This action is irreversible. The agent cannot be reactivated after termination. Run ID header is injected automatically.",
     inputSchema: toJsonSchema(AgentIdInput),
     annotations: {
       title: "Terminate agent permanently",
@@ -310,7 +316,7 @@ export const agentTools: ToolDefinition[] = [
   {
     name: "paperclip_create_agent_key",
     description:
-      "Create a long-lived API key for an agent. Returns the key value — store it securely, it will not be shown again. Run ID header is injected automatically.",
+      "⚠ Board-only: Create a long-lived API key for an agent. Returns the key value — store it securely, it will not be shown again. Run ID header is injected automatically.",
     inputSchema: toJsonSchema(CreateAgentKeyInput),
     annotations: { title: "Create agent API key", destructiveHint: false, openWorldHint: false },
     async handler(args, client) {
@@ -348,7 +354,7 @@ export const agentTools: ToolDefinition[] = [
   {
     name: "paperclip_rollback_agent_config",
     description:
-      "Rollback an agent's config to a previous revision. Run ID header is injected automatically.",
+      "⚠ Board-only: Rollback an agent's config to a previous revision. Run ID header is injected automatically.",
     inputSchema: toJsonSchema(ConfigRevisionInput),
     annotations: {
       title: "Rollback agent config revision",
@@ -370,7 +376,7 @@ export const agentTools: ToolDefinition[] = [
   {
     name: "paperclip_set_agent_instructions_path",
     description:
-      "Set or clear the AGENTS.md instructions file path for an agent. Send null to clear. Run ID header is injected automatically.",
+      "⚠ Board-only: Set or clear the AGENTS.md instructions file path for an agent. Send null to clear. Run ID header is injected automatically.",
     inputSchema: toJsonSchema(SetInstructionsPathInput),
     annotations: {
       title: "Set agent instructions file path",

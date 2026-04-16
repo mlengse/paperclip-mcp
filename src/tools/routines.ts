@@ -144,7 +144,12 @@ export const routineTools: ToolDefinition[] = [
     description:
       "Update a routine's name, description, or scheduling policies. Run ID header is injected automatically.",
     inputSchema: toJsonSchema(UpdateRoutineInput),
-    annotations: { title: "Update routine settings", destructiveHint: true, openWorldHint: false },
+    annotations: {
+      title: "Update routine settings",
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
     async handler(args, client) {
       try {
         const { routineId, ...rest } = validate(UpdateRoutineInput, args);
@@ -185,6 +190,7 @@ export const routineTools: ToolDefinition[] = [
     annotations: {
       title: "Update routine trigger",
       destructiveHint: true,
+      idempotentHint: true,
       openWorldHint: false,
     },
     async handler(args, client) {

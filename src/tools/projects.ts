@@ -114,7 +114,12 @@ export const projectTools: ToolDefinition[] = [
     description:
       "Update a project's name, description, or status. Run ID header is injected automatically.",
     inputSchema: toJsonSchema(UpdateProjectInput),
-    annotations: { title: "Update project fields", destructiveHint: true, openWorldHint: false },
+    annotations: {
+      title: "Update project fields",
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
     async handler(args, client) {
       try {
         const { projectId, ...rest } = validate(UpdateProjectInput, args);
@@ -174,6 +179,7 @@ export const projectTools: ToolDefinition[] = [
     annotations: {
       title: "Update workspace settings",
       destructiveHint: true,
+      idempotentHint: true,
       openWorldHint: false,
     },
     async handler(args, client) {
