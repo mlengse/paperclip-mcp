@@ -115,7 +115,7 @@ export const approvalTools: ToolDefinition[] = [
     name: "paperclip_approve",
     description: "Approve an approval request. Run ID header is injected automatically.",
     inputSchema: toJsonSchema(ApprovalIdInput),
-    annotations: { title: "Approve request", destructiveHint: true, openWorldHint: false },
+    annotations: { title: "Approve approval request", destructiveHint: true, openWorldHint: false },
     async handler(args, client) {
       try {
         const { approvalId } = validate(ApprovalIdInput, args);
