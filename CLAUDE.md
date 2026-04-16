@@ -51,9 +51,14 @@ paperclip-mcp is a Model Context Protocol (MCP) stdio server that exposes the Pa
 
 ## Adding a New Tool
 
-1. Create or edit a file in `src/tools/` — define a Zod input schema and export a `ToolDefinition[]` array.
-2. Each tool's handler: validate args with `validate(schema, args)`, call `client.get/post/patch/...`, return `{ content: [{ type: "text", text: JSON.stringify(data) }] }`.
-3. If it's a new module, import and spread its array into `ALL_TOOLS` in `src/tools/index.ts`.
+See **[`docs/guides/mcp-tool-conventions.md`](docs/guides/mcp-tool-conventions.md)** for the full reference. Quick checklist:
+
+1. Define a `.strict()` Zod schema with `.describe()` on every field. Use `toJsonSchema()` for `inputSchema` — never write JSON Schema by hand.
+2. Use `composeDescription()` for the description (Args / Returns / Examples / Error Handling sections required).
+3. Set all applicable annotations (`title` always required, ≤ 60 chars).
+4. Wrap list responses in `paginate()`. Call `applyCharLimit()` on every return value.
+5. Delegate all `catch` blocks to `handleApiError(err, { tool, resource })`.
+6. Register in `src/tools/index.ts` → `ALL_TOOLS` and update registry test allow-lists.
 
 ## Conventions
 
