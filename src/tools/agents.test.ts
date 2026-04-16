@@ -377,7 +377,10 @@ describe("paperclip_list_agent_config_revisions", () => {
     const revisions = [{ id: "rev-1", createdAt: "2026-01-01T00:00:00Z" }];
     const { fn, calls } = mockFetch(200, revisions);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listConfigRevisions.handler({ agentId: "agent-1" }, client);
+    const result = await listConfigRevisions.handler(
+      { agentId: "agent-1", response_format: "json" },
+      client
+    );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/agents/agent-1/config-revisions");
     assert.equal(calls[0]!.init.method, "GET");
     const parsedRevisions = JSON.parse(result.content[0]!.text);
@@ -608,7 +611,7 @@ describe("paperclip_list_company_skills", () => {
     ];
     const { fn, calls } = mockFetch(200, skills);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listCompanySkills.handler({}, client);
+    const result = await listCompanySkills.handler({ response_format: "json" }, client);
     assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/skills");
     assert.equal(calls[0]!.init.method, "GET");
     const parsedSkills = JSON.parse(result.content[0]!.text);
@@ -919,5 +922,54 @@ describe("[stage-5] paperclip_list_agents — truncation + format", () => {
     const result = await listAgents.handler({ response_format: "markdown" }, client);
     assert.match(result.content[0]!.text, /^##/m);
     assert.ok(result.content[0]!.text.includes("Test Agent"));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] F1/F2 — paperclip_list_agent_config_revisions
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_list_agent_config_revisions — format", () => {
+  it("F1: defaults to markdown output", async () => {
+    const revisions = [{ id: "rev-1", summary: "initial config" }];
+    const { fn } = mockFetch(200, revisions);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listConfigRevisions.handler({ agentId: "agent-1" }, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("F2: response_format 'json' returns parseable JSON array", async () => {
+    const revisions = [{ id: "rev-1", summary: "initial config" }];
+    const { fn } = mockFetch(200, revisions);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listConfigRevisions.handler(
+      { agentId: "agent-1", response_format: "json" },
+      client
+    );
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, revisions);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] F1/F2 — paperclip_list_company_skills
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_list_company_skills — format", () => {
+  it("F1: defaults to markdown output", async () => {
+    const skills = [{ id: "skill-1", name: "paperclip" }];
+    const { fn } = mockFetch(200, skills);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listCompanySkills.handler({}, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("F2: response_format 'json' returns parseable JSON array", async () => {
+    const skills = [{ id: "skill-1", name: "paperclip" }];
+    const { fn } = mockFetch(200, skills);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listCompanySkills.handler({ response_format: "json" }, client);
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, skills);
   });
 });

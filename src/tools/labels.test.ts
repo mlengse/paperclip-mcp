@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { McpError } from "@modelcontextprotocol/sdk/types.js";
 import { PaperclipClient } from "../client.js";
 import { labelTools } from "./labels.js";
+import { labelFixture, largeLabelList } from "../test/helpers/fixtures.js";
 
 const TEST_AUTH = {
   apiKey: "test-jwt",
@@ -159,5 +160,44 @@ describe("[stage-2] paperclip_create_label — hex color regex + A5: strict", ()
       }
     );
     assert.equal(calls.length, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] D1/D2 truncation + F1/F2 — paperclip_list_labels
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_list_labels — truncation + format", () => {
+  it("D1: response >25k chars is truncated with hint", async () => {
+    const big = largeLabelList(500);
+    const { fn } = mockFetch(200, big);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listLabels.handler({ response_format: "json" }, client);
+    assert.ok(result.content[0]!.text.length <= 25_000);
+    assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("D2: small response is not truncated", async () => {
+    const small = [labelFixture()];
+    const { fn } = mockFetch(200, small);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listLabels.handler({ response_format: "json" }, client);
+    assert.ok(!result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, [labelFixture()]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listLabels.handler({}, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("F2: response_format 'json' returns parseable JSON array", async () => {
+    const labels = [labelFixture()];
+    const { fn } = mockFetch(200, labels);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listLabels.handler({ response_format: "json" }, client);
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, labels);
   });
 });

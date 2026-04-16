@@ -191,7 +191,10 @@ describe("paperclip_get_heartbeat_context", () => {
     const ctx = { state: "in_progress", goal: "Build MCP" };
     const { fn, calls } = mockFetch(200, ctx);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await getHeartbeat.handler({ issueId: "issue-1" }, client);
+    const result = await getHeartbeat.handler(
+      { issueId: "issue-1", response_format: "json" },
+      client
+    );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/issues/issue-1/heartbeat-context");
     const parsedCtx = JSON.parse(result.content[0]!.text);
     assert.deepEqual(parsedCtx, ctx);
@@ -1081,5 +1084,31 @@ describe("[stage-5] paperclip_get_issue — truncation + format", () => {
     const client = new PaperclipClient(TEST_AUTH, fn);
     const result = await getIssue.handler({ issueId: "issue-1", response_format: "json" }, client);
     assert.doesNotThrow(() => JSON.parse(result.content[0]!.text));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] F1/F2 — paperclip_get_heartbeat_context
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_get_heartbeat_context — format", () => {
+  it("F1: defaults to markdown output", async () => {
+    const ctx = { issueId: "PAP-1", status: "todo", lastCommentId: null };
+    const { fn } = mockFetch(200, ctx);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getHeartbeat.handler({ issueId: "PAP-1" }, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("F2: response_format 'json' returns parseable JSON", async () => {
+    const ctx = { issueId: "PAP-1", status: "todo", lastCommentId: null };
+    const { fn } = mockFetch(200, ctx);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getHeartbeat.handler(
+      { issueId: "PAP-1", response_format: "json" },
+      client
+    );
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, ctx);
   });
 });

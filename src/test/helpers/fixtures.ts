@@ -118,3 +118,131 @@ export function largeIssueList(count = 300): IssueLike[] {
     })
   );
 }
+
+// ---------------------------------------------------------------------------
+// Goal
+// ---------------------------------------------------------------------------
+export interface GoalLike {
+  id: string;
+  title: string;
+  status: string;
+  description: string | null;
+}
+
+export function goalFixture(overrides: Partial<GoalLike> = {}): GoalLike {
+  return {
+    id: "goal-1",
+    title: "Fixture goal",
+    status: "active",
+    description: null,
+    ...overrides,
+  };
+}
+
+export function largeGoalList(count = 300): GoalLike[] {
+  return Array.from({ length: count }, (_, i) =>
+    goalFixture({
+      id: `goal-${i + 1}`,
+      title: `Goal ${i + 1} — ${"x".repeat(100)}`,
+    })
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Project
+// ---------------------------------------------------------------------------
+export interface ProjectLike {
+  id: string;
+  name: string;
+  status: string;
+  goalId: string | null;
+}
+
+export function projectFixture(overrides: Partial<ProjectLike> = {}): ProjectLike {
+  return {
+    id: "proj-1",
+    name: "Fixture project",
+    status: "active",
+    goalId: null,
+    ...overrides,
+  };
+}
+
+export function largeProjectList(count = 300): ProjectLike[] {
+  return Array.from({ length: count }, (_, i) =>
+    projectFixture({
+      id: `proj-${i + 1}`,
+      name: `Project ${i + 1} — ${"x".repeat(100)}`,
+    })
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Label
+// ---------------------------------------------------------------------------
+export interface LabelLike {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
+export function labelFixture(overrides: Partial<LabelLike> = {}): LabelLike {
+  return {
+    id: "label-1",
+    name: "bug",
+    color: "#ff0000",
+    ...overrides,
+  };
+}
+
+export function largeLabelList(count = 500): LabelLike[] {
+  return Array.from({ length: count }, (_, i) =>
+    labelFixture({
+      id: `label-${i + 1}`,
+      name: `label-${i + 1}-${"x".repeat(60)}`,
+    })
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Comment
+// ---------------------------------------------------------------------------
+export interface CommentLike {
+  id: string;
+  body: string;
+  authorId: string;
+  authorType: string;
+  createdAt: string;
+}
+
+export function commentFixture(overrides: Partial<CommentLike> = {}): CommentLike {
+  return {
+    id: "comment-1",
+    body: "Fixture comment",
+    authorId: "agent-1",
+    authorType: "agent",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+export function largeCommentList(count = 300): CommentLike[] {
+  return Array.from({ length: count }, (_, i) =>
+    commentFixture({
+      id: `comment-${i + 1}`,
+      body: `Comment ${i + 1} — ${"x".repeat(100)}`,
+    })
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Large approval list
+// ---------------------------------------------------------------------------
+export function largeApprovalList(count = 300): ApprovalLike[] {
+  return Array.from({ length: count }, (_, i) =>
+    approvalFixture({
+      id: `appr-${i + 1}`,
+      payload: { name: `Agent ${i + 1}`, description: "x".repeat(100) },
+    })
+  );
+}

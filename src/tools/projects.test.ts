@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { McpError } from "@modelcontextprotocol/sdk/types.js";
 import { PaperclipClient } from "../client.js";
 import { projectTools } from "./projects.js";
+import { projectFixture, largeProjectList } from "../test/helpers/fixtures.js";
 
 const TEST_AUTH = {
   apiKey: "test-jwt",
@@ -401,5 +402,69 @@ describe("[stage-2] paperclip_create_workspace — .refine() cwd||repoUrl", () =
       client
     );
     assert.equal(result.isError, undefined);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] D1/D2 truncation + F1/F2 — paperclip_list_projects
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_list_projects — truncation + format", () => {
+  it("D1: response >25k chars is truncated with hint", async () => {
+    const big = largeProjectList(300);
+    const { fn } = mockFetch(200, big);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listProjects.handler({ response_format: "json" }, client);
+    assert.ok(result.content[0]!.text.length <= 25_000);
+    assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("D2: small response is not truncated", async () => {
+    const small = [projectFixture()];
+    const { fn } = mockFetch(200, small);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listProjects.handler({ response_format: "json" }, client);
+    assert.ok(!result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, [projectFixture()]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listProjects.handler({}, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("F2: response_format 'json' returns parseable JSON array", async () => {
+    const projects = [projectFixture()];
+    const { fn } = mockFetch(200, projects);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listProjects.handler({ response_format: "json" }, client);
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, projects);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] D1/D2 truncation + F1/F2 — paperclip_get_project
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_get_project — truncation + format", () => {
+  it("F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, projectFixture());
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getProject.handler({ projectId: "proj-1" }, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("F2: response_format 'json' returns parseable JSON object", async () => {
+    const project = projectFixture();
+    const { fn } = mockFetch(200, project);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getProject.handler(
+      { projectId: "proj-1", response_format: "json" },
+      client
+    );
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, project);
   });
 });

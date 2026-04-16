@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { McpError } from "@modelcontextprotocol/sdk/types.js";
 import { PaperclipClient } from "../client.js";
 import { goalTools } from "./goals.js";
+import { goalFixture, largeGoalList } from "../test/helpers/fixtures.js";
 
 const TEST_AUTH = {
   apiKey: "test-jwt",
@@ -209,5 +210,66 @@ describe("[stage-2] paperclip_update_goal — A5: strict", () => {
       }
     );
     assert.equal(calls.length, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] D1/D2 truncation + F1/F2 — paperclip_list_goals
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_list_goals — truncation + format", () => {
+  it("D1: response >25k chars is truncated with hint", async () => {
+    const big = largeGoalList(300);
+    const { fn } = mockFetch(200, big);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listGoals.handler({ response_format: "json" }, client);
+    assert.ok(result.content[0]!.text.length <= 25_000);
+    assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("D2: small response is not truncated", async () => {
+    const small = [goalFixture()];
+    const { fn } = mockFetch(200, small);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listGoals.handler({ response_format: "json" }, client);
+    assert.ok(!result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, [goalFixture()]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listGoals.handler({}, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("F2: response_format 'json' returns parseable JSON array", async () => {
+    const goals = [goalFixture()];
+    const { fn } = mockFetch(200, goals);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listGoals.handler({ response_format: "json" }, client);
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, goals);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] D1/D2 truncation + F1/F2 — paperclip_get_goal
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_get_goal — truncation + format", () => {
+  it("F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, goalFixture());
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getGoal.handler({ goalId: "goal-1" }, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("F2: response_format 'json' returns parseable JSON object", async () => {
+    const goal = goalFixture();
+    const { fn } = mockFetch(200, goal);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getGoal.handler({ goalId: "goal-1", response_format: "json" }, client);
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, goal);
   });
 });

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { McpError } from "@modelcontextprotocol/sdk/types.js";
 import { PaperclipClient } from "../client.js";
 import { approvalTools } from "./approvals.js";
+import { approvalFixture, largeApprovalList } from "../test/helpers/fixtures.js";
 
 const TEST_AUTH = {
   apiKey: "test-jwt",
@@ -340,7 +341,10 @@ describe("paperclip_list_approval_comments", () => {
     const comments = [{ id: "cmt-1", body: "Looks good" }];
     const { fn, calls } = mockFetch(200, comments);
     const client = new PaperclipClient(TEST_AUTH, fn);
-    const result = await listComments.handler({ approvalId: "appr-1" }, client);
+    const result = await listComments.handler(
+      { approvalId: "appr-1", response_format: "json" },
+      client
+    );
     assert.equal(calls[0]!.url, "http://localhost:3100/api/approvals/appr-1/comments");
     assert.equal(calls[0]!.init.method, "GET");
     const parsed = JSON.parse(result.content[0]!.text);
@@ -485,5 +489,69 @@ describe("[stage-2] paperclip_create_approval — A4: ApprovalTypeSchema + A5: s
       }
     );
     assert.equal(calls.length, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] D1/D2 truncation + F1/F2 — paperclip_list_approvals
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_list_approvals — truncation + format", () => {
+  it("D1: response >25k chars is truncated with hint", async () => {
+    const big = largeApprovalList(300);
+    const { fn } = mockFetch(200, big);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovals.handler({ response_format: "json" }, client);
+    assert.ok(result.content[0]!.text.length <= 25_000);
+    assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("D2: small response is not truncated", async () => {
+    const small = [approvalFixture()];
+    const { fn } = mockFetch(200, small);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovals.handler({ response_format: "json" }, client);
+    assert.ok(!result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, [approvalFixture()]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovals.handler({}, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("F2: response_format 'json' returns parseable JSON array", async () => {
+    const approvals = [approvalFixture()];
+    const { fn } = mockFetch(200, approvals);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovals.handler({ response_format: "json" }, client);
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, approvals);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] F1/F2 — paperclip_get_approval
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_get_approval — format", () => {
+  it("F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, approvalFixture());
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getApproval.handler({ approvalId: "appr-1" }, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("F2: response_format 'json' returns parseable JSON object", async () => {
+    const approval = approvalFixture();
+    const { fn } = mockFetch(200, approval);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await getApproval.handler(
+      { approvalId: "appr-1", response_format: "json" },
+      client
+    );
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, approval);
   });
 });

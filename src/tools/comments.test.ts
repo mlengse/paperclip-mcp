@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { McpError } from "@modelcontextprotocol/sdk/types.js";
 import { PaperclipClient } from "../client.js";
 import { commentTools } from "./comments.js";
+import { commentFixture, largeCommentList } from "../test/helpers/fixtures.js";
 
 const TEST_AUTH = {
   apiKey: "test-jwt",
@@ -199,5 +200,53 @@ describe("paperclip_get_comment", () => {
     );
     assert.equal(result.isError, true);
     assert.ok(result.content[0]!.text.includes("404"));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-5] D1/D2 truncation + F1/F2 — paperclip_list_comments
+// ---------------------------------------------------------------------------
+describe("[stage-5] paperclip_list_comments — truncation + format", () => {
+  it("D1: response >25k chars is truncated with hint", async () => {
+    const big = largeCommentList(300);
+    const { fn } = mockFetch(200, big);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listComments.handler(
+      { issueId: "issue-1", response_format: "json" },
+      client
+    );
+    assert.ok(result.content[0]!.text.length <= 25_000);
+    assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("D2: small response is not truncated", async () => {
+    const small = [commentFixture()];
+    const { fn } = mockFetch(200, small);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listComments.handler(
+      { issueId: "issue-1", response_format: "json" },
+      client
+    );
+    assert.ok(!result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, [commentFixture()]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listComments.handler({ issueId: "issue-1" }, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("F2: response_format 'json' returns parseable JSON array", async () => {
+    const comments = [commentFixture()];
+    const { fn } = mockFetch(200, comments);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listComments.handler(
+      { issueId: "issue-1", response_format: "json" },
+      client
+    );
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed, comments);
   });
 });
