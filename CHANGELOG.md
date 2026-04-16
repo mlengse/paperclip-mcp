@@ -1,3 +1,16 @@
+# [2.0.0](https://github.com/bruhsb/paperclip-mcp/compare/v1.2.5...v2.0.0) (2026-04-16)
+
+
+### Features
+
+* **release:** switch to conventionalcommits preset and trigger v2.0.0 ([b407bba](https://github.com/bruhsb/paperclip-mcp/commit/b407bba8e0438c6739ffc1c9dd68f24f55fe3dd7)), closes [#10](https://github.com/bruhsb/paperclip-mcp/issues/10) [#10](https://github.com/bruhsb/paperclip-mcp/issues/10)
+
+
+### BREAKING CHANGES
+
+* **release:** list_* tools now return a pagination envelope
+{items, total, count, offset, has_more, next_offset} instead of raw arrays.
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
