@@ -1228,6 +1228,180 @@ describe("[stage-8a] paperclip_wakeup_agent — happy path (B1–B2)", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// [stage-8c] paperclip_create_agent — schema validation (A1–A5)
+// ---------------------------------------------------------------------------
+describe("[stage-8c] paperclip_create_agent — schema validation (A1–A5)", () => {
+  const createAgent = agentTools.find((t) => t.name === "paperclip_create_agent")!;
+
+  it("A1: rejects missing name (validation failure, fetch not called)", async () => {
+    assert.ok(createAgent, "tool must exist");
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => createAgent.handler({ companyId: "company-1" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A2: rejects empty name string (validation failure, fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => createAgent.handler({ companyId: "company-1", name: "" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A4: rejects invalid role enum value (fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        createAgent.handler({ companyId: "company-1", name: "TestAgent", role: "janitor" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A5: rejects unknown top-level field (.strict())", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        createAgent.handler(
+          { companyId: "company-1", name: "TestAgent", unknownField: "oops" },
+          client
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A5-nested: rejects unknown field inside permissions object (nested strict)", async () => {
+    const { fn, calls } = mockFetch(200, {});
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () =>
+        createAgent.handler(
+          {
+            companyId: "company-1",
+            name: "TestAgent",
+            permissions: { canCreateAgents: false, extraField: true },
+          },
+          client
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-8c] paperclip_create_agent — happy path (B1–B2)
+// ---------------------------------------------------------------------------
+describe("[stage-8c] paperclip_create_agent — happy path (B1–B2)", () => {
+  const createAgent = agentTools.find((t) => t.name === "paperclip_create_agent")!;
+
+  it("B1: calls POST correct URL + method + body", async () => {
+    const created = {
+      id: "agent-new",
+      companyId: "company-1",
+      name: "TestAgent",
+      role: "engineer",
+      status: "idle",
+    };
+    const { fn, calls } = mockFetch(200, created);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await createAgent.handler(
+      { companyId: "company-1", name: "TestAgent", role: "engineer" },
+      client
+    );
+    assert.equal(calls[0]!.url, "http://localhost:3100/api/companies/company-1/agents");
+    assert.equal(calls[0]!.init.method, "POST");
+    const body = JSON.parse(calls[0]!.init.body as string);
+    assert.equal(body.name, "TestAgent");
+    assert.equal(body.role, "engineer");
+    assert.ok(!("companyId" in body), "companyId must not be in POST body");
+    assert.ok(!result.isError);
+  });
+
+  it("B2: happy path response parsed and returned", async () => {
+    const created = {
+      id: "agent-new",
+      companyId: "company-1",
+      name: "NewAgent",
+      role: "general",
+      title: null,
+      icon: null,
+      status: "idle",
+      reportsTo: null,
+      capabilities: null,
+      adapterType: "process",
+      adapterConfig: {},
+      runtimeConfig: { heartbeat: { enabled: false } },
+      budgetMonthlyCents: 0,
+      permissions: { canCreateAgents: false },
+      metadata: null,
+      createdAt: "2026-04-16T08:46:10.600Z",
+      updatedAt: "2026-04-16T08:46:10.600Z",
+    };
+    const { fn } = mockFetch(200, created);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await createAgent.handler({ companyId: "company-1", name: "NewAgent" }, client);
+    assert.ok(!result.isError);
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.equal(parsed.id, "agent-new");
+    assert.equal(parsed.name, "NewAgent");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [stage-8c] paperclip_create_agent — error paths (C1–C2)
+// ---------------------------------------------------------------------------
+describe("[stage-8c] paperclip_create_agent — error paths (C1–C2)", () => {
+  const createAgent = agentTools.find((t) => t.name === "paperclip_create_agent")!;
+
+  it("C1: returns isError on 400 (bad request)", async () => {
+    const { fn } = mockFetch(400, { error: "name is required" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await createAgent.handler(
+      { companyId: "company-1", name: "X", role: "general" },
+      client
+    );
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("400"));
+  });
+
+  it("C2: returns isError on 403 (agent key — board-only operation)", async () => {
+    const { fn } = mockFetch(403, { error: "Forbidden" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await createAgent.handler(
+      { companyId: "company-1", name: "X", role: "general" },
+      client
+    );
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("403"));
+  });
+});
+
 describe("[stage-8a] paperclip_wakeup_agent — error paths (C1–C3)", () => {
   const wakeupAgent = agentTools.find((t) => t.name === "paperclip_wakeup_agent")!;
 
