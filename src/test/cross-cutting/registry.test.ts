@@ -379,6 +379,8 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
 // Stage 4 — Description quality invariants
 // ---------------------------------------------------------------------------
 
+// NOTE: the "ALL_TOOLS is not empty" guard in the structural invariants block
+// above (line ~30) prevents filter-based false positives in the tests below.
 describe("ALL_TOOLS registry — description quality", () => {
   it("every tool description has a 'Returns:' section", () => {
     const missing = ALL_TOOLS.filter((t) => !t.description.includes("Returns:"));

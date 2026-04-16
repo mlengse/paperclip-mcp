@@ -109,6 +109,8 @@ export const attachmentTools: ToolDefinition[] = [
       }
     },
   },
+  // TODO: tighten Returns description after live-API confirmation in Stage 8
+  //       (currently hedged because upstream contract isn't documented).
   {
     name: "paperclip_download_attachment",
     description: composeDescription({
