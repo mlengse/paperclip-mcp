@@ -600,6 +600,226 @@ describe("[stage-6] paperclip_list_approvals — pagination envelope", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// [stage-8a] paperclip_list_approval_issues
+// ---------------------------------------------------------------------------
+describe("[stage-8a] paperclip_list_approval_issues — schema (A1–A5)", () => {
+  const listApprovalIssues = approvalTools.find(
+    (t) => t.name === "paperclip_list_approval_issues"
+  )!;
+
+  it("A1: rejects missing approvalId (validation failure, fetch not called)", async () => {
+    assert.ok(listApprovalIssues, "tool must exist");
+    const { fn, calls } = mockFetch(200, []);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => listApprovalIssues.handler({}, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A2: rejects empty approvalId (validation failure, fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, []);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => listApprovalIssues.handler({ approvalId: "" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A3: rejects invalid limit (non-integer, fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, []);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => listApprovalIssues.handler({ approvalId: "appr-1", limit: 1.5 }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A5: rejects unknown extra field (.strict())", async () => {
+    const { fn, calls } = mockFetch(200, []);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => listApprovalIssues.handler({ approvalId: "appr-1", unknownField: "oops" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});
+
+describe("[stage-8a] paperclip_list_approval_issues — happy path (B1–B2)", () => {
+  const listApprovalIssues = approvalTools.find(
+    (t) => t.name === "paperclip_list_approval_issues"
+  )!;
+
+  it("B1: calls GET /api/approvals/{id}/issues with correct URL and method", async () => {
+    const issues = [{ id: "issue-1", title: "Fix bug", status: "todo" }];
+    const { fn, calls } = mockFetch(200, issues);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovalIssues.handler(
+      { approvalId: "appr-1", response_format: "json" },
+      client
+    );
+    assert.equal(calls[0]!.url, "http://localhost:3100/api/approvals/appr-1/issues");
+    assert.equal(calls[0]!.init.method, "GET");
+    assert.ok(!result.isError);
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed.items, issues);
+  });
+
+  it("B2: returns pagination envelope in JSON format", async () => {
+    const issues = [
+      { id: "issue-1", title: "Fix bug", status: "todo" },
+      { id: "issue-2", title: "Add feature", status: "in_progress" },
+    ];
+    const { fn } = mockFetch(200, issues);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovalIssues.handler(
+      { approvalId: "appr-1", response_format: "json", limit: 10, offset: 0 },
+      client
+    );
+    assert.ok(!result.isError);
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.equal(parsed.total, 2);
+    assert.equal(parsed.count, 2);
+    assert.equal(parsed.offset, 0);
+    assert.equal(parsed.limit, 10);
+  });
+});
+
+describe("[stage-8a] paperclip_list_approval_issues — error paths (C1–C3)", () => {
+  const listApprovalIssues = approvalTools.find(
+    (t) => t.name === "paperclip_list_approval_issues"
+  )!;
+
+  it("C1: returns isError on 404", async () => {
+    const { fn } = mockFetch(404, { error: "Approval not found" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovalIssues.handler({ approvalId: "missing" }, client);
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("404"));
+  });
+
+  it("C2: returns isError on 401", async () => {
+    const { fn } = mockFetch(401, { error: "Unauthorized" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovalIssues.handler({ approvalId: "appr-1" }, client);
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("401"));
+  });
+
+  it("C3: returns isError on 500", async () => {
+    const { fn } = mockFetch(500, { error: "Internal Server Error" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovalIssues.handler({ approvalId: "appr-1" }, client);
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("500"));
+  });
+});
+
+describe("[stage-8a] paperclip_list_approval_issues — pagination envelope (E1–E3)", () => {
+  const listApprovalIssues = approvalTools.find(
+    (t) => t.name === "paperclip_list_approval_issues"
+  )!;
+
+  it("E1: default limit=50, offset=0 in envelope", async () => {
+    const items = [{ id: "issue-1", title: "Fix bug" }];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovalIssues.handler(
+      { approvalId: "appr-1", response_format: "json" },
+      client
+    );
+    assertPaginationEnvelope(result, { total: 1, limit: 50, offset: 0, count: 1 });
+  });
+
+  it("E2: explicit limit=2, offset=1 pages correctly", async () => {
+    const items = Array.from({ length: 4 }, (_, i) => ({ id: `issue-${i}`, title: `Issue ${i}` }));
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovalIssues.handler(
+      { approvalId: "appr-1", response_format: "json", limit: 2, offset: 1 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.total, 4);
+    assert.equal(data.count, 2);
+    assert.equal(data.has_more, true);
+    assert.equal(data.next_offset, 3);
+  });
+
+  it("E3: offset past end returns empty items", async () => {
+    const items = [{ id: "issue-1", title: "Fix bug" }];
+    const { fn } = mockFetch(200, items);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovalIssues.handler(
+      { approvalId: "appr-1", response_format: "json", limit: 10, offset: 100 },
+      client
+    );
+    assert.ok(!result.isError);
+    const data = JSON.parse(result.content[0]!.text);
+    assert.equal(data.count, 0);
+    assert.deepEqual(data.items, []);
+  });
+});
+
+describe("[stage-8a] paperclip_list_approval_issues — truncation + format (D1, F1–F2)", () => {
+  const listApprovalIssues = approvalTools.find(
+    (t) => t.name === "paperclip_list_approval_issues"
+  )!;
+
+  it("D1: response >25k chars is truncated with hint", async () => {
+    const big = Array.from({ length: 300 }, (_, i) => ({
+      id: `issue-${i}`,
+      title: `Issue ${i} — ${"x".repeat(200)}`,
+    }));
+    const { fn } = mockFetch(200, big);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovalIssues.handler(
+      { approvalId: "appr-1", limit: 100, response_format: "json" },
+      client
+    );
+    assert.ok(result.content[0]!.text.length <= 25_000);
+    assert.ok(result.content[0]!.text.toLowerCase().includes("truncated"));
+  });
+
+  it("F1: defaults to markdown output", async () => {
+    const { fn } = mockFetch(200, [{ id: "issue-1", title: "Fix bug" }]);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovalIssues.handler({ approvalId: "appr-1" }, client);
+    assert.ok(!result.isError);
+    assert.match(result.content[0]!.text, /^##|\n- /m);
+  });
+
+  it("F2: response_format 'json' returns parseable JSON", async () => {
+    const issues = [{ id: "issue-1", title: "Fix bug" }];
+    const { fn } = mockFetch(200, issues);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await listApprovalIssues.handler(
+      { approvalId: "appr-1", response_format: "json" },
+      client
+    );
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.deepEqual(parsed.items, issues);
+  });
+});
+
 describe("[stage-6] paperclip_list_approval_comments — pagination envelope", () => {
   it("E1: default limit=50, offset=0 in envelope", async () => {
     const items = [{ id: "cmt-1", body: "Looks good", authorId: "user-1" }];

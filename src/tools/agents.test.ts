@@ -1096,3 +1096,162 @@ describe("[stage-7] paperclip_list_agents — C4/C5 timeout + network errors", (
     assert.match(result.content[0]!.text.toLowerCase(), /network|reach/);
   });
 });
+
+// ---------------------------------------------------------------------------
+// [stage-8a] paperclip_wakeup_agent
+// ---------------------------------------------------------------------------
+describe("[stage-8a] paperclip_wakeup_agent — schema (A1–A5)", () => {
+  const wakeupAgent = agentTools.find((t) => t.name === "paperclip_wakeup_agent")!;
+
+  it("A1: rejects missing agentId (validation failure, fetch not called)", async () => {
+    assert.ok(wakeupAgent, "tool must exist");
+    const { fn, calls } = mockFetch(200, { id: "run-1", status: "running" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => wakeupAgent.handler({}, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A2: rejects empty agentId (validation failure, fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, { id: "run-1" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => wakeupAgent.handler({ agentId: "" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A4: rejects invalid source enum value (fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, { id: "run-1" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => wakeupAgent.handler({ agentId: "agent-1", source: "invalid_source" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A4b: rejects invalid triggerDetail enum value (fetch not called)", async () => {
+    const { fn, calls } = mockFetch(200, { id: "run-1" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => wakeupAgent.handler({ agentId: "agent-1", triggerDetail: "bad_value" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+
+  it("A5: rejects unknown extra field (.strict())", async () => {
+    const { fn, calls } = mockFetch(200, { id: "run-1" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await assert.rejects(
+      () => wakeupAgent.handler({ agentId: "agent-1", unknownField: "oops" }, client),
+      (err: unknown) => {
+        assert.ok(err instanceof McpError);
+        return true;
+      }
+    );
+    assert.equal(calls.length, 0);
+  });
+});
+
+describe("[stage-8a] paperclip_wakeup_agent — happy path (B1–B2)", () => {
+  const wakeupAgent = agentTools.find((t) => t.name === "paperclip_wakeup_agent")!;
+
+  it("B1: calls POST /api/agents/{id}/wakeup with required field only", async () => {
+    const runObj = {
+      id: "run-1",
+      agentId: "agent-1",
+      companyId: "company-1",
+      status: "running",
+      invocationSource: "on_demand",
+      triggerDetail: "manual",
+      startedAt: "2026-04-16T00:00:00.000Z",
+      createdAt: "2026-04-16T00:00:00.000Z",
+    };
+    const { fn, calls } = mockFetch(200, runObj);
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await wakeupAgent.handler({ agentId: "agent-1" }, client);
+    assert.equal(calls[0]!.url, "http://localhost:3100/api/agents/agent-1/wakeup");
+    assert.equal(calls[0]!.init.method, "POST");
+    assert.ok(!result.isError);
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.equal(parsed.id, "run-1");
+  });
+
+  it("B2: sends optional fields in request body when provided", async () => {
+    const { fn, calls } = mockFetch(200, { id: "run-2", status: "running" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    await wakeupAgent.handler(
+      {
+        agentId: "agent-1",
+        source: "on_demand",
+        triggerDetail: "manual",
+        reason: "Testing wakeup",
+        payload: { key: "value" },
+        idempotencyKey: "idem-key-123",
+        forceFreshSession: true,
+      },
+      client
+    );
+    const body = JSON.parse(calls[0]!.init.body as string);
+    assert.equal(body.source, "on_demand");
+    assert.equal(body.triggerDetail, "manual");
+    assert.equal(body.reason, "Testing wakeup");
+    assert.deepEqual(body.payload, { key: "value" });
+    assert.equal(body.idempotencyKey, "idem-key-123");
+    assert.equal(body.forceFreshSession, true);
+  });
+
+  it("B2b: returns { status: 'skipped' } when agent already running", async () => {
+    const { fn } = mockFetch(200, { status: "skipped" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await wakeupAgent.handler({ agentId: "agent-1" }, client);
+    assert.ok(!result.isError);
+    const parsed = JSON.parse(result.content[0]!.text);
+    assert.equal(parsed.status, "skipped");
+  });
+});
+
+describe("[stage-8a] paperclip_wakeup_agent — error paths (C1–C3)", () => {
+  const wakeupAgent = agentTools.find((t) => t.name === "paperclip_wakeup_agent")!;
+
+  it("C1: returns isError on 404 (agent not found)", async () => {
+    const { fn } = mockFetch(404, { error: "Agent not found" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await wakeupAgent.handler({ agentId: "missing-agent" }, client);
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("404"));
+  });
+
+  it("C2: returns isError on 401 (unauthorized)", async () => {
+    const { fn } = mockFetch(401, { error: "Unauthorized" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await wakeupAgent.handler({ agentId: "agent-1" }, client);
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("401"));
+  });
+
+  it("C3: returns isError on 500 (server error)", async () => {
+    const { fn } = mockFetch(500, { error: "Internal Server Error" });
+    const client = new PaperclipClient(TEST_AUTH, fn);
+    const result = await wakeupAgent.handler({ agentId: "agent-1" }, client);
+    assert.equal(result.isError, true);
+    assert.ok(result.content[0]!.text.includes("500"));
+  });
+});

@@ -94,10 +94,10 @@ describe("ALL_TOOLS registry — structural invariants", () => {
     );
   });
 
-  it("tool count is within expected bounds (≥74, ≤110)", () => {
+  it("tool count is within expected bounds (≥78, ≤110)", () => {
     // Lower bound guards against accidental deletions.
     // Upper bound guards against a Stage 8 typo duplicating a module.
-    assert.ok(ALL_TOOLS.length >= 74, `Expected at least 74 tools, got ${ALL_TOOLS.length}`);
+    assert.ok(ALL_TOOLS.length >= 78, `Expected at least 78 tools, got ${ALL_TOOLS.length}`);
     assert.ok(
       ALL_TOOLS.length <= 110,
       `Expected at most 110 tools, got ${ALL_TOOLS.length} — Stage 8 should land 103 total`
@@ -285,6 +285,8 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
     "paperclip_get_routine",
     "paperclip_list_routine_runs",
     "paperclip_list_labels",
+    "paperclip_list_approval_issues",
+    "paperclip_get_current_user",
   ];
 
   it("read-only tools have readOnlyHint: true", () => {
@@ -315,6 +317,7 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
     "paperclip_delete_routine_trigger",
     "paperclip_approve",
     "paperclip_reject",
+    "paperclip_revoke_current_session",
   ];
 
   it("destructive tools have destructiveHint: true", () => {
@@ -362,6 +365,8 @@ describe("ALL_TOOLS registry — annotation correctness", () => {
     "paperclip_approve",
     "paperclip_reject",
     "paperclip_request_revision",
+    "paperclip_get_current_user",
+    "paperclip_revoke_current_session",
   ];
 
   it("board-only tools have '⚠ Board-only:' description prefix", () => {
@@ -440,6 +445,8 @@ describe("ALL_TOOLS registry — description quality", () => {
       "paperclip_approve",
       "paperclip_reject",
       "paperclip_request_revision",
+      "paperclip_get_current_user",
+      "paperclip_revoke_current_session",
     ];
     const bad: string[] = [];
     for (const name of boardOnlyTools) {
