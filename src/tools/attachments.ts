@@ -63,7 +63,12 @@ export const attachmentTools: ToolDefinition[] = [
     name: "paperclip_list_attachments",
     description: composeDescription({
       summary: "List all attachments on an issue.",
-      args: ['- issueId: string — Issue ID or identifier (example: "PAP-42")'],
+      args: [
+        '- issueId: string — Issue ID or identifier (example: "PAP-42")',
+        "- limit: number — Max attachments per page (1–100, default 50)",
+        "- offset: number — Number of attachments to skip (default 0)",
+        "- response_format: 'markdown' | 'json' — Output format (default 'markdown')",
+      ],
       returns:
         "Pagination envelope { items: Attachment[], total, count, offset, limit, has_more, next_offset }. Each item: id, filename, mimeType, size, createdAt.",
       examples: {
@@ -153,7 +158,10 @@ export const attachmentTools: ToolDefinition[] = [
     name: "paperclip_download_attachment",
     description: composeDescription({
       summary: "Fetch the content of an attachment by ID from the Paperclip API.",
-      args: ['- attachmentId: string — Attachment UUID (example: "att_abc123")'],
+      args: [
+        '- attachmentId: string — Attachment UUID (example: "att_abc123")',
+        "- response_format: 'markdown' | 'json' — Output format (default 'markdown')",
+      ],
       returns:
         "Returns the upstream API response body as a JSON string. Structure varies by attachment type and may include fields such as url, content, mimeType, or other upstream fields.",
       examples: {

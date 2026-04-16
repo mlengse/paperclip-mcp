@@ -40,6 +40,8 @@ export const labelTools: ToolDefinition[] = [
     description: composeDescription({
       summary: "List all labels defined for the current company.",
       args: [
+        "- limit: number — Max labels per page (1–100, default 50)",
+        "- offset: number — Number of labels to skip (default 0)",
         "- response_format: 'markdown' | 'json' (optional) — Output format (default: markdown)",
       ],
       returns:
