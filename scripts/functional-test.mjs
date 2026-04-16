@@ -323,12 +323,11 @@ try {
   seedFail("approvalId", err.message);
 }
 
-// Step 11: create routine (raw API requires 'title', MCP tool maps 'name' → this is a known tool bug)
-// Seed via raw API so downstream tests can use routineId
+// Step 11: create routine (raw API: requires `title` + `assigneeAgentId`)
 try {
   if (!ctx.agentId) throw new Error("no agentId available");
   const routine = await apiFetch("POST", `/api/companies/${COMPANY_ID}/routines`, {
-    agentId: ctx.agentId,
+    assigneeAgentId: ctx.agentId,
     title: "functional-test-routine",
     description: "Seeded by functional test harness",
   });
@@ -782,9 +781,10 @@ const TEST_CASES = {
     dependsOn: "routineId",
   },
   paperclip_create_routine: {
-    // NOTE: MCP tool sends 'name' to API but raw API requires 'title' — known tool bug
-    // We still test the tool invocation; it will FAIL due to API 400
-    argsFn: (c) => ({ agentId: c.agentId, name: "functional-test-routine-via-mcp" }),
+    argsFn: (c) => ({
+      assigneeAgentId: c.agentId,
+      title: "functional-test-routine-via-mcp",
+    }),
     dependsOn: "agentId",
   },
   paperclip_update_routine: {
@@ -794,12 +794,12 @@ const TEST_CASES = {
   paperclip_add_routine_trigger: {
     argsFn: (c) => ({
       routineId: c.routineId,
-      type: "api",
+      kind: "api",
     }),
     dependsOn: "routineId",
   },
   paperclip_update_routine_trigger: {
-    argsFn: (c) => ({ triggerId: c.triggerId, type: "api" }),
+    argsFn: (c) => ({ triggerId: c.triggerId, kind: "api" }),
     dependsOn: "triggerId",
   },
   paperclip_delete_routine_trigger: {
@@ -807,7 +807,7 @@ const TEST_CASES = {
     dependsOn: "triggerId",
   },
   paperclip_run_routine: {
-    argsFn: (c) => ({ routineId: c.routineId }),
+    argsFn: (c) => ({ routineId: c.routineId, agentId: c.agentId }),
     dependsOn: "routineId",
   },
   paperclip_list_routine_runs: {
@@ -932,7 +932,6 @@ const TEST_CASES = {
     }),
   },
   paperclip_preview_company_import: {
-    // PreviewCompanyImportInput requires companyId as explicit field
     argsFn: (c) => ({
       companyId: c.companyId,
       source: {
@@ -943,6 +942,7 @@ const TEST_CASES = {
         },
       },
       include: { company: true, agents: false, projects: false, issues: false, skills: false },
+      target: { mode: "existing_company", companyId: c.companyId },
     }),
   },
   paperclip_apply_company_import: {
