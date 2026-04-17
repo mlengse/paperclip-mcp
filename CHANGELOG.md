@@ -1,3 +1,10 @@
+## [2.1.1](https://github.com/bruhsb/paperclip-mcp/compare/v2.1.0...v2.1.1) (2026-04-17)
+
+
+### Bug Fixes
+
+* **docs:** remove personal-path exposure in CLAUDE.md ([#14](https://github.com/bruhsb/paperclip-mcp/issues/14)) ([92d7f83](https://github.com/bruhsb/paperclip-mcp/commit/92d7f83d5dc233949b38558d49aa63ebedee5de7))
+
 # [2.1.0](https://github.com/bruhsb/paperclip-mcp/compare/v2.0.0...v2.1.0) (2026-04-17)
 
 
