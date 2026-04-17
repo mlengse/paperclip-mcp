@@ -6,6 +6,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 paperclip-mcp is a Model Context Protocol (MCP) stdio server that exposes the Paperclip control plane API as callable tools for Claude Code agents. It translates MCP tool requests into Paperclip REST API calls over HTTP.
 
+## Local Paperclip dev server
+
+A persistent Paperclip server runs in Podman alongside this repo for development. See [`docs/guides/local-stack.md`](docs/guides/local-stack.md) for full setup; everyday commands (run from this repo's root):
+
+| Action                      | Command                                             |
+| --------------------------- | --------------------------------------------------- |
+| Check if running            | `curl -sf http://127.0.0.1:3100/api/health \| jq .` |
+| Start (if stopped)          | `podman-compose --profile external-db up -d`        |
+| Stop (keeps volumes + data) | `podman-compose --profile external-db stop`         |
+| Restart                     | `podman-compose --profile external-db restart`      |
+| Tail logs                   | `podman logs -f paperclip`                          |
+| Dashboard URL               | <http://127.0.0.1:3100>                             |
+
+> **Do NOT use `down -v`** unless you want to wipe the Postgres volume. `down` without `-v` removes containers but preserves the `paperclip-data` and `paperclip-pg-data` named volumes.
+
+The MCP server is wired via `.mcp.json` using `npx paperclip-mcp` (published package). Public skills under `skills/` can be symlinked into your local `~/.claude/skills/` so Claude Code picks them up automatically.
+
 ## Commands
 
 | Task                  | Command                                            |
