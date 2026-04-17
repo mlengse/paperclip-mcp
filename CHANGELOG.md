@@ -1,3 +1,10 @@
+# [2.1.0](https://github.com/bruhsb/paperclip-mcp/compare/v2.0.0...v2.1.0) (2026-04-17)
+
+
+### Features
+
+* **release:** v2.1.0 — compose stack, docs overhaul, Model B quality gates ([#13](https://github.com/bruhsb/paperclip-mcp/issues/13)) ([bb145c2](https://github.com/bruhsb/paperclip-mcp/commit/bb145c27622ac63b508eb5036dbb60f4cf1a229f))
+
 # [2.0.0](https://github.com/bruhsb/paperclip-mcp/compare/v1.2.5...v2.0.0) (2026-04-16)
 
 
