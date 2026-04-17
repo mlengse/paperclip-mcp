@@ -30,6 +30,10 @@ worktrees/
 # TypeScript incremental build info
 *.tsbuildinfo
 
+# Build/lint/format caches
+.eslintcache
+.prettier-cache
+
 # Test coverage output
 coverage/
 
@@ -52,5 +56,9 @@ _bmad-output/
 # Stale BMAD template artifact (miscreated directory)
 {output_folder}/
 
-# Functional test reports (generated per-run)
-scripts/.functional-test*
+# Docker/Podman CLI context cache (local machine state)
+contexts/
+
+# Functional test run reports (local artifacts)
+scripts/.functional-test*.json
+scripts/.functional-test*.md

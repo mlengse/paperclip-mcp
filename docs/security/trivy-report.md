@@ -5,7 +5,7 @@
 | Field           | Value                                                                     |
 | --------------- | ------------------------------------------------------------------------- |
 | Scan date       | 2026-04-16                                                                |
-| Image           | `paperclip-mcp:2.0.0`                                                     |
+| Image           | `paperclip-mcp:2.1.0`                                                     |
 | Image ID        | `sha256:fa5fd77a15849a1f0ddd6624ec653ffa9b42cbf5ddc5b1573866bc4a38e41c37` |
 | Runtime base    | `node:22-alpine` (musl, hardened)                                         |
 | Builder base    | `node:22-slim` (glibc, build stage only — not shipped)                    |
@@ -15,7 +15,7 @@
 ## Reproducibility
 
 ```bash
-trivy image --severity HIGH,CRITICAL,MEDIUM,LOW --format table paperclip-mcp:2.0.0
+trivy image --severity HIGH,CRITICAL,MEDIUM,LOW --format table paperclip-mcp:2.1.0
 ```
 
 ## CVE breakdown
@@ -98,7 +98,7 @@ into their pipeline:
 
 ```bash
 # Scan for HIGH and CRITICAL only (actionable threshold)
-trivy image --severity HIGH,CRITICAL --exit-code 1 paperclip-mcp:2.0.0
+trivy image --severity HIGH,CRITICAL --exit-code 1 paperclip-mcp:2.1.0
 ```
 
 Set `--exit-code 1` to fail the pipeline if new HIGH/CRITICAL CVEs appear after a base

@@ -46,6 +46,6 @@ These example files are available to consult when you want to understand the exp
 
 - Commit prefix follows the archetype's declared type: `ci(scope):`, `ops(scope):`, `security(scope):`, `data(scope):`, `release(scope):`.
 - Branch naming: `{archetype-slug}/PAP-XX` (e.g. `sre/PAP-55`).
-- All work targets `develop`. `main` is touched only by DevOps via semantic-release.
+- All work targets `main`. `main` is touched only by DevOps via semantic-release.
 - Every agent follows the standard Paperclip agent protocol: `paperclip_get_me` → check wake reason → checkout issue → work → set `in_review` → `@QA`.
 - Scope tables in each template are the authoritative boundary definition. Overlap disputes escalate to CTO.

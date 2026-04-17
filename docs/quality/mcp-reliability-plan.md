@@ -116,14 +116,6 @@ The table below has one row per `paperclip_*` tool. Column definitions:
 - **Last verified:** Date the row was last audited against the live API.
 - **Status:** PASS / FAIL / NEEDS-REVIEW.
 
-<!-- populated by QA audit Workstream B — Phase 1 static audit completed 2026-04-11 -->
-<!--
-  Audit methodology: read all src/tools/*.ts and src/tools/*.test.ts; cross-check Zod schemas;
-  verify jsonArrayPreprocess usage on all array fields; check annotation correctness; review test coverage.
-  Response shape column is UNKNOWN throughout — static audit cannot verify live API response shapes.
-  See child issues filed under PAP-166 for FAIL and PARTIAL cells.
--->
-
 | Tool                                    | HTTP verb        | Endpoint                                                       | Input coverage | Required-param enforcement | Response shape | Error codes | Tests | Last verified | Status       |
 | --------------------------------------- | ---------------- | -------------------------------------------------------------- | -------------- | -------------------------- | -------------- | ----------- | ----- | ------------- | ------------ |
 | `paperclip_get_me`                      | GET              | `/api/agents/{agentId}`                                        | PASS           | PASS                       | UNKNOWN        | PASS        | PASS  | 2026-04-11    | PASS         |
@@ -203,7 +195,7 @@ The table below has one row per `paperclip_*` tool. Column definitions:
 **Matrix notes (Phase 1 static audit, 2026-04-11):**
 
 - **Response shape UNKNOWN across all tools:** Static audit cannot verify live API response shapes without a running Paperclip server. Contract tests (Phase 2) will resolve these to PASS/FAIL.
-- **`paperclip_sync_agent_skills` PASS — input coverage:** Fixed in [PAP-179](/PAP/issues/PAP-179). `desiredSkills` now uses `z.preprocess(jsonArrayPreprocess, z.array(z.string()))`, consistent with the PAP-120 fix pattern. Regression test added to `src/tools/agents.test.ts`.
+- **`paperclip_sync_agent_skills` PASS — input coverage:** Fixed in PAP-179. `desiredSkills` now uses `z.preprocess(jsonArrayPreprocess, z.array(z.string()))`, consistent with the PAP-120 fix pattern. Regression test added to `src/tools/agents.test.ts`.
 - **`paperclip_create_approval` NEEDS-REVIEW — input coverage PARTIAL:** `payload` is typed as `z.record(z.string(), z.unknown())` with no inner schema per `type` discriminant. This is intentional — the API accepts arbitrary payloads — but provides no compile-time or runtime guard against sending an incorrect payload for `hire_agent` vs `approve_ceo_strategy` vs `budget_override_required`. Tracked in Section 6.
 - **`paperclip_get_activity` NEEDS-REVIEW — input coverage PARTIAL:** Schema exposes `agentId`, `entityType`, `entityId` filters but no pagination parameters (limit/offset/cursor). If the API supports pagination for this endpoint, agents will always receive unbounded result sets. Cannot verify without live API docs. Tracked in Section 6.
 - **`paperclip_add_routine_trigger` / `paperclip_update_routine_trigger` NEEDS-REVIEW — input coverage PARTIAL:** `config` object only exposes `cron` field (for schedule triggers). Webhook triggers likely require additional config fields (e.g., URL, secret). `api` type triggers may not need config. Cannot verify without live API docs. Tracked in Section 6.

@@ -2,9 +2,9 @@
 # Regression test for PAP-107: verify that a git commit lands on the
 # expected feature branch after the husky/lint-staged pre-commit hook runs.
 #
-# The bug: when a feature branch and its base (develop) pointed to the same
+# The bug: when a feature branch and its base (main) pointed to the same
 # commit SHA, lint-staged's stash backup/restore cycle drifted HEAD to the
-# base branch, causing the commit to land on develop instead of the feature
+# base branch, causing the commit to land on main instead of the feature
 # branch.  Fix: --no-stash flag + HEAD guard in .husky/pre-commit.
 #
 # Usage:
@@ -24,15 +24,15 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Resolve a base SHA: prefer origin/develop so the test works both locally
-# and in CI (where develop may not be checked out as a local branch).
-BASE_SHA="$(git -C "$REPO_ROOT" rev-parse origin/develop 2>/dev/null \
-  || git -C "$REPO_ROOT" rev-parse develop 2>/dev/null \
+# Resolve a base SHA: prefer origin/main so the test works both locally
+# and in CI (where main may not be checked out as a local branch).
+BASE_SHA="$(git -C "$REPO_ROOT" rev-parse origin/main 2>/dev/null \
+  || git -C "$REPO_ROOT" rev-parse main 2>/dev/null \
   || git -C "$REPO_ROOT" rev-parse HEAD)"
 
 # Create a feature branch pointing to the same SHA as the base.
 # This replicates the exact PAP-107 condition (git checkout -b immediately
-# after git checkout develop gives both branches the same SHA).
+# after git checkout main gives both branches the same SHA).
 git -C "$REPO_ROOT" branch "$BRANCH" "$BASE_SHA"
 git -C "$REPO_ROOT" worktree add "$WORKTREE" "$BRANCH"
 

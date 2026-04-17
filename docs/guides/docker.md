@@ -8,13 +8,13 @@ no network ports are exposed, and the process communicates exclusively over stdi
 
 ```bash
 # Podman (recommended per project convention)
-podman build -t paperclip-mcp:2.0.0 -t paperclip-mcp:latest .
+podman build -t paperclip-mcp:2.1.0 -t paperclip-mcp:latest .
 
 # Or via npm script
 npm run docker:build
 
 # Docker is also supported (same Dockerfile)
-docker build -t paperclip-mcp:2.0.0 -t paperclip-mcp:latest .
+docker build -t paperclip-mcp:2.1.0 -t paperclip-mcp:latest .
 ```
 
 The build uses two stages:
@@ -52,7 +52,7 @@ Add paperclip-mcp to your Claude Code MCP configuration:
         "PAPERCLIP_AGENT_ID",
         "-e",
         "PAPERCLIP_COMPANY_ID",
-        "paperclip-mcp:2.0.0"
+        "paperclip-mcp:2.1.0"
       ],
       "env": {
         "PAPERCLIP_API_KEY": "your-api-key-here",
@@ -91,7 +91,7 @@ podman run -i --rm --network=host \
   -e PAPERCLIP_API_URL=http://127.0.0.1:3100 \
   -e PAPERCLIP_AGENT_ID=... \
   -e PAPERCLIP_COMPANY_ID=... \
-  paperclip-mcp:2.0.0
+  paperclip-mcp:2.1.0
 ```
 
 ### Remote Paperclip server (explicit networking)
@@ -105,7 +105,7 @@ podman run -i --rm \
   -e PAPERCLIP_API_URL=https://api.yourpaperclip.example.com \
   -e PAPERCLIP_AGENT_ID=... \
   -e PAPERCLIP_COMPANY_ID=... \
-  paperclip-mcp:2.0.0
+  paperclip-mcp:2.1.0
 ```
 
 ## Security
@@ -123,7 +123,7 @@ podman run -i --rm \
   time. Consumers can verify this with:
 
   ```bash
-  trivy image --severity HIGH,CRITICAL paperclip-mcp:2.0.0
+  trivy image --severity HIGH,CRITICAL paperclip-mcp:2.1.0
   ```
 
   See [`docs/security/trivy-report.md`](../security/trivy-report.md) for the baseline report.
@@ -148,11 +148,11 @@ After building, verify the image boots and enumerates tools correctly:
 npm run docker:smoke
 
 # Or directly
-node scripts/smoke-docker.mjs paperclip-mcp:2.0.0
+node scripts/smoke-docker.mjs paperclip-mcp:2.1.0
 
 # Use Docker instead of Podman
-CONTAINER_RUNTIME=docker node scripts/smoke-docker.mjs paperclip-mcp:2.0.0
+CONTAINER_RUNTIME=docker node scripts/smoke-docker.mjs paperclip-mcp:2.1.0
 ```
 
 The smoke test sends an MCP initialize handshake followed by `tools/list` and asserts
-that the response contains 100+ tools.
+that the response contains 104 tools.

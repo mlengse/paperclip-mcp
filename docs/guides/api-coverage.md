@@ -1,6 +1,6 @@
 # API Coverage Matrix
 
-Full endpoint × tool mapping for Paperclip API v2.0. One row per endpoint. Sources: `docs/v2-reference/03-api-contracts.md` and `docs/v2-reference/06-live-verified.md`. Live-verified corrections are noted in the Notes column.
+Full endpoint × tool mapping for Paperclip API v2.0. One row per endpoint. Live-verified against a local Paperclip server; corrections are noted in the Notes column.
 
 Legend:
 
@@ -46,7 +46,7 @@ Legend:
 | `/api/agents/{agentId}/pause`                                  | POST   | `paperclip_pause_agent`                 | `agents.ts:548`  | either | —      |                             |
 | `/api/agents/{agentId}/resume`                                 | POST   | `paperclip_resume_agent`                | `agents.ts:586`  | either | —      |                             |
 | `/api/agents/{agentId}/heartbeat/invoke`                       | POST   | `paperclip_invoke_heartbeat`            | `agents.ts:625`  | either | —      |                             |
-| `/api/agents/{agentId}/wakeup`                                 | POST   | `paperclip_wakeup_agent`                | `agents.ts:1019` | either | yes    | Stage 8a                    |
+| `/api/agents/{agentId}/wakeup`                                 | POST   | `paperclip_wakeup_agent`                | `agents.ts:1019` | either | yes    |                             |
 | `/api/agents/{agentId}/terminate`                              | POST   | `paperclip_terminate_agent`             | `agents.ts:669`  | board  | —      | Board-only; destructive     |
 | `/api/agents/{agentId}/keys`                                   | POST   | `paperclip_create_agent_key`            | `agents.ts:712`  | board  | —      | Board-only                  |
 | `/api/agents/{agentId}/config-revisions`                       | GET    | `paperclip_list_agent_config_revisions` | `agents.ts:762`  | either | —      |                             |
@@ -153,7 +153,7 @@ Legend:
 | `/api/approvals/{approvalId}/resubmit`         | POST   | `paperclip_resubmit_approval`      | `approvals.ts:363` | either | yes    |                                     |
 | `/api/approvals/{approvalId}/comments`         | GET    | `paperclip_list_approval_comments` | `approvals.ts:404` | either | —      |                                     |
 | `/api/approvals/{approvalId}/comments`         | POST   | `paperclip_add_approval_comment`   | `approvals.ts:452` | either | yes    |                                     |
-| `/api/approvals/{approvalId}/issues`           | GET    | `paperclip_list_approval_issues`   | `approvals.ts:546` | either | —      | Stage 8a                            |
+| `/api/approvals/{approvalId}/issues`           | GET    | `paperclip_list_approval_issues`   | `approvals.ts:546` | either | —      |                                     |
 | `/api/companies/{companyId}/agent-hires`       | POST   | `paperclip_create_agent_hire`      | `approvals.ts:494` | either | yes    | Creates agent-hire approval request |
 
 ---
@@ -236,7 +236,7 @@ All tools in this domain are board-only (`⚠ Board-only:` description prefix).
 
 ## Feedback Traces
 
-All tools in this domain are board-only (`⚠ Board-only:` description prefix) — confirmed by live-API 403 on all three endpoints with agent keys (see `docs/v2-reference/06-live-verified.md`).
+All tools in this domain are board-only (`⚠ Board-only:` description prefix) — confirmed by live-API 403 on all three endpoints with agent keys.
 
 | Endpoint                                     | Method | Tool                                   | Source            | Auth  | Run-ID | Notes                            |
 | -------------------------------------------- | ------ | -------------------------------------- | ----------------- | ----- | ------ | -------------------------------- |

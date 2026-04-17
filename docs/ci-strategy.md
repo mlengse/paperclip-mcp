@@ -2,19 +2,26 @@
 
 This document describes the CI/CD pipeline for paperclip-mcp — what runs, when, and why.
 
-## Motivation
+## Why Model B?
 
-GitHub Actions minutes are a shared budget. Running the full quality gate on every `develop` push generates noise and burns minutes on work-in-progress commits. The strategy is:
+paperclip-mcp is a small, fast project (~20 source files, ~10s test suite, solo developer). Running the
+full quality gate in CI on every push burns GitHub Actions minutes on a private repo budget with no
+proportional benefit. The `modelcontextprotocol/typescript-sdk` uses this same pattern.
 
-- **Pre-commit hooks** catch formatting and lint issues instantly, before any push.
-- **CI only gates PRs and `main` pushes** — where code quality actually matters for the shared history.
-- **Releases are automatic** from conventional commits on `main` via semantic-release.
+Key tradeoffs that make Model B the right fit:
+
+- **Private repo, metered CI minutes** — every unnecessary run has a real cost.
+- **Faster developer feedback** — typecheck + test + build runs locally in ~25–35s; failure surfaces before push.
+- **One-push cost vs per-commit cost** — pre-push fires once per `git push`, not once per commit.
+  A 10-commit rebase session costs one gate run, not ten.
+- **CI becomes a backstop**, not the primary gate — it catches what only CI can catch (PAP-107
+  regression script, docs link-check against live URLs), not what belongs in the local loop.
 
 ## Layers
 
 ### 1. Pre-commit (husky + lint-staged)
 
-Runs locally on every `git commit` against staged files only.
+Runs locally on every `git commit` against staged files only. ~3–8s per commit.
 
 | File pattern     | Actions                            |
 | ---------------- | ---------------------------------- |
@@ -23,37 +30,48 @@ Runs locally on every `git commit` against staged files only.
 
 Setup is automatic: `npm install` runs `prepare`, which installs husky. No manual step required.
 
-The `prepare` script skips husky gracefully when `node_modules/.bin/husky` is not present (e.g. `npm publish --dry-run`, `npm pack`, or environments where devDependencies are not installed). This prevents a `command not found` error in those contexts while preserving normal hook installation for local development.
+The `prepare` script skips husky gracefully when devDependencies are not installed (e.g. `npm publish --dry-run`,
+`npm pack`, CI publish environments). This prevents a `command not found` error while preserving normal hook
+installation for local development.
 
-**HEAD-drift guard (PAP-107):** `.husky/pre-commit` passes `--no-stash` to lint-staged and explicitly restores `HEAD` to the original symbolic ref after the hook exits. This prevents lint-staged's stash backup/restore cycle from drifting `HEAD` to the base branch when a feature branch and its base share the same commit SHA.
+**HEAD-drift guard (PAP-107):** `.husky/pre-commit` passes `--no-stash` to lint-staged and explicitly restores
+`HEAD` to the original symbolic ref after the hook exits. This prevents lint-staged's stash backup/restore cycle
+from drifting `HEAD` to the base branch when a feature branch and its base share the same commit SHA.
 
-To skip the hook in an emergency (not recommended):
+### 2. Pre-push (husky)
 
-```sh
-git commit --no-verify -m "your message"
-```
+Runs locally once per `git push`, regardless of how many commits are in the push. ~25–35s.
 
-### 2. Quality Gate (`quality-gate.yml`)
+Steps, in order:
 
-Runs on GitHub Actions. Triggered by:
+1. `npm run typecheck` — full tsc type check (incremental via `.tsbuildinfo`; warm runs are fast)
+2. `npm run test` — full test suite
+3. `npm run build` — compile to `dist/`
+4. `docs:generate` drift check — runs `npm run docs:generate` then fails if `docs/tools/` has uncommitted
+   changes, prompting you to commit the generated output before pushing
 
-- Pull request opened/updated targeting `main` or `develop`
-- Direct push to `main`
+This hook covers typecheck, test, build, and docs:generate drift-check locally before the push reaches CI. Lint and format are handled at pre-commit time (lint-staged) — they do not run again at pre-push.
 
-Does **not** run on pushes to `develop` — those are covered by pre-commit and by the PR gate when the branch is promoted.
+### 3. Quality Gate (`quality-gate.yml`)
 
-**Jobs:**
+Runs on GitHub Actions. Triggered by **PR to `main` only**.
 
-| Job                     | Steps                                                       |
-| ----------------------- | ----------------------------------------------------------- |
-| `quality-gate`          | typecheck → lint → format:check → test → build → docs-check |
-| `pre-commit-regression` | `scripts/test-precommit-head.sh` (PAP-107 HEAD-drift guard) |
+Single job — the former `pre-commit-regression` job is folded in, sharing the same `npm ci` install.
+
+| Step                      | Why CI-only                                                          |
+| ------------------------- | -------------------------------------------------------------------- |
+| PAP-107 regression script | Tests hook behavior — only valid in a clean, neutral CI environment  |
+| `npm run test`            | Second pass in neutral environment before merging to `main`          |
+| `npm run build`           | Confirms the build is clean on the merge candidate                   |
+| `npm run docs:check`      | Markdown link-check hits live URLs — unsuitable to run on every push |
+
+Removed from CI (now pre-push or pre-commit): typecheck + docs:generate drift (pre-push); lint + format:check (pre-commit via lint-staged).
 
 All steps must pass for a PR to be mergeable to `main`.
 
-### 3. Release (`release.yml`)
+### 4. Release (`release.yml`)
 
-Triggered on every **push to `main`** (including PR merges from `develop`).
+Triggered on every **push to `main`** (including squash-merge PR merges).
 
 Runs `npx semantic-release`, which orchestrates the full plugin chain in this order:
 
@@ -74,22 +92,45 @@ If semantic-release finds no `fix:`, `feat:`, or `BREAKING CHANGE:` commits sinc
 
 ## Workflow Trigger Matrix
 
-| Event                   | Pre-commit | Quality gate | Pre-commit regression | Release | Stale-lock detector |
-| ----------------------- | :--------: | :----------: | :-------------------: | :-----: | :-----------------: |
-| `git commit` (local)    |     ✓      |              |                       |         |                     |
-| Push to feature branch  |            |              |                       |         |                     |
-| PR → `develop`          |            |      ✓       |           ✓           |         |                     |
-| PR → `main`             |            |      ✓       |           ✓           |         |                     |
-| Push to `main`          |            |      ✓       |           ✓           |    ✓    |                     |
-| `[skip ci]` back-push   |            |              |                       |         |                     |
-| Schedule (every 30 min) |            |              |                       |         |          ✓          |
-| Manual dispatch         |            |              |                       |         |          ✓          |
+| Event                | Pre-commit | Pre-push | Quality gate (CI) | Release | Stale-lock detector |
+| -------------------- | :--------: | :------: | :---------------: | :-----: | :-----------------: |
+| `git commit` (local) |     ✓      |          |                   |         |                     |
+| `git push` (local)   |            |    ✓     |                   |         |                     |
+| PR → `main`          |            |          |         ✓         |         |                     |
+| Push to `main`       |            |          |                   |    ✓    |                     |
+| `[skip ci]` push     |            |          |                   |         |                     |
+| Schedule (hourly)    |            |          |                   |         |          ✓          |
+| Manual dispatch      |            |          |                   |         |          ✓          |
 
-### 4. Stale-Lock Detector (`stale-lock-detector.yml`)
+## Performance Guards
 
-Triggered on a 30-minute schedule and on-demand via `workflow_dispatch`.
+Three caches reduce repeat-run cost for unchanged inputs:
 
-Detects Paperclip issues that are in the stale-lock state caused by the platform bug tracked in [PAP-127](/PAP/issues/PAP-127): `POST /api/issues/{id}/release` clears `checkoutRunId` but does not clear `executionRunId`. A new agent dispatch then receives a persistent 409 on checkout even though no active agent holds the lock.
+| Cache               | Location          | Gitignored | Activated by                       |
+| ------------------- | ----------------- | :--------: | ---------------------------------- |
+| tsc incremental     | `.tsbuildinfo`    |     ✓      | `"incremental": true` in tsconfig  |
+| ESLint result cache | `.eslintcache`    |     ✓      | `--cache --cache-strategy content` |
+| Prettier cache      | `.prettier-cache` |     ✓      | `--cache`                          |
+
+All three are listed in `.gitignore`. After the first pre-push run, typecheck on an unchanged codebase
+is typically <2s; lint is near-instant.
+
+## Escape Hatch
+
+`git push --no-verify` bypasses the pre-push hook entirely. Reserve this for:
+
+- Broken upstream type declaration that blocks typecheck/build (and fixing it is not your task)
+- Emergency hotfix where the pre-push gate would delay an urgent production fix
+
+When using `--no-verify`, immediately create a follow-up commit or issue documenting why the bypass was
+used and what the plan is to address it. The CI quality gate on PR to `main` still runs regardless.
+
+### 5. Stale-Lock Detector (`stale-lock-detector.yml`)
+
+Triggered hourly (reduced from every 30 min — stale locks are not real-time critical) and on-demand
+via `workflow_dispatch`.
+
+Detects Paperclip issues that are in the stale-lock state caused by the platform bug tracked in PAP-127 (tracked in the Paperclip issue tracker): `POST /api/issues/{id}/release` clears `checkoutRunId` but does not clear `executionRunId`. A new agent dispatch then receives a persistent 409 on checkout even though no active agent holds the lock.
 
 **What it does:**
 
@@ -129,13 +170,12 @@ Non-conforming commits are ignored by semantic-release and produce no release.
 3. If the step needs a new script, add it to `package.json` `scripts` and update the **Commands** table in `CLAUDE.md`.
 4. Test locally with `act` or push to a draft PR — do not push directly to `main`.
 
-## Pre-commit Setup Verification
+## Hook Setup Verification
 
-To confirm hooks are installed after a fresh clone:
+To confirm both hooks are installed after a fresh clone:
 
 ```sh
-ls .husky/pre-commit   # should exist
-cat .husky/pre-commit  # should contain: npx lint-staged --no-stash
+ls .husky/pre-commit .husky/pre-push   # both should exist
 ```
 
-If missing, run `npm install` to trigger the `prepare` script.
+If missing, run `npm install` to trigger the `prepare` script (husky v9 — no `husky install` needed).

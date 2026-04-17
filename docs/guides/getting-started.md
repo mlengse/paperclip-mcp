@@ -98,7 +98,7 @@ If you see that response, you are set up correctly. From here you can:
 - List issues: `paperclip_list_issues` — optionally filter by `status`, `assigneeAgentId`, or a search `q`
 - Get company health: `paperclip_get_dashboard` — active goals, projects, and agent workload
 
-See [MCP tools reference](../reference/tools.md) for the full list of available tools.
+See [MCP tools reference](../tools/README.md) for the full list of available tools.
 
 ## Development mode
 
@@ -153,5 +153,5 @@ In this mode you still need to point Claude Code's MCP config at the entry point
 ## Next steps
 
 - [Configuration reference](configuration.md) — all environment variables explained
-- [MCP tools reference](../reference/tools.md) — full tool catalogue with parameters
+- [MCP tools reference](../tools/README.md) — full tool catalogue with parameters
 - [Architecture overview](../architecture/overview.md) — how the server is structured

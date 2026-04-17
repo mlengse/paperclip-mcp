@@ -1,29 +1,37 @@
-# Paperclip MCP — Documentation
+# paperclip-mcp documentation
 
-Paperclip MCP exposes the [Paperclip](https://paperclip.ing) control plane API as MCP tools for use by Claude Code agents.
+paperclip-mcp is a Model Context Protocol (MCP) stdio server that exposes the [Paperclip](https://paperclip.ing) control plane API as callable tools for Claude Code agents. This index organises the documentation by audience — pick the section that matches your role and skip the rest.
 
-## Sections
+## End-user (agents consuming this MCP)
 
-| Section                                    | Description                                           |
-| ------------------------------------------ | ----------------------------------------------------- |
-| [Guides](guides/README.md)                 | Step-by-step guides — start here                      |
-| [Reference](reference/README.md)           | MCP tool reference                                    |
-| [Architecture](architecture/README.md)     | Internal design and extension points                  |
-| [Quality](quality/mcp-reliability-plan.md) | MCP reliability and API-compatibility validation plan |
+| File                                           | Purpose                                    |
+| ---------------------------------------------- | ------------------------------------------ |
+| [quickstart.md](quickstart.md)                 | Get connected and run your first tool call |
+| [auth-keys.md](auth-keys.md)                   | API key setup and environment variables    |
+| [troubleshooting.md](troubleshooting.md)       | Common errors and fixes                    |
+| [cookbook/](cookbook/README.md)                | Copy-paste recipes for common agent tasks  |
+| [installation/](installation/README.md)        | Platform-specific install instructions     |
+| [tools/](tools/README.md)                      | Full MCP tool reference                    |
+| [guides/local-stack.md](guides/local-stack.md) | Running the full Paperclip stack locally   |
 
-## Quick links
+## Contributor (adding tools / fixing bugs)
 
-- [Getting started](guides/getting-started.md)
-- [Configuration](guides/configuration.md)
-- [MCP tools](reference/tools.md)
-- [Architecture overview](architecture/overview.md)
+| File                                                 | Purpose                                           |
+| ---------------------------------------------------- | ------------------------------------------------- |
+| [../CONTRIBUTING.md](../CONTRIBUTING.md)             | Branch strategy, PR flow, dev environment setup   |
+| [architecture/overview.md](architecture/overview.md) | Internal design, module map, and extension points |
 
-## Contributing to the docs
+## Operator (running the server)
 
-All documentation lives in `docs/` as plain Markdown. To check for broken links locally:
+| File                                                               | Purpose                                               |
+| ------------------------------------------------------------------ | ----------------------------------------------------- |
+| [guides/local-stack.md](guides/local-stack.md)                     | Local stack setup for development and testing         |
+| [quality/mcp-reliability-plan.md](quality/mcp-reliability-plan.md) | MCP reliability and API-compatibility validation plan |
 
-```bash
-npm run docs:check
-```
+## Maintainer (releases / governance)
 
-See the [contributing section](../README.md#contributing) in the root README for branch strategy.
+| File                                                                   | Purpose                                                    |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------- |
+| [quality/drift-response-runbook.md](quality/drift-response-runbook.md) | Runbook for handling API drift and compatibility breaks    |
+| [../AGENTS.md](../AGENTS.md)                                           | Paperclip-orchestrated agent protocol and BMAD integration |
+| [../CHANGELOG.md](../CHANGELOG.md)                                     | Release history                                            |

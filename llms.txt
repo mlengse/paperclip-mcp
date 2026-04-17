@@ -1,0 +1,25 @@
+# paperclip-mcp
+
+paperclip-mcp is a Model Context Protocol (MCP) stdio server that exposes the Paperclip control plane API as 104 callable tools across 19 domains (identity, issues, comments, documents, agents, dashboard, approvals, goals, projects, activity, routines, attachments, labels, companies, plugins, secrets, runs, feedback, company-import). Agents use these tools to manage tasks, post comments, read documents, coordinate work, and orchestrate multi-agent pipelines — all without direct API calls. The server authenticates via a bearer token, resolves agent identity and company scope at startup, and transparently injects run IDs on every mutating request for full audit trail.
+
+## End-user
+
+- [README](README.md) — Overview, quickstart, and environment variable reference
+- [Quickstart](docs/quickstart.md) — Shortest path to a working tool call
+- [Auth keys](docs/auth-keys.md) — API key setup and scoping
+- [Troubleshooting](docs/troubleshooting.md) — Common errors and fixes
+- [Tool reference](docs/tools/README.md) — Full per-tool input/output schemas
+
+## Operator
+
+- [Installation index](docs/installation/README.md) — Platform-specific install guides (Claude Code, Claude Desktop, Cursor, VS Code, Windsurf)
+- [Cookbook](docs/cookbook/README.md) — Copy-paste recipes for common agent tasks
+
+## Contributor
+
+- [Contributing guide](CONTRIBUTING.md) — Branch strategy, PR flow, dev environment, adding new tools
+- [Security policy](SECURITY.md) — How to report vulnerabilities
+
+## Agent-orchestration
+
+- [AGENTS.md](AGENTS.md) — Paperclip-orchestrated agent protocol, BMAD integration, heartbeat model, and role-specific workflows

@@ -1,0 +1,58 @@
+# Docker compatibility file. Primary tool is podman-compose. See `docs/guides/local-stack.md`.
+#
+# Usage: docker compose -f docker-compose.yaml up -d
+# For external PostgreSQL: docker compose -f docker-compose.yaml --profile external-db up -d
+#
+# Differences from podman-compose.yaml:
+#   - Volume mounts omit the :Z SELinux label (not needed on Docker Desktop;
+#     Docker silently ignores :Z on named volumes anyway, but this keeps the
+#     file clean for Docker-only users).
+
+services:
+  paperclip:
+    image: ghcr.io/paperclipai/paperclip:${PAPERCLIP_VERSION:-sha-b8725c5}
+    container_name: paperclip
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      HOST: "127.0.0.1"
+      PORT: "${PORT:-3100}"
+      PAPERCLIP_HOME: /paperclip
+      PAPERCLIP_DEPLOYMENT_MODE: "${PAPERCLIP_DEPLOYMENT_MODE:-local_trusted}"
+      # MANDATORY in all modes — server throws at startup if absent.
+      BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET}"
+      SERVE_UI: "${SERVE_UI:-true}"
+      PAPERCLIP_TELEMETRY_DISABLED: "${PAPERCLIP_TELEMETRY_DISABLED:-1}"
+      # DATABASE_URL: "${DATABASE_URL}"
+    volumes:
+      - paperclip-data:/paperclip
+    healthcheck:
+      # CMD-SHELL lets us honour ${PORT} if the user overrides the default.
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:${PORT:-3100}/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  postgres:
+    image: docker.io/library/postgres:${POSTGRES_VERSION:-17.9-alpine}
+    container_name: paperclip-postgres
+    profiles:
+      - external-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER:-paperclip}"
+      # Required when using external-db profile — set POSTGRES_PASSWORD in .env.
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_DB: "${POSTGRES_DB:-paperclip}"
+    volumes:
+      - paperclip-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-paperclip} -d ${POSTGRES_DB:-paperclip}"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  paperclip-data:
+  paperclip-pg-data:

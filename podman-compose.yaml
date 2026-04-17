@@ -1,0 +1,89 @@
+# Primary compose file — rootless Podman (podman-compose >= 1.0, Podman >= 3.4).
+# Docker users: see docker-compose.yaml and docs/guides/local-stack.md.
+#
+# Default stack: paperclip with embedded PGlite (no external database required).
+# External PostgreSQL: add --profile external-db to the podman-compose command.
+
+services:
+  paperclip:
+    image: ghcr.io/paperclipai/paperclip:${PAPERCLIP_VERSION:-sha-b8725c5}
+    container_name: paperclip
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      # local_trusted mode requires loopback binding. network_mode: host means
+      # 127.0.0.1 is reachable from the host without port mapping.
+      HOST: "127.0.0.1"
+      PORT: "${PORT:-3100}"
+      # Data root inside the container — backed by the named volume below.
+      # /paperclip is pre-owned by the node user (UID 1000) in the image.
+      PAPERCLIP_HOME: /paperclip
+      # Deployment mode: local_trusted removes auth overhead for local dev.
+      PAPERCLIP_DEPLOYMENT_MODE: "${PAPERCLIP_DEPLOYMENT_MODE:-local_trusted}"
+      # MANDATORY in all modes — server throws at startup if absent.
+      BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET}"
+      # Serve the React dashboard from the same process.
+      SERVE_UI: "${SERVE_UI:-true}"
+      # Disable telemetry. Also honoured: DO_NOT_TRACK=1.
+      PAPERCLIP_TELEMETRY_DISABLED: "${PAPERCLIP_TELEMETRY_DISABLED:-1}"
+      # When --profile external-db is active, set DATABASE_URL in .env (e.g.
+      # `postgres://paperclip:…@127.0.0.1:5432/paperclip`) and uncomment the
+      # line below OR (preferred) export it via host env. The variable is
+      # passed through unconditionally; when empty, Paperclip falls back to
+      # embedded PGlite exactly as it does without this line.
+      DATABASE_URL: "${DATABASE_URL:-}"
+    volumes:
+      # Mount at /paperclip — pre-owned by the node user (UID 1000) in the
+      # image. :Z sets the SELinux private label; required on Fedora/RHEL
+      # rootless Podman, silently ignored by Docker.
+      - paperclip-data:/paperclip:Z
+    healthcheck:
+      # wget is present in node:24-trixie-slim; curl is not guaranteed.
+      # /api/health validates DB connectivity and secret provider init — not a shallow ping.
+      # CMD-SHELL lets us honour ${PORT} if the user overrides the default.
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:${PORT:-3100}/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      # First boot applies all DB migrations (~57 for PGlite, ~12 s on average hardware).
+      start_period: 30s
+
+  postgres:
+    image: docker.io/library/postgres:${POSTGRES_VERSION:-17.9-alpine}
+    container_name: paperclip-postgres
+    profiles:
+      - external-db
+    # network_mode: host — paperclip also runs in host netns, so postgres must
+    # be reachable at 127.0.0.1:${POSTGRES_PORT:-5432}. On host netns, the
+    # container binds directly to localhost, no port publishing needed.
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER:-paperclip}"
+      # Required when using external-db profile — set POSTGRES_PASSWORD in .env.
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_DB: "${POSTGRES_DB:-paperclip}"
+      # Honour a custom port if set; defaults to the Postgres default 5432.
+      PGPORT: "${POSTGRES_PORT:-5432}"
+    volumes:
+      # Mount exactly /var/lib/postgresql/data — mounting the parent causes
+      # Postgres to write to an ephemeral anonymous volume instead.
+      - paperclip-pg-data:/var/lib/postgresql/data:Z
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -h 127.0.0.1 -p ${POSTGRES_PORT:-5432} -U ${POSTGRES_USER:-paperclip} -d ${POSTGRES_DB:-paperclip}",
+        ]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+# Named volumes — managed by Podman's volume driver.
+# The paperclip service runs as the `node` user (UID 1000, the image's default)
+# — no `user:` override is set above. /paperclip is pre-owned by node:node in
+# the upstream image; adding a `user:` directive here would likely break
+# permissions on the mounted volume.
+volumes:
+  paperclip-data:
+  paperclip-pg-data:

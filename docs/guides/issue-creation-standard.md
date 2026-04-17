@@ -284,7 +284,7 @@ Paperclip's API does not expose a native template endpoint — `paperclip_create
 - Input schema: `<field>: <type> (<required|optional>)` — list all fields.
 - Handler: call `client.<method>('/api/<path>')`, validate with Zod schema, return `{ content: [{ type: "text", text: JSON.stringify(data) }] }`.
 - Register in `src/tools/index.ts` by spreading the new array into `ALL_TOOLS`.
-- Add the tool to `docs/reference/tools.md`.
+- Run `npm run docs:generate` to regenerate `docs/tools/` from Zod schemas.
 
 ## Acceptance Criteria
 

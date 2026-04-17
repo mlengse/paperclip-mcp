@@ -1,0 +1,25 @@
+# Model B: pre-push quality gate (runs once per push)
+# To bypass in a genuine emergency: git push --no-verify (discouraged)
+
+set -e
+
+echo "pre-push: typecheck…"
+npm run typecheck
+
+echo "pre-push: test…"
+npm run test
+
+echo "pre-push: build…"
+npm run build
+
+echo "pre-push: tool-doc drift…"
+npm run docs:generate
+# `git diff HEAD -- <path>` covers both staged and unstaged changes against the
+# committed state, so regenerated-but-uncommitted docs don't sneak past the gate.
+if ! git diff --quiet HEAD -- docs/tools/; then
+  echo "ERROR: docs/tools/ drifted vs HEAD — run 'npm run docs:generate' and commit the result." >&2
+  git --no-pager diff --stat HEAD -- docs/tools/ >&2
+  exit 1
+fi
+
+echo "pre-push: all checks passed."
