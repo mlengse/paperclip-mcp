@@ -17,7 +17,7 @@ name: Paperclip Stale-Lock Detector
 on:
   schedule:
     # hourly to reduce CI-minute drain; stale locks are not real-time critical
-    - cron: "0 * * * *"
+    # - cron: "0 * * * *"
   workflow_dispatch:
     inputs:
       issue_id:
