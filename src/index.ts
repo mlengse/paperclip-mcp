@@ -33,13 +33,18 @@ async function main() {
       const url = new URL(req.url || "/", baseUrl);
       const pathname = url.pathname;
 
-      // GET /sse — establish SSE stream
+      // GET /sse — establish SSE stream.
+      // Close any previous transport first — the MCP SDK Server can only
+      // be connected to ONE transport at a time. Without this explicit close(),
+      // a reconnecting client (e.g. new Hermes session) gets a 500 because
+      // the old transport is still attached.
       if (req.method === "GET" && pathname === "/sse") {
         const transport = new SSEServerTransport("/messages", res);
         transports[transport.sessionId] = transport;
         res.on("close", () => {
           delete transports[transport.sessionId];
         });
+        await server.close();
         await server.connect(transport);
         return;
       }

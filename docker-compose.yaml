@@ -10,16 +10,17 @@
 
 services:
   paperclip:
-    image: ghcr.io/paperclipai/paperclip:${PAPERCLIP_VERSION:-sha-b8725c5}
+    image: ghcr.io/paperclipai/paperclip:${PAPERCLIP_VERSION:-latest}
     container_name: paperclip
-    network_mode: host
+    user: "1000:1000"
+    ports:
+      - "3100:3100"
     restart: unless-stopped
     environment:
-      HOST: "127.0.0.1"
+      HOST: "0.0.0.0"
       PORT: "${PORT:-3100}"
       PAPERCLIP_HOME: /paperclip
-      PAPERCLIP_DEPLOYMENT_MODE: "${PAPERCLIP_DEPLOYMENT_MODE:-local_trusted}"
-      # MANDATORY in all modes — server throws at startup if absent.
+      PAPERCLIP_DEPLOYMENT_MODE: "authenticated"
       BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET}"
       SERVE_UI: "${SERVE_UI:-true}"
       PAPERCLIP_TELEMETRY_DISABLED: "${PAPERCLIP_TELEMETRY_DISABLED:-1}"
@@ -55,4 +56,6 @@ services:
 
 volumes:
   paperclip-data:
+    name: paperclip-data
+    external: true
   paperclip-pg-data:
