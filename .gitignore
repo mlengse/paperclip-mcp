@@ -62,3 +62,32 @@ contexts/
 # Functional test run reports (local artifacts)
 scripts/.functional-test*.json
 scripts/.functional-test*.md
+
+# Ad-hoc testing / investigation scripts
+check_*.py
+check-*.mjs
+fix*.py
+fix-*.mjs
+deep-check.mjs
+test_*.py
+*_test.py
+trigger_*.py
+wakeup*.py
+set_*.py
+fase*.py
+verify_agents.py
+update_agents.py
+list_agents.py
+cleanup_agents.py
+debug_run.py
+discover_routes.py
+final_check.py
+
+# Windows service scripts (local infra, not part of project)
+install-service.bat
+restart-service.bat
+resume-service.bat
+
+# pnpm artifacts (project uses npm)
+pnpm-lock.yaml
+pnpm-workspace.yaml
